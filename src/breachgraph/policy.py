@@ -139,6 +139,13 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
 
     if gating:
         reasons.append(f"{gating} {scope}finding(s) at or above the threshold")
+    if result.attack_graph:
+        paths = result.attack_graph.gating_paths
+        if paths:
+            kind = "new " if result.baseline_used else ""
+            reasons.append(f"{len(paths)} {kind}attack path(s) to a crown-jewel asset")
+        if config.attack_graph.fail_on_new_path:
+            threshold.append("any attack path to a crown jewel")
     failed_tools = [t.name for t in result.tools if t.status is ToolStatus.FAILED]
     if failed_tools and rules.scanner_errors:
         reasons.append("scanner(s) failed: " + ", ".join(failed_tools))

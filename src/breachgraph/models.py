@@ -178,6 +178,52 @@ class GateResult(BaseModel):
     threshold: str = ""
 
 
+class AttackStep(BaseModel):
+    src: str  # node display name
+    dst: str
+    dst_kind: str
+    kind: str  # edge kind
+    via: str | None = None  # weakness class used to cross
+    weakness_title: str | None = None
+    note: str = ""
+    confidence: str = "high"
+    evidence_path: str | None = None
+    evidence_line: int | None = None
+
+
+class AttackPathView(BaseModel):
+    target: str
+    target_kind: str
+    score: float
+    confidence: str
+    length: int
+    is_new: bool = True  # introduces a path not present in the baseline
+    gating: bool = False
+    steps: list[AttackStep] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)  # fingerprints of findings on the path
+
+
+class ChokePointView(BaseModel):
+    title: str
+    weakness: str
+    paths_cut: int
+    fingerprint: str | None = None
+    path: str | None = None
+    line: int | None = None
+
+
+class AttackGraphSummary(BaseModel):
+    enabled: bool = True
+    paths: list[AttackPathView] = Field(default_factory=list)
+    choke_points: list[ChokePointView] = Field(default_factory=list)
+    skipped: list[str] = Field(default_factory=list)
+    stats: dict[str, int] = Field(default_factory=dict)
+
+    @property
+    def gating_paths(self) -> list[AttackPathView]:
+        return [p for p in self.paths if p.gating]
+
+
 class ScanResult(BaseModel):
     breachgraph_version: str
     target: str
@@ -189,6 +235,7 @@ class ScanResult(BaseModel):
     baseline_used: bool = False
     warnings: list[str] = Field(default_factory=list)
     artifacts: dict[str, str] = Field(default_factory=dict)  # e.g. {"sbom": "path"}
+    attack_graph: AttackGraphSummary | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     def counts_by(

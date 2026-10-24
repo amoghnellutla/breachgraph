@@ -12,6 +12,8 @@ from pathlib import Path
 from breachgraph import __version__
 from breachgraph.config import Config
 from breachgraph.enrich import enrich
+from breachgraph.graph import build_attack_graph
+from breachgraph.graph.summary import summarize
 from breachgraph.models import Finding, ScanResult, ToolRun, ToolStatus
 from breachgraph.normalize import dedupe, finalize
 from breachgraph.policy import (
@@ -115,6 +117,13 @@ def process(
             result.warnings.append(f"baseline {opts.baseline} not found; treating all findings as new")
     result.warnings += apply_suppressions(items, config)
     result.findings = items
+    if config.attack_graph.enabled:
+        try:
+            ag = build_attack_graph(target, items, config)
+            result.attack_graph = summarize(ag, items, config.attack_graph, result.baseline_used)
+        except Exception as exc:  # the attack graph must never break a scan
+            log.exception("attack graph failed")
+            result.warnings.append(f"attack graph skipped: {exc}")
     for run in tools:
         if run.status is ToolStatus.FAILED:
             result.warnings.append(f"{run.name} failed: {run.message}")

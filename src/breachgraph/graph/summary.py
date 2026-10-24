@@ -1,0 +1,83 @@
+"""Convert the attack-graph engine output into the serializable summary reporters consume."""
+
+from __future__ import annotations
+
+from breachgraph.config import AttackGraph as AttackGraphConfig
+from breachgraph.graph import AttackGraphResult
+from breachgraph.graph.model import Confidence
+from breachgraph.graph.paths import AttackPath
+from breachgraph.models import (
+    AttackGraphSummary,
+    AttackPathView,
+    AttackStep,
+    ChokePointView,
+    Finding,
+    Status,
+)
+
+_CONF_RANK = {"high": 3, "medium": 2, "low": 1}
+
+
+def summarize(
+    result: AttackGraphResult, findings: list[Finding], config: AttackGraphConfig, baseline_used: bool
+) -> AttackGraphSummary:
+    node_name = {nid: n.name for nid, n in result.graph.nodes.items()}
+    node_kind = {nid: n.kind.value for nid, n in result.graph.nodes.items()}
+    status_by_fp = {f.fingerprint: f.status for f in findings}
+    new_fps = {f.fingerprint for f in findings if f.status is Status.NEW}
+    min_rank = _CONF_RANK[config.min_confidence]
+
+    views: list[AttackPathView] = []
+    for p in result.paths:
+        # A path is "new" if any weapon on it is a new finding, or if there is no baseline.
+        is_new = (not baseline_used) or any(fp in new_fps for fp in p.weaknesses) or not p.weaknesses
+        gating = (
+            config.fail_on_new_path
+            and _CONF_RANK[p.confidence.value] >= min_rank
+            and (is_new or not baseline_used)
+        )
+        views.append(
+            AttackPathView(
+                target=p.target.name,
+                target_kind=p.target.kind.value,
+                score=p.score,
+                confidence=p.confidence.value,
+                length=p.length,
+                is_new=is_new,
+                gating=gating,
+                steps=[_step(p, i, node_name, node_kind) for i in range(len(p.steps))],
+                weaknesses=[fp for fp in p.weaknesses if status_by_fp.get(fp) is not Status.SUPPRESSED],
+            )
+        )
+
+    chokes = [
+        ChokePointView(
+            title=c.title,
+            weakness=c.weakness.value,
+            paths_cut=c.paths_cut,
+            fingerprint=c.fingerprint,
+            path=c.evidence_path,
+            line=c.evidence_line,
+        )
+        for c in result.choke_points
+    ]
+    return AttackGraphSummary(
+        enabled=True, paths=views, choke_points=chokes, skipped=result.skipped, stats=result.stats
+    )
+
+
+def _step(path: AttackPath, i: int, names: dict[str, str], kinds: dict[str, str]) -> AttackStep:
+    s = path.steps[i]
+    ev = s.edge.evidence[0] if s.edge.evidence else None
+    return AttackStep(
+        src=names.get(s.edge.src, s.edge.src),
+        dst=names.get(s.edge.dst, s.edge.dst),
+        dst_kind=kinds.get(s.edge.dst, ""),
+        kind=s.edge.kind.value,
+        via=s.via.value if s.via else None,
+        weakness_title=s.weakness_title,
+        note=s.edge.note,
+        confidence=s.edge.confidence.value if isinstance(s.edge.confidence, Confidence) else "high",
+        evidence_path=ev.path if ev else None,
+        evidence_line=ev.line if ev else None,
+    )
