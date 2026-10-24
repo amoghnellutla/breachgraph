@@ -150,16 +150,16 @@ class AIConfig(_Strict):
     """Optional AI-assisted triage. Bring your own Anthropic API key (ANTHROPIC_API_KEY).
 
     breachgraph never spends tokens on your behalf: this is off unless you enable it and a key
-    is present. It explains findings and attack paths and gives a true/false-positive verdict with
-    a fix — it does not change the gate, and it never generates exploit code.
+    is present. For the top findings it gives a real / likely-false-positive / needs-review verdict
+    with reasoning and a concrete fix, from the enclosing code, route and attack-path context. It
+    does not change the gate, and it never generates exploit code.
     """
 
     enabled: bool = False
     model: str = "claude-opus-5-5"  # any Anthropic model id; set a cheaper one to save cost
-    max_findings: int = 10  # triage at most this many top findings (cost control)
-    explain_paths: bool = True  # write a narrative + fix plan for the attack paths
-    max_usd: float = 1.0  # stop before exceeding this estimated spend
-    effort: Literal["low", "medium", "high"] = "low"  # reasoning effort (cost vs depth)
+    max_findings: int = Field(default=10, ge=1, le=100)  # triage at most this many top findings
+    max_usd: float = Field(default=1.0, gt=0)  # never start a request that could exceed this spend
+    effort: Literal["low", "medium", "high", "xhigh", "max"] = "low"  # reasoning depth vs cost
 
 
 class ReachabilityConfig(_Strict):

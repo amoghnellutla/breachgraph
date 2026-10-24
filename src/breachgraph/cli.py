@@ -17,6 +17,7 @@ from typing import Annotated
 import typer
 from pydantic import ValidationError
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from breachgraph import __version__
@@ -142,8 +143,8 @@ def scan_cmd(
         bool,
         typer.Option(
             "--ai",
-            help="AI-assisted triage (needs your own ANTHROPIC_API_KEY). Explains findings and "
-            "attack paths with a verdict and fix. Advisory only; never changes the gate.",
+            help="AI-assisted triage (needs your own ANTHROPIC_API_KEY): a verdict and a concrete "
+            "fix for the top findings. Advisory only; never changes the gate.",
         ),
     ] = False,
     ai_model: Annotated[
@@ -305,22 +306,18 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
             console.print("[green]No attack path[/] from the internet to a crown-jewel asset.")
         return
     console.print(f"\n[bold red]🎯 {len(ag.paths)} attack path(s) to crown-jewel assets[/]")
-    if ag.ai_narrative:
-        console.print("[bold]🤖 AI summary:[/]")
-        for line in ag.ai_narrative.splitlines():
-            console.print(f"   {line}")
     for i, p in enumerate(ag.paths[:limit], 1):
         flag = " [bold red]BLOCKS[/]" if p.gating else ""
         hops = ["Internet"]
         for s in p.steps:
-            hops.append(f"[bold red]{s.dst}[/]({s.via})" if s.via else s.dst)
+            hops.append(f"[bold red]{escape(s.dst)}[/]({s.via})" if s.via else escape(s.dst))
         console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}")
         console.print("     " + " → ".join(hops))
     if ag.choke_points:
         console.print("  [bold]Fix first:[/]")
         for c in ag.choke_points[:5]:
             loc = f" ({c.path}:{c.line})" if c.path else ""
-            console.print(f"    • {c.title}{loc} — breaks {c.paths_cut} path(s)")
+            console.print(f"    • {escape(c.title)}{escape(loc)} — breaks {c.paths_cut} path(s)")
 
 
 def _print_summary(result: ScanResult) -> None:
@@ -331,11 +328,13 @@ def _print_summary(result: ScanResult) -> None:
     for f in open_findings[:15]:
         loc = f.location.path + (f":{f.location.start_line}" if f.location.start_line else "")
         flag = " [bold red]KEV[/]" if f.enrichment.kev else ""
+        if f.ai:
+            flag += f" [cyan]🤖 {f.ai.verdict.label}[/]"
         table.add_row(
             f"[{_PRIO_STYLE[f.priority]}]{f.priority.value}[/]",
             str(f.risk_score),
-            f.title[:90] + flag,
-            loc[:60],
+            escape(f.title[:90]) + flag,
+            escape(loc[:60]),
             ",".join(f.sources),
             ("[bold red]BLOCKS[/] " if f.gating else "") + f.status.value,
         )
@@ -344,12 +343,14 @@ def _print_summary(result: ScanResult) -> None:
     _print_attack_paths(result)
     ai_meta = result.metadata.get("ai")
     if isinstance(ai_meta, dict):
+        bound = " (upper bound)" if ai_meta.get("cost_is_upper_bound") else ""
         console.print(
-            f"[dim]AI triage: {ai_meta.get('triaged', 0)} finding(s), "
-            f"~${ai_meta.get('cost_usd', 0):.3f} ({ai_meta.get('model', '')})[/]"
+            f"[dim]AI triage: {ai_meta.get('triaged', 0)} of {ai_meta.get('attempted', 0)} finding(s), "
+            f"~${ai_meta.get('cost_usd', 0):.3f}{bound} ({escape(str(ai_meta.get('model', '')))}). "
+            "Verdicts and fixes are in the HTML report and PR comment.[/]"
         )
     for w in result.warnings:
-        console.print(f"[yellow]warning:[/] {w}")
+        console.print(f"[yellow]warning:[/] {escape(w)}")
     if result.gate.passed:
         console.print(f"[bold green]Gate passed[/] ({result.gate.threshold})")
     else:

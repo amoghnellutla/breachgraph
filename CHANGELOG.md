@@ -19,11 +19,13 @@ All notable changes to this project are documented here. The format follows
 - `breachgraph graph` command to build the graph standalone.
 - `examples/vulnerable-platform` demo with a real internet-to-S3 path.
 - **AI-assisted triage (bring your own key)**: optional, off by default. With your own
-  `ANTHROPIC_API_KEY`, breachgraph explains findings and attack paths, gives each finding a
-  true/false-positive verdict with reasoning and a fix, and writes a plain-English attack-path
-  narrative. Advisory only (never changes the gate), defensive only (no exploit generation),
-  grounded in the code and graph evidence, with a spend cap and graceful handling of a missing
-  key or a safety refusal. Enable with `--ai`; see docs/ai-triage.md.
+  `ANTHROPIC_API_KEY`, each top finding gets a real / likely-false-positive / needs-review verdict,
+  reasoning with line numbers, and a concrete fix with corrected code. The model sees what a
+  reviewer would open: the whole enclosing function and the HTTP route that runs it, the attack
+  path the finding is a step on, and for dependency CVEs the lines that call the package. Advisory
+  only (never changes the gate), defensive only, secrets redacted before sending, a spend cap
+  enforced before each request, and every failure (no key, refusal, API error) is a warning, never
+  a failed scan. Enable with `--ai`; see docs/ai-triage.md.
 - **Reachability analysis**: for each dependency CVE, checks whether first-party code actually
   imports the package (Python/JS/TS/Java/Go via tree-sitter) and whether the importing module is
   reachable from an HTTP entry point. Unused (transitive-only) CVEs are deprioritized and don't

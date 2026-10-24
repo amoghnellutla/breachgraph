@@ -56,7 +56,7 @@ def _py_candidates(name: str) -> set[str]:
     return {b for b in base if b}
 
 
-def _candidates(name: str, ecosystem: str | None) -> tuple[str, set[str]]:
+def import_candidates(name: str, ecosystem: str | None) -> tuple[str, set[str]]:
     """(language, candidate import tokens) for matching against collected imports."""
     eco = (ecosystem or "").lower()
     if eco in ("npm", "yarn", "node-pkg"):
@@ -119,7 +119,7 @@ def annotate_reachability(target: Path, findings: list[Finding], config: Config)
         pkg = f.package
         if pkg is None:
             continue
-        lang, cands = _candidates(pkg.name, pkg.ecosystem)
+        lang, cands = import_candidates(pkg.name, pkg.ecosystem)
         if not cands or lang not in langs_present:
             pkg.reachability = Reachability.UNKNOWN
         else:

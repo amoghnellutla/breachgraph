@@ -130,7 +130,7 @@ def _overlap(a: Finding, b: Finding) -> bool:
     return a1 <= b2 and b1 <= a2
 
 
-def _is_secret(f: Finding) -> bool:
+def is_secret(f: Finding) -> bool:
     return f.category is Category.SECRETS or "CWE-798" in f.cwe
 
 
@@ -138,7 +138,7 @@ def _strength(a: Finding, b: Finding, keys_a: set[str], keys_b: set[str]) -> int
     """How sure we are that two findings (from different tools) are the same issue: 0-3."""
     if a.location.path != b.location.path:
         return 0
-    if _is_secret(a) and _is_secret(b):
+    if is_secret(a) and is_secret(b):
         return 3 if _overlap(a, b) else 0
     if a.category is not b.category:
         return 0

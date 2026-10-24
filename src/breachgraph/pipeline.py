@@ -157,10 +157,11 @@ def _run_ai(result: ScanResult, config: Config, target: Path) -> None:
         return
     result.warnings.extend(run.warnings)
     result.metadata["ai"] = {
-        "triaged": run.triaged,
-        "narrative": run.narrative,
         "model": run.model,
+        "attempted": run.attempted,
+        "triaged": run.triaged,
         "cost_usd": round(run.cost_usd, 4),
+        "cost_is_upper_bound": run.cost_is_upper_bound,
         "input_tokens": run.input_tokens,
         "output_tokens": run.output_tokens,
     }

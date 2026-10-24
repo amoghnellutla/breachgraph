@@ -8,17 +8,24 @@ from breachgraph.paths import normalize_path
 _MAX_SNIPPET_LINES = 12
 
 
+def read_lines(target: Path, rel_path: str) -> list[str] | None:
+    """Lines of a file inside the scanned tree; None if unreadable or outside it."""
+    path = (target / normalize_path(rel_path)).resolve()
+    try:
+        path.relative_to(target.resolve())  # never read outside the scanned tree
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            return fh.read().splitlines()
+    except (OSError, ValueError):
+        return None
+
+
 def read_snippet(target: Path, rel_path: str, start: int | None, end: int | None) -> str | None:
     """Read source lines from disk. Used instead of the tools' own snippets, which are
     sometimes redacted or replaced (e.g. Semgrep's "requires login")."""
     if not start:
         return None
-    path = (target / normalize_path(rel_path)).resolve()
-    try:
-        path.relative_to(target.resolve())  # never read outside the scanned tree
-        with path.open(encoding="utf-8", errors="replace") as fh:
-            lines = fh.read().splitlines()
-    except (OSError, ValueError):
+    lines = read_lines(target, rel_path)
+    if lines is None:
         return None
     stop = min(end or start, start + _MAX_SNIPPET_LINES - 1)
     chunk = lines[start - 1 : stop]

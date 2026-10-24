@@ -119,26 +119,42 @@ class RouteSource:
 
     def collect(self, ctx: SourceContext) -> list[Route]:
         for path in ctx.files(*_LANGS):
-            data = path.read_bytes()
-            if b"\0" in data[:1024]:
-                continue
-            rel = ctx.rel(path)
             try:
-                tree = _parser(path.suffix.lower()).parse(data)
-            except Exception:  # grammar errors are recoverable by design; this is a safety net
-                ctx.skipped.append(f"{rel}: could not parse")
-                continue
-            suffix = path.suffix.lower()
-            root = tree.root_node
-            if suffix == ".py":
-                self.routes += _python(root, rel)
-            elif suffix == ".java":
-                self.routes += _java(root, rel)
-            elif suffix == ".go":
-                self.routes += _go(root, rel)
-            else:
-                self.routes += _javascript(root, rel, path)
+                self.routes += routes_in_file(path, ctx.rel(path))
+            except ValueError:
+                ctx.skipped.append(f"{ctx.rel(path)}: could not parse")
         return self.routes
+
+
+def parse_tree(path: Path) -> ts.Tree | None:
+    """Parse a supported source file. None for other languages or binary files; raises
+    ValueError if the grammar fails."""
+    suffix = path.suffix.lower()
+    if suffix not in _LANGS:
+        return None
+    data = path.read_bytes()
+    if b"\0" in data[:1024]:
+        return None
+    try:
+        return _parser(suffix).parse(data)
+    except Exception as exc:  # grammar errors are recoverable by design; this is a safety net
+        raise ValueError(str(exc)) from exc
+
+
+def routes_in_file(path: Path, rel: str) -> list[Route]:
+    """Routes declared in one source file. Raises ValueError if the file can't be parsed."""
+    tree = parse_tree(path)
+    if tree is None:
+        return []
+    suffix = path.suffix.lower()
+    root = tree.root_node
+    if suffix == ".py":
+        return _python(root, rel)
+    if suffix == ".java":
+        return _java(root, rel)
+    if suffix == ".go":
+        return _go(root, rel)
+    return _javascript(root, rel, path)
 
 
 # ------------------------------------------------------------------ Python

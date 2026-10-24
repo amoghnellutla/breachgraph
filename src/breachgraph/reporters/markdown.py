@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from breachgraph.models import Finding, Priority, ScanResult, Status, ToolStatus
 
 MARKER = "<!-- breachgraph-report -->"
@@ -25,6 +28,41 @@ def _cell(text: str, limit: int = 120) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+_MD_SPECIAL = re.compile(r"([\\`*_{}\[\]()<>#+!|~])")
+
+
+def _plain(text: str, limit: int) -> str:
+    """Model-written prose as inert text: no links, images, HTML or formatting get through
+    (repository content can steer a model via prompt injection)."""
+    text = " ".join(text.split())
+    if len(text) > limit:
+        text = text[: limit - 1] + "…"
+    return defang(_MD_SPECIAL.sub(r"\\\1", text))
+
+
+_FENCE_LANG = {
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".java": "java",
+    ".go": "go",
+    ".tf": "hcl",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".json": "json",
+}
+
+
+def _fenced(code: str, path: str = "", limit: int = 1500) -> list[str]:
+    """A code block the code itself cannot close: the fence is longer than any backtick run in it."""
+    code = code if len(code) <= limit else code[:limit] + "\n…"
+    longest = max((len(run) for run in re.findall(r"`+", code)), default=0)
+    fence = "`" * max(3, longest + 1)
+    name = path.rsplit("/", 1)[-1]
+    lang = "dockerfile" if name.lower().startswith("dockerfile") else _FENCE_LANG.get(Path(name).suffix, "")
+    return [fence + lang, code, fence]
+
+
 def _where(f: Finding, link_base: str | None) -> str:
     loc = f.location
     label = loc.path + (f":{loc.start_line}" if loc.start_line else "")
@@ -45,10 +83,10 @@ def _table(findings: list[Finding], link_base: str | None, limit: int) -> list[s
         if f.enrichment.epss is not None and f.enrichment.epss >= 0.1:
             tags.append(f"EPSS {f.enrichment.epss:.0%}")
         if f.ai:
-            tags.append("🤖 " + _AI_VERDICT.get(f.ai.verdict.value, f.ai.verdict.value))
+            tags.append("🤖 " + f.ai.verdict.label)
         title = _cell(f.title) + (" " + " ".join(tags) if tags else "")
         if f.ai and f.ai.summary:
-            title += "<br>_" + _cell(f.ai.summary, 160) + "_"
+            title += "<br>_" + _plain(f.ai.summary, 200) + "_"
         rows.append(
             f"| {_PRIO_ICON[f.priority]} {f.priority.value} | {title} | {_where(f, link_base)} "
             f"| {f.severity.value} | {', '.join(f.sources)} |"
@@ -58,11 +96,6 @@ def _table(findings: list[Finding], link_base: str | None, limit: int) -> list[s
     return rows
 
 
-_AI_VERDICT = {
-    "true_positive": "real",
-    "likely_false_positive": "likely false positive",
-    "needs_review": "needs review",
-}
 _WEAPON_ICON = {
     "code_execution": "💥",
     "ssrf": "🔁",
@@ -85,10 +118,6 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
             return ["> 🟢 **No attack path** found from the internet to a crown-jewel asset.", ""]
         return []
     out = [f"### 🎯 Attack paths ({len(ag.paths)})", ""]
-    if ag.ai_narrative:
-        out += ["> 🤖 **AI summary**", ""]
-        out += ["> " + line for line in defang(ag.ai_narrative).splitlines()]
-        out.append("")
     out.append(
         "An attacker on the internet can reach a high-value asset by chaining these steps. "
         "Each ⚠️ step needs a real vulnerability; fix any one to break the path."
@@ -121,6 +150,33 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         out.append(f"<details><summary>Attack-graph blind spots ({len(ag.skipped)})</summary>\n")
         out += [f"- {_cell(s, 200)}" for s in ag.skipped[:20]]
         out += ["", "</details>", ""]
+    return out
+
+
+def _ai_md(findings: list[Finding], link_base: str | None, limit: int = 10) -> list[str]:
+    triaged = [(f, f.ai) for f in findings if f.ai][:limit]
+    if not triaged:
+        return []
+    out = [f"<details><summary>🤖 AI triage: verdicts and fixes ({len(triaged)})</summary>", ""]
+    for f, ai in triaged:
+        out += [
+            f"**{_cell(f.title, 100)}** · {_where(f, link_base)} · "
+            f"**{ai.verdict.label}** ({ai.confidence.value} confidence)",
+            "",
+            _plain(ai.reasoning, 900),
+            "",
+        ]
+        if ai.remediation:
+            out += [f"**Fix:** {_plain(ai.remediation, 500)}", ""]
+        if ai.fix_code:
+            out += [*_fenced(ai.fix_code, f.location.path), ""]
+    out += [
+        f"_AI-assisted ({_cell(triaged[0][1].model, 40)}). Advisory only: it does not affect the "
+        "gate. Check a fix before applying it._",
+        "",
+        "</details>",
+        "",
+    ]
     return out
 
 
@@ -170,6 +226,7 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
             "</details>",
             "",
         ]
+    out += _ai_md([*gating, *others], link_base)
     if result.warnings:
         out += ["<details><summary>Warnings</summary>", ""]
         out += [f"- {_cell(w, 300)}" for w in result.warnings]

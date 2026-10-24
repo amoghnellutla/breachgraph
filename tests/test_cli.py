@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from breachgraph.cli import app
@@ -158,3 +159,30 @@ def test_graph_command_with_findings(tmp_path: Path) -> None:
     assert res.exit_code == 1  # gating attack path found
     assert out.is_file()
     assert "customer-data" in out.read_text(encoding="utf-8")
+
+
+def test_console_output_escapes_untrusted_text(capsys: pytest.CaptureFixture[str]) -> None:
+    from breachgraph.cli import _print_summary
+    from breachgraph.models import (
+        AIInsight,
+        AIVerdict,
+        Category,
+        Finding,
+        Location,
+        ScanResult,
+        Severity,
+    )
+
+    f = Finding(
+        tool="semgrep",
+        rule_id="r",
+        title="Route [/admin] [bold]x",
+        severity=Severity.HIGH,
+        category=Category.SAST,
+        location=Location(path="a[/b].py", start_line=1),
+        ai=AIInsight(verdict=AIVerdict.NEEDS_REVIEW, summary="s", reasoning="r", remediation="f"),
+    )
+    result = ScanResult(breachgraph_version="t", target=".", findings=[f], warnings=["model said [/x]"])
+    _print_summary(result)  # Rich would raise MarkupError on "[/admin]" if it were not escaped
+    out = capsys.readouterr().err
+    assert "[/admin]" in out and "needs review" in out and "[/x]" in out

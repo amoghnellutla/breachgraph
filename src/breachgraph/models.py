@@ -145,6 +145,12 @@ class AIVerdict(StrEnum):
     LIKELY_FALSE_POSITIVE = "likely_false_positive"
     NEEDS_REVIEW = "needs_review"
 
+    @property
+    def label(self) -> str:
+        return {"true_positive": "real", "likely_false_positive": "likely false positive"}.get(
+            self.value, "needs review"
+        )
+
 
 class AIInsight(BaseModel):
     """AI-assisted triage for one finding. Advisory only — never changes the gate on its own."""
@@ -153,8 +159,9 @@ class AIInsight(BaseModel):
     confidence: Confidence = Confidence.MEDIUM
     summary: str  # one-line plain-English explanation
     reasoning: str  # why, grounded in the code/config evidence
-    remediation: str  # concrete fix guidance
-    model: str = ""
+    remediation: str  # concrete fix guidance, prose
+    fix_code: str = ""  # corrected code for the flagged lines, if a code change applies
+    model: str = ""  # the model that actually answered (may differ after a refusal fallback)
 
 
 class Finding(BaseModel):
@@ -255,7 +262,6 @@ class AttackGraphSummary(BaseModel):
     choke_points: list[ChokePointView] = Field(default_factory=list)
     skipped: list[str] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
-    ai_narrative: str | None = None  # AI-written explanation of the attack paths and fix plan
 
     @property
     def gating_paths(self) -> list[AttackPathView]:

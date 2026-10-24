@@ -1,4 +1,5 @@
 import json
+import re
 import xml.etree.ElementTree as ET
 from datetime import date
 
@@ -184,17 +185,42 @@ def test_ai_insights_render() -> None:
     from breachgraph.models import AIInsight, AIVerdict
 
     result = _result_with_paths()
-    result.attack_graph.ai_narrative = "An attacker can reach the customer-data bucket."
-    result.findings[0].ai = AIInsight(
-        verdict=AIVerdict.TRUE_POSITIVE,
+    f = result.findings[0]
+    f.gating = True
+    f.ai = AIInsight(
+        verdict=AIVerdict.LIKELY_FALSE_POSITIVE,
         summary="Real SSRF.",
         reasoning="User URL flows to requests.get.",
         remediation="Add an allowlist.",
+        fix_code="if host not in ALLOWED:\n    abort(400)",
         model="claude-opus-5-5",
     )
     md = markdown.render(result)
-    assert "AI summary" in md and "customer-data" in md
-    assert "🤖" in md
+    assert "🤖 likely false positive" in md
+    assert "AI triage: verdicts and fixes (1)" in md
+    assert "**Fix:** Add an allowlist." in md and "abort(400)" in md
     page = html.render(result)
-    assert "AI triage" in page and "Add an allowlist" in page
-    assert "Advisory only" in page
+    assert "AI triage: likely false positive" in page and "Add an allowlist" in page
+    assert "abort(400)" in page and "Advisory only" in page
+
+
+def test_ai_text_cannot_inject_markdown() -> None:
+    from breachgraph.models import AIInsight, AIVerdict
+
+    result = _result_with_paths()
+    f = result.findings[0]
+    f.gating = True
+    f.ai = AIInsight(
+        verdict=AIVerdict.TRUE_POSITIVE,
+        summary="See ![x](https://evil.example/p.png) <img src=x> @org/team",
+        reasoning="[click here](https://evil.example) <script>alert(1)</script>",
+        remediation="**ok**",
+        fix_code="print('```')\n```\n[link](https://evil.example)",
+        model="m",
+    )
+    md = markdown.render(result)
+    outside_code = md.split("````")[0]
+    assert "![x](" not in outside_code and "](https://evil.example)" not in outside_code
+    assert not re.search(r"(?<!\\)<(img|script)", md)  # tags are escaped, so they render as text
+    assert "@​org" in md  # no mentions
+    assert re.search(r"````\w*\nprint\('```'\)", md)  # fence is longer than any backtick run in the code
