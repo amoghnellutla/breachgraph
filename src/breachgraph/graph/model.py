@@ -61,6 +61,12 @@ class Confidence(StrEnum):
     LOW = "low"
 
 
+# Weaknesses that let an attacker run code as (i.e. fully control) a workload.
+CONTROL = [WeaknessClass.CODE_EXECUTION, WeaknessClass.VULNERABLE_DEPENDENCY]
+# Weaknesses that let an attacker read a mounted secret file.
+READ_FILES = [*CONTROL, WeaknessClass.FILE_READ]
+
+
 class Evidence(BaseModel):
     path: str
     line: int | None = None

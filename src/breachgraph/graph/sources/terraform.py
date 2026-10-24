@@ -16,6 +16,7 @@ from typing import Any
 import hcl2
 
 from breachgraph.graph.model import (
+    CONTROL,
     INTERNET_ID,
     Confidence,
     Edge,
@@ -601,7 +602,9 @@ class TerraformSource:
                                 src=node.id,
                                 dst=role.node_id,
                                 kind=EdgeKind.USES_IDENTITY,
+                                requires=CONTROL,
                                 evidence=[r.ev],
+                                note="using the instance role requires running code on the instance",
                             )
                         )
             elif r.rtype == "aws_eks_node_group":
@@ -658,7 +661,9 @@ class TerraformSource:
                             src=node.id,
                             dst=role.node_id,
                             kind=EdgeKind.USES_IDENTITY,
+                            requires=CONTROL,
                             evidence=[r.ev],
+                            note="using the task role requires running code in the task",
                         )
                     )
             elif r.rtype == "aws_lambda_function":
@@ -683,8 +688,9 @@ class TerraformSource:
                             src=r.node_id,
                             dst=role.node_id,
                             kind=EdgeKind.USES_IDENTITY,
+                            requires=CONTROL,
                             evidence=[r.ev],
-                            note="credentials are in the function's environment",
+                            note="using the function role requires code execution in the function",
                         )
                     )
         for r in st.res.values():  # ECS services point at task definitions

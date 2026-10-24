@@ -138,6 +138,24 @@ class SeverityOverride(_Strict):
     severity: Severity
 
 
+class CrownJewel(_Strict):
+    """Mark an asset as high value so attack paths that reach it are prioritized."""
+
+    match: str  # substring/glob matched against the node name and id (e.g. "customer", "*prod*")
+    value: int = Field(default=9, ge=0, le=10)
+    kind: str | None = None  # restrict to one node kind: datastore, secret, identity...
+
+
+class AttackGraph(_Strict):
+    enabled: bool = True
+    crown_value: int = Field(default=7, ge=1, le=10)  # a node at/above this value is a crown jewel
+    crown_jewels: list[CrownJewel] = Field(default_factory=list)
+    max_depth: int = 12
+    max_paths: int = 40
+    fail_on_new_path: bool = True  # a PR that introduces an internet->crown-jewel path fails
+    min_confidence: Literal["high", "medium", "low"] = "medium"  # paths below this don't gate
+
+
 class Config(_Strict):
     version: Literal[1] = 1
     scanners: Scanners = Field(default_factory=Scanners)
@@ -148,6 +166,7 @@ class Config(_Strict):
     require_suppression_expiry: bool = True
     severity_overrides: list[SeverityOverride] = Field(default_factory=list)
     enrich: Enrich = Field(default_factory=Enrich)
+    attack_graph: AttackGraph = Field(default_factory=AttackGraph)
     timeout: int = 900
 
     @model_validator(mode="after")

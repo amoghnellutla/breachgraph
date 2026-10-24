@@ -14,7 +14,9 @@ from typing import Any
 import yaml
 
 from breachgraph.graph.model import (
+    CONTROL,
     INTERNET_ID,
+    READ_FILES,
     Confidence,
     Edge,
     EdgeKind,
@@ -454,7 +456,9 @@ class KubernetesSource:
             graph.add_node(
                 Node(id=sid, kind=NodeKind.SECRET, name=f"Secret {ns}/{s}", value=6, evidence=[ev])
             )
-            graph.add_edge(Edge(src=node.id, dst=sid, kind=EdgeKind.MOUNTS, evidence=[ev]))
+            graph.add_edge(
+                Edge(src=node.id, dst=sid, kind=EdgeKind.MOUNTS, requires=READ_FILES, evidence=[ev])
+            )
 
         # --- identity: service account token, and the cloud role it maps to (IRSA)
         sa = str(spec.get("serviceAccountName") or spec.get("serviceAccount") or "default")
@@ -474,7 +478,16 @@ class KubernetesSource:
                     evidence=[sa_ev],
                 )
             )
-            graph.add_edge(Edge(src=node.id, dst=said, kind=EdgeKind.USES_IDENTITY, evidence=[ev]))
+            graph.add_edge(
+                Edge(
+                    src=node.id,
+                    dst=said,
+                    kind=EdgeKind.USES_IDENTITY,
+                    requires=CONTROL,
+                    evidence=[ev],
+                    note="using the pod's token/role requires running code in the pod",
+                )
+            )
             if role_arn:
                 m = ROLE_ARN_RE.search(str(role_arn))
                 role_name = m.group(1) if m else str(role_arn)
