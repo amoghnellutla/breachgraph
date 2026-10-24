@@ -1,0 +1,31 @@
+# secgate for GitLab CI. Include it from your .gitlab-ci.yml:
+#
+#   include:
+#     - remote: https://raw.githubusercontent.com/OWNER/secgate/v0/templates/gitlab-ci.yml
+#
+# Gating findings show up as failed tests in the merge request (JUnit), and the full HTML
+# report is kept as a job artifact.
+
+secgate:
+  stage: test
+  image:
+    name: ghcr.io/OWNER/secgate:v0
+    entrypoint: [""]
+  variables:
+    SECGATE_ARGS: ""
+    SECGATE_CACHE_DIR: "$CI_PROJECT_DIR/.secgate-cache"
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.secgate-cache/trivy"
+  cache:
+    key: secgate
+    paths: [.secgate-cache/]
+  script:
+    - secgate scan . --output-dir secgate-report --format json,sarif,html,md,junit $SECGATE_ARGS
+  artifacts:
+    when: always
+    paths: [secgate-report/]
+    reports:
+      junit: secgate-report/secgate-junit.xml
+    expire_in: 30 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

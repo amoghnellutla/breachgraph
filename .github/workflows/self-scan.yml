@@ -1,0 +1,37 @@
+# secgate scans its own repository with the image built from this commit (dogfooding).
+name: self-scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # weekly: new CVEs appear without code changes
+
+permissions:
+  contents: read
+
+jobs:
+  secgate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: secgate:self
+          cache-from: type=gha
+      - uses: ./
+        with:
+          image: secgate:self
+          comment: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+          issues: ${{ github.event_name != 'pull_request' && 'P1' || '' }}

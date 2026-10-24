@@ -1,0 +1,37 @@
+# Live demo: scans the intentionally vulnerable app so anyone can see secgate's output
+# (PR comment, job summary, HTML report artifact) without installing anything.
+name: demo
+
+on:
+  pull_request:
+    paths: ["examples/**", "src/**", "action.yml", "Dockerfile"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vulnerable-app:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: secgate:demo
+          cache-from: type=gha
+      - uses: ./
+        with:
+          image: secgate:demo
+          path: examples/vulnerable-app
+          output-dir: demo-report
+          extra-args: --no-fail # show results without failing the demo
+          upload-sarif: false # keep the repo's Security tab for real alerts
+          comment: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}

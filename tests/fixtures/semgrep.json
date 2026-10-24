@@ -1,0 +1,1463 @@
+{
+ "version": "1.179.0",
+ "results": [
+  {
+   "check_id": "dockerfile.security.missing-user.missing-user",
+   "path": "Dockerfile",
+   "start": {
+    "line": 7,
+    "col": 1,
+    "offset": 162
+   },
+   "end": {
+    "line": 7,
+    "col": 25,
+    "offset": 186
+   },
+   "extra": {
+    "message": "By not specifying a USER, a program in the container may run as 'root'. This is a security hazard. If an attacker can control a process running as root, they may have control over the container. Ensure that the last USER in a Dockerfile is a USER other than 'root'.",
+    "fix": "USER non-root\nCMD [\"python\", \"app.py\"]",
+    "metadata": {
+     "cwe": [
+      "CWE-250: Execution with Unnecessary Privileges"
+     ],
+     "category": "security",
+     "technology": [
+      "dockerfile"
+     ],
+     "confidence": "MEDIUM",
+     "owasp": [
+      "A04:2021 - Insecure Design",
+      "A06:2025 - Insecure Design"
+     ],
+     "references": [
+      "https://owasp.org/Top10/A04_2021-Insecure_Design"
+     ],
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Improper Authorization"
+     ],
+     "source": "https://semgrep.dev/r/dockerfile.security.missing-user.missing-user",
+     "shortlink": "https://sg.run/Gbvn"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.audit.hardcoded-config.avoid_hardcoded_config_SECRET_KEY",
+   "path": "app.py",
+   "start": {
+    "line": 12,
+    "col": 1,
+    "offset": 209
+   },
+   "end": {
+    "line": 12,
+    "col": 55,
+    "offset": 263
+   },
+   "extra": {
+    "message": "Hardcoded variable `SECRET_KEY` detected. Use environment variables or config files instead",
+    "metadata": {
+     "likelihood": "LOW",
+     "impact": "LOW",
+     "confidence": "LOW",
+     "category": "security",
+     "cwe": [
+      "CWE-489: Active Debug Code"
+     ],
+     "owasp": [
+      "A05:2021 - Security Misconfiguration",
+      "A02:2025 - Security Misconfiguration"
+     ],
+     "references": [
+      "https://bento.dev/checks/flask/avoid-hardcoded-config/",
+      "https://flask.palletsprojects.com/en/1.1.x/config/?highlight=configuration#builtin-configuration-values",
+      "https://flask.palletsprojects.com/en/1.1.x/config/?highlight=configuration#environment-and-debug-features"
+     ],
+     "subcategory": [
+      "audit"
+     ],
+     "technology": [
+      "flask"
+     ],
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Active Debug Code"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.audit.hardcoded-config.avoid_hardcoded_config_SECRET_KEY",
+     "shortlink": "https://sg.run/Ekde"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query",
+   "path": "app.py",
+   "start": {
+    "line": 21,
+    "col": 5,
+    "offset": 469
+   },
+   "end": {
+    "line": 21,
+    "col": 71,
+    "offset": 535
+   },
+   "extra": {
+    "message": "Avoiding SQL string concatenation: untrusted input concatenated with raw SQL query can result in SQL Injection. In order to execute raw query safely, prepared statement should be used. SQLAlchemy provides TextualSQL to easily used prepared statement with named parameters. For complex SQL composition, use SQL Expression Language or Schema Definition Language. In most cases, SQLAlchemy ORM will be a better option.",
+    "metadata": {
+     "cwe": [
+      "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+     ],
+     "owasp": [
+      "A01:2017 - Injection",
+      "A03:2021 - Injection",
+      "A05:2025 - Injection"
+     ],
+     "references": [
+      "https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-textual-sql",
+      "https://www.tutorialspoint.com/sqlalchemy/sqlalchemy_quick_guide.htm",
+      "https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-more-specific-text-with-table-expression-literal-column-and-expression-column"
+     ],
+     "category": "security",
+     "technology": [
+      "sqlalchemy"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "HIGH",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "SQL Injection"
+     ],
+     "source": "https://semgrep.dev/r/python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query",
+     "shortlink": "https://sg.run/2b1L"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.django.security.injection.tainted-sql-string.tainted-sql-string",
+   "path": "app.py",
+   "start": {
+    "line": 21,
+    "col": 20,
+    "offset": 484
+   },
+   "end": {
+    "line": 21,
+    "col": 70,
+    "offset": 534
+   },
+   "extra": {
+    "message": "Detected user input used to manually construct a SQL string. This is usually bad practice because manual construction could accidentally result in a SQL injection. An attacker could use a SQL injection to steal or modify contents of the database. Instead, use a parameterized query which is available by default in most database engines. Alternatively, consider using the Django object-relational mappers (ORM) instead of raw SQL queries.",
+    "metadata": {
+     "cwe": [
+      "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+     ],
+     "owasp": [
+      "A08:2021 - Software and Data Integrity Failures",
+      "A08:2025 - Software or Data Integrity Failures"
+     ],
+     "references": [
+      "https://docs.djangoproject.com/en/3.0/topics/security/#sql-injection-protection"
+     ],
+     "category": "security",
+     "technology": [
+      "django"
+     ],
+     "subcategory": [
+      "audit"
+     ],
+     "impact": "LOW",
+     "likelihood": "MEDIUM",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Mass Assignment"
+     ],
+     "source": "https://semgrep.dev/r/python.django.security.injection.tainted-sql-string.tainted-sql-string",
+     "shortlink": "https://sg.run/PbZp"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+   "path": "app.py",
+   "start": {
+    "line": 21,
+    "col": 20,
+    "offset": 484
+   },
+   "end": {
+    "line": 21,
+    "col": 70,
+    "offset": 534
+   },
+   "extra": {
+    "message": "Detected user input used to manually construct a SQL string. This is usually bad practice because manual construction could accidentally result in a SQL injection. An attacker could use a SQL injection to steal or modify contents of the database. Instead, use a parameterized query which is available by default in most database engines. Alternatively, consider using an object-relational mapper (ORM) such as SQLAlchemy which will protect your queries.",
+    "metadata": {
+     "cwe": [
+      "CWE-704: Incorrect Type Conversion or Cast"
+     ],
+     "owasp": [
+      "A01:2017 - Injection",
+      "A03:2021 - Injection",
+      "A05:2025 - Injection"
+     ],
+     "references": [
+      "https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-textual-sql",
+      "https://www.tutorialspoint.com/sqlalchemy/sqlalchemy_quick_guide.htm",
+      "https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-more-specific-text-with-table-expression-literal-column-and-expression-column"
+     ],
+     "category": "security",
+     "technology": [
+      "sqlalchemy",
+      "flask"
+     ],
+     "subcategory": [
+      "vuln"
+     ],
+     "impact": "MEDIUM",
+     "likelihood": "MEDIUM",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Improper Validation"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+     "shortlink": "https://sg.run/JxZj"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.injection.subprocess-injection.subprocess-injection",
+   "path": "app.py",
+   "start": {
+    "line": 29,
+    "col": 14,
+    "offset": 708
+   },
+   "end": {
+    "line": 29,
+    "col": 70,
+    "offset": 764
+   },
+   "extra": {
+    "message": "Detected user input entering a `subprocess` call unsafely. This could result in a command injection vulnerability. An attacker could use this vulnerability to execute arbitrary commands on the host, which allows them to download malware, scan sensitive data, or run any command they wish on the server. Do not let users choose the command to run. In general, prefer to use Python API versions of system commands. If you must use subprocess, use a dictionary to allowlist a set of commands.",
+    "metadata": {
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "owasp": [
+      "A01:2017 - Injection",
+      "A03:2021 - Injection",
+      "A05:2025 - Injection"
+     ],
+     "cwe": [
+      "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+     ],
+     "references": [
+      "https://semgrep.dev/docs/cheat-sheets/python-command-injection/"
+     ],
+     "confidence": "HIGH",
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "HIGH",
+     "impact": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Command Injection"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.injection.subprocess-injection.subprocess-injection",
+     "shortlink": "https://sg.run/5gW3"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.lang.security.dangerous-subprocess-use.dangerous-subprocess-use",
+   "path": "app.py",
+   "start": {
+    "line": 29,
+    "col": 38,
+    "offset": 732
+   },
+   "end": {
+    "line": 29,
+    "col": 57,
+    "offset": 751
+   },
+   "extra": {
+    "message": "Detected subprocess function 'check_output' with user controlled data. A malicious actor could leverage this to perform command injection. You may consider using 'shlex.escape()'.",
+    "metadata": {
+     "owasp": [
+      "A01:2017 - Injection",
+      "A03:2021 - Injection",
+      "A05:2025 - Injection"
+     ],
+     "cwe": [
+      "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+     ],
+     "asvs": {
+      "control_id": "5.3.8 OS Command Injection",
+      "control_url": "https://github.com/OWASP/ASVS/blob/master/4.0/en/0x13-V5-Validation-Sanitization-Encoding.md#v53-output-encoding-and-injection-prevention-requirements",
+      "section": "V5: Validation, Sanitization and Encoding Verification Requirements",
+      "version": "4"
+     },
+     "references": [
+      "https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess",
+      "https://docs.python.org/3/library/subprocess.html",
+      "https://docs.python.org/3/library/shlex.html",
+      "https://semgrep.dev/docs/cheat-sheets/python-command-injection/"
+     ],
+     "category": "security",
+     "technology": [
+      "python"
+     ],
+     "confidence": "MEDIUM",
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "HIGH",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Command Injection"
+     ],
+     "source": "https://semgrep.dev/r/python.lang.security.dangerous-subprocess-use.dangerous-subprocess-use",
+     "shortlink": "https://sg.run/NWxp"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+   "path": "app.py",
+   "start": {
+    "line": 29,
+    "col": 65,
+    "offset": 759
+   },
+   "end": {
+    "line": 29,
+    "col": 69,
+    "offset": 763
+   },
+   "extra": {
+    "message": "Found 'subprocess' function 'check_output' with 'shell=True'. This is dangerous because this call will spawn the command using a shell process. Doing so propagates current shell settings and variables, which makes it much easier for a malicious actor to execute commands. Use 'shell=False' instead.",
+    "fix": "False",
+    "metadata": {
+     "source-rule-url": "https://bandit.readthedocs.io/en/latest/plugins/b602_subprocess_popen_with_shell_equals_true.html",
+     "owasp": [
+      "A01:2017 - Injection",
+      "A03:2021 - Injection",
+      "A05:2025 - Injection"
+     ],
+     "cwe": [
+      "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+     ],
+     "references": [
+      "https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess",
+      "https://docs.python.org/3/library/subprocess.html"
+     ],
+     "category": "security",
+     "technology": [
+      "python"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "secure default"
+     ],
+     "likelihood": "HIGH",
+     "impact": "LOW",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Command Injection"
+     ],
+     "source": "https://semgrep.dev/r/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+     "shortlink": "https://sg.run/J92w"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests",
+   "path": "app.py",
+   "start": {
+    "line": 36,
+    "col": 5,
+    "offset": 878
+   },
+   "end": {
+    "line": 37,
+    "col": 45,
+    "offset": 952
+   },
+   "extra": {
+    "message": "Data from request object is passed to a new server-side request. This could lead to a server-side request forgery (SSRF). To mitigate, ensure that schemes and hosts are validated against an allowlist, do not forward the response to the user, and ensure proper authentication and transport-layer security in the proxied request. See https://owasp.org/www-community/attacks/Server_Side_Request_Forgery to learn more about SSRF vulnerabilities.",
+    "metadata": {
+     "cwe": [
+      "CWE-918: Server-Side Request Forgery (SSRF)"
+     ],
+     "owasp": [
+      "A10:2021 - Server-Side Request Forgery (SSRF)",
+      "A01:2025 - Broken Access Control"
+     ],
+     "references": [
+      "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
+     ],
+     "category": "security",
+     "technology": [
+      "django"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "HIGH",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Server-Side Request Forgery (SSRF)"
+     ],
+     "source": "https://semgrep.dev/r/python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests",
+     "shortlink": "https://sg.run/YvY4"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.injection.ssrf-requests.ssrf-requests",
+   "path": "app.py",
+   "start": {
+    "line": 37,
+    "col": 12,
+    "offset": 919
+   },
+   "end": {
+    "line": 37,
+    "col": 40,
+    "offset": 947
+   },
+   "extra": {
+    "message": "Data from request object is passed to a new server-side request. This could lead to a server-side request forgery (SSRF). To mitigate, ensure that schemes and hosts are validated against an allowlist, do not forward the response to the user, and ensure proper authentication and transport-layer security in the proxied request.",
+    "metadata": {
+     "cwe": [
+      "CWE-918: Server-Side Request Forgery (SSRF)"
+     ],
+     "owasp": [
+      "A10:2021 - Server-Side Request Forgery (SSRF)",
+      "A01:2025 - Broken Access Control"
+     ],
+     "references": [
+      "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
+     ],
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "HIGH",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Server-Side Request Forgery (SSRF)"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.injection.ssrf-requests.ssrf-requests",
+     "shortlink": "https://sg.run/J9LW"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.insecure-deserialization.insecure-deserialization",
+   "path": "app.py",
+   "start": {
+    "line": 43,
+    "col": 15,
+    "offset": 1075
+   },
+   "end": {
+    "line": 43,
+    "col": 41,
+    "offset": 1101
+   },
+   "extra": {
+    "message": "Detected the use of an insecure deserialization library in a Flask route. These libraries are prone to code execution vulnerabilities. Ensure user data does not enter this function. To fix this, try to avoid serializing whole objects. Consider instead using a serializer such as JSON.",
+    "metadata": {
+     "owasp": [
+      "A08:2017 - Insecure Deserialization",
+      "A08:2021 - Software and Data Integrity Failures",
+      "A08:2025 - Software or Data Integrity Failures"
+     ],
+     "cwe": [
+      "CWE-502: Deserialization of Untrusted Data"
+     ],
+     "references": [
+      "https://docs.python.org/3/library/pickle.html"
+     ],
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Insecure Deserialization "
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.insecure-deserialization.insecure-deserialization",
+     "shortlink": "https://sg.run/N45z"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.lang.security.deserialization.pickle.avoid-pickle",
+   "path": "app.py",
+   "start": {
+    "line": 43,
+    "col": 15,
+    "offset": 1075
+   },
+   "end": {
+    "line": 43,
+    "col": 41,
+    "offset": 1101
+   },
+   "extra": {
+    "message": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format.",
+    "metadata": {
+     "owasp": [
+      "A08:2017 - Insecure Deserialization",
+      "A08:2021 - Software and Data Integrity Failures",
+      "A08:2025 - Software or Data Integrity Failures"
+     ],
+     "cwe": [
+      "CWE-502: Deserialization of Untrusted Data"
+     ],
+     "references": [
+      "https://docs.python.org/3/library/pickle.html"
+     ],
+     "category": "security",
+     "technology": [
+      "python"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Insecure Deserialization "
+     ],
+     "source": "https://semgrep.dev/r/python.lang.security.deserialization.pickle.avoid-pickle",
+     "shortlink": "https://sg.run/OPwB"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.insecure-deserialization.insecure-deserialization",
+   "path": "app.py",
+   "start": {
+    "line": 50,
+    "col": 16,
+    "offset": 1262
+   },
+   "end": {
+    "line": 50,
+    "col": 59,
+    "offset": 1305
+   },
+   "extra": {
+    "message": "Detected the use of an insecure deserialization library in a Flask route. These libraries are prone to code execution vulnerabilities. Ensure user data does not enter this function. To fix this, try to avoid serializing whole objects. Consider instead using a serializer such as JSON.",
+    "metadata": {
+     "owasp": [
+      "A08:2017 - Insecure Deserialization",
+      "A08:2021 - Software and Data Integrity Failures",
+      "A08:2025 - Software or Data Integrity Failures"
+     ],
+     "cwe": [
+      "CWE-502: Deserialization of Untrusted Data"
+     ],
+     "references": [
+      "https://docs.python.org/3/library/pickle.html"
+     ],
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Insecure Deserialization "
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.insecure-deserialization.insecure-deserialization",
+     "shortlink": "https://sg.run/N45z"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load",
+   "path": "app.py",
+   "start": {
+    "line": 50,
+    "col": 16,
+    "offset": 1262
+   },
+   "end": {
+    "line": 50,
+    "col": 59,
+    "offset": 1305
+   },
+   "extra": {
+    "message": "Detected a possible YAML deserialization vulnerability. `yaml.unsafe_load`, `yaml.Loader`, `yaml.CLoader`, and `yaml.UnsafeLoader` are all known to be unsafe methods of deserializing YAML. An attacker with control over the YAML input could create special YAML input that allows the attacker to run arbitrary Python code. This would allow the attacker to steal files, download and install malware, or otherwise take over the machine. Use `yaml.safe_load` or `yaml.SafeLoader` instead.",
+    "fix": "yaml.load(request.data, Loader=yaml.Loader)",
+    "metadata": {
+     "owasp": [
+      "A08:2017 - Insecure Deserialization",
+      "A08:2021 - Software and Data Integrity Failures",
+      "A08:2025 - Software or Data Integrity Failures"
+     ],
+     "cwe": [
+      "CWE-502: Deserialization of Untrusted Data"
+     ],
+     "references": [
+      "https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation",
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-18342"
+     ],
+     "category": "security",
+     "technology": [
+      "pyyaml"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Insecure Deserialization "
+     ],
+     "source": "https://semgrep.dev/r/python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load",
+     "shortlink": "https://sg.run/we9Y"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.injection.path-traversal-open.path-traversal-open",
+   "path": "app.py",
+   "start": {
+    "line": 57,
+    "col": 10,
+    "offset": 1412
+   },
+   "end": {
+    "line": 57,
+    "col": 47,
+    "offset": 1449
+   },
+   "extra": {
+    "message": "Found request data in a call to 'open'. Ensure the request data is validated or sanitized, otherwise it could result in path traversal attacks.",
+    "metadata": {
+     "cwe": [
+      "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+     ],
+     "owasp": [
+      "A05:2017 - Broken Access Control",
+      "A01:2021 - Broken Access Control",
+      "A01:2025 - Broken Access Control"
+     ],
+     "references": [
+      "https://owasp.org/www-community/attacks/Path_Traversal"
+     ],
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "HIGH",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Path Traversal"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.injection.path-traversal-open.path-traversal-open",
+     "shortlink": "https://sg.run/PJRW"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host",
+   "path": "app.py",
+   "start": {
+    "line": 62,
+    "col": 5,
+    "offset": 1515
+   },
+   "end": {
+    "line": 62,
+    "col": 51,
+    "offset": 1561
+   },
+   "extra": {
+    "message": "Running flask app with host 0.0.0.0 could expose the server publicly.",
+    "metadata": {
+     "cwe": [
+      "CWE-668: Exposure of Resource to Wrong Sphere"
+     ],
+     "owasp": [
+      "A01:2021 - Broken Access Control",
+      "A01:2025 - Broken Access Control"
+     ],
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "references": [
+      "https://owasp.org/Top10/A01_2021-Broken_Access_Control"
+     ],
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "HIGH",
+     "impact": "MEDIUM",
+     "confidence": "HIGH",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Other"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host",
+     "shortlink": "https://sg.run/eLby"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "python.flask.security.audit.debug-enabled.debug-enabled",
+   "path": "app.py",
+   "start": {
+    "line": 62,
+    "col": 5,
+    "offset": 1515
+   },
+   "end": {
+    "line": 62,
+    "col": 51,
+    "offset": 1561
+   },
+   "extra": {
+    "message": "Detected Flask app with debug=True. Do not deploy to production with this flag enabled as it will leak sensitive information. Instead, consider using Flask configuration variables or setting 'debug' using system environment variables.",
+    "metadata": {
+     "cwe": [
+      "CWE-489: Active Debug Code"
+     ],
+     "owasp": "A06:2017 - Security Misconfiguration",
+     "references": [
+      "https://labs.detectify.com/2015/10/02/how-patreon-got-hacked-publicly-exposed-werkzeug-debugger/"
+     ],
+     "category": "security",
+     "technology": [
+      "flask"
+     ],
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "HIGH",
+     "impact": "MEDIUM",
+     "confidence": "HIGH",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Active Debug Code"
+     ],
+     "source": "https://semgrep.dev/r/python.flask.security.audit.debug-enabled.debug-enabled",
+     "shortlink": "https://sg.run/dKrd"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "terraform.aws.security.aws-db-instance-no-logging.aws-db-instance-no-logging",
+   "path": "infra/main.tf",
+   "start": {
+    "line": 38,
+    "col": 1,
+    "offset": 793
+   },
+   "end": {
+    "line": 48,
+    "col": 2,
+    "offset": 1126
+   },
+   "extra": {
+    "message": "Database instance has no logging. Missing logs can cause missing important event information.",
+    "metadata": {
+     "owasp": [
+      "A03:2017 - Sensitive Data Exposure",
+      "A04:2021 - Insecure Design",
+      "A06:2025 - Insecure Design"
+     ],
+     "cwe": [
+      "CWE-311: Missing Encryption of Sensitive Data"
+     ],
+     "technology": [
+      "aws",
+      "terraform"
+     ],
+     "category": "security",
+     "references": [
+      "https://owasp.org/Top10/A04_2021-Insecure_Design"
+     ],
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "LOW",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Cryptographic Issues"
+     ],
+     "source": "https://semgrep.dev/r/terraform.aws.security.aws-db-instance-no-logging.aws-db-instance-no-logging",
+     "shortlink": "https://sg.run/GyAp"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "terraform.lang.security.rds-insecure-password-storage-in-source-code.rds-insecure-password-storage-in-source-code",
+   "path": "infra/main.tf",
+   "start": {
+    "line": 44,
+    "col": 3,
+    "offset": 997
+   },
+   "end": {
+    "line": 44,
+    "col": 42,
+    "offset": 1036
+   },
+   "extra": {
+    "message": "RDS instance or cluster with hardcoded credentials in source code. It is recommended to pass the credentials at runtime, or generate random credentials using the random_password resource.",
+    "metadata": {
+     "references": [
+      "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#master_password",
+      "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster#master_password",
+      "https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password"
+     ],
+     "cwe": [
+      "CWE-522: Insufficiently Protected Credentials"
+     ],
+     "category": "security",
+     "technology": [
+      "terraform",
+      "aws",
+      "secrets"
+     ],
+     "owasp": [
+      "A02:2017 - Broken Authentication",
+      "A04:2021 - Insecure Design",
+      "A06:2025 - Insecure Design"
+     ],
+     "cwe2021-top25": true,
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "MEDIUM",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Cryptographic Issues"
+     ],
+     "source": "https://semgrep.dev/r/terraform.lang.security.rds-insecure-password-storage-in-source-code.rds-insecure-password-storage-in-source-code",
+     "shortlink": "https://sg.run/x4qA"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "terraform.lang.security.rds-public-access.rds-public-access",
+   "path": "infra/main.tf",
+   "start": {
+    "line": 46,
+    "col": 3,
+    "offset": 1069
+   },
+   "end": {
+    "line": 46,
+    "col": 29,
+    "offset": 1095
+   },
+   "extra": {
+    "message": "RDS instance accessible from the Internet detected.",
+    "metadata": {
+     "references": [
+      "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#publicly_accessible",
+      "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.WorkingWithRDSInstanceinaVPC.html#USER_VPC.Hiding"
+     ],
+     "cwe": [
+      "CWE-1220: Insufficient Granularity of Access Control"
+     ],
+     "category": "security",
+     "technology": [
+      "terraform",
+      "aws"
+     ],
+     "owasp": [
+      "A05:2017 - Broken Access Control",
+      "A01:2021 - Broken Access Control",
+      "A01:2025 - Broken Access Control"
+     ],
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "LOW",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Other"
+     ],
+     "source": "https://semgrep.dev/r/terraform.lang.security.rds-public-access.rds-public-access",
+     "shortlink": "https://sg.run/Oye2"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "yaml.kubernetes.security.run-as-non-root.run-as-non-root",
+   "path": "k8s/deployment.yaml",
+   "start": {
+    "line": 15,
+    "col": 5,
+    "offset": 281
+   },
+   "end": {
+    "line": 15,
+    "col": 9,
+    "offset": 285
+   },
+   "extra": {
+    "message": "When running containers in Kubernetes, it's important to ensure that they  are properly secured to prevent privilege escalation attacks.  One potential vulnerability is when a container is allowed to run  applications as the root user, which could allow an attacker to gain  access to sensitive resources. To mitigate this risk, it's recommended to  add a `securityContext` to the container, with the parameter `runAsNonRoot`  set to `true`. This will ensure that the container runs as a non-root user,  limiting the damage that could be caused by any potential attacks. By  adding a `securityContext` to the container in your Kubernetes pod, you can  help to ensure that your containerized applications are more secure and  less vulnerable to privilege escalation attacks.",
+    "fix": "spec:\n      securityContext:\n        runAsNonRoot: true #",
+    "metadata": {
+     "references": [
+      "https://kubernetes.io/blog/2016/08/security-best-practices-kubernetes-deployment/",
+      "https://kubernetes.io/docs/concepts/policy/pod-security-policy/",
+      "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-2-set-a-user"
+     ],
+     "category": "security",
+     "cwe": [
+      "CWE-250: Execution with Unnecessary Privileges"
+     ],
+     "owasp": [
+      "A05:2021 - Security Misconfiguration",
+      "A06:2017 - Security Misconfiguration",
+      "A02:2025 - Security Misconfiguration"
+     ],
+     "technology": [
+      "kubernetes"
+     ],
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "LOW",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Improper Authorization"
+     ],
+     "source": "https://semgrep.dev/r/yaml.kubernetes.security.run-as-non-root.run-as-non-root",
+     "shortlink": "https://sg.run/dgP5"
+    },
+    "severity": "INFO",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod",
+   "path": "k8s/deployment.yaml",
+   "start": {
+    "line": 16,
+    "col": 7,
+    "offset": 293
+   },
+   "end": {
+    "line": 16,
+    "col": 24,
+    "offset": 310
+   },
+   "extra": {
+    "message": "Pod may use the node network namespace. This gives the pod access to the loopback device, services listening on localhost, and could be used to snoop on network activity of other pods on the same node. Remove the 'hostNetwork' key to disable this functionality.",
+    "metadata": {
+     "cwe": [
+      "CWE-406: Insufficient Control of Network Message Volume (Network Amplification)"
+     ],
+     "references": [
+      "https://kubernetes.io/docs/concepts/policy/pod-security-policy/#host-namespaces"
+     ],
+     "category": "security",
+     "technology": [
+      "kubernetes"
+     ],
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "confidence": "LOW",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Other"
+     ],
+     "source": "https://semgrep.dev/r/yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod",
+     "shortlink": "https://sg.run/E51A"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "yaml.kubernetes.security.privileged-container.privileged-container",
+   "path": "k8s/deployment.yaml",
+   "start": {
+    "line": 23,
+    "col": 13,
+    "offset": 478
+   },
+   "end": {
+    "line": 23,
+    "col": 29,
+    "offset": 494
+   },
+   "extra": {
+    "message": "Container or pod is running in privileged mode. This grants the container the equivalent of root capabilities on the host machine. This can lead to container escapes, privilege escalation, and other security concerns. Remove the 'privileged' key to disable this capability.",
+    "metadata": {
+     "cwe": [
+      "CWE-250: Execution with Unnecessary Privileges"
+     ],
+     "references": [
+      "https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privileged",
+      "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
+      "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html"
+     ],
+     "category": "security",
+     "technology": [
+      "kubernetes"
+     ],
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "MEDIUM",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Improper Authorization"
+     ],
+     "source": "https://semgrep.dev/r/yaml.kubernetes.security.privileged-container.privileged-container",
+     "shortlink": "https://sg.run/Ygr5"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "yaml.kubernetes.security.allow-privilege-escalation-true.allow-privilege-escalation-true",
+   "path": "k8s/deployment.yaml",
+   "start": {
+    "line": 24,
+    "col": 39,
+    "offset": 533
+   },
+   "end": {
+    "line": 24,
+    "col": 43,
+    "offset": 537
+   },
+   "extra": {
+    "message": "In Kubernetes, each pod runs in its own isolated environment with its own  set of security policies. However, certain container images may contain  `setuid` or `setgid` binaries that could allow an attacker to perform  privilege escalation and gain access to sensitive resources. To mitigate  this risk, it's recommended to add a `securityContext` to the container in  the pod, with the parameter `allowPrivilegeEscalation` set to `false`.  This will prevent the container from running any privileged processes and  limit the impact of any potential attacks.  In the container `app` this parameter is set to `true` which makes this container much more vulnerable to privelege escalation attacks.",
+    "fix": "false",
+    "metadata": {
+     "cwe": [
+      "CWE-732: Incorrect Permission Assignment for Critical Resource"
+     ],
+     "owasp": [
+      "A05:2021 - Security Misconfiguration",
+      "A06:2017 - Security Misconfiguration",
+      "A02:2025 - Security Misconfiguration"
+     ],
+     "references": [
+      "https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation",
+      "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
+      "https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt",
+      "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag"
+     ],
+     "category": "security",
+     "technology": [
+      "kubernetes"
+     ],
+     "cwe2021-top25": true,
+     "subcategory": [
+      "vuln"
+     ],
+     "likelihood": "MEDIUM",
+     "impact": "MEDIUM",
+     "confidence": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Improper Authorization"
+     ],
+     "source": "https://semgrep.dev/r/yaml.kubernetes.security.allow-privilege-escalation-true.allow-privilege-escalation-true",
+     "shortlink": "https://sg.run/vw3W"
+    },
+    "severity": "WARNING",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "generic.secrets.security.detected-generic-api-key.detected-generic-api-key",
+   "path": "settings.py",
+   "start": {
+    "line": 4,
+    "col": 10,
+    "offset": 173
+   },
+   "end": {
+    "line": 4,
+    "col": 62,
+    "offset": 225
+   },
+   "extra": {
+    "message": "Generic API Key detected",
+    "metadata": {
+     "source-rule-url": "https://github.com/dxa4481/truffleHogRegexes/blob/master/truffleHogRegexes/regexes.json",
+     "category": "security",
+     "technology": [
+      "secrets"
+     ],
+     "confidence": "LOW",
+     "references": [
+      "https://github.com/dxa4481/truffleHogRegexes/blob/master/truffleHogRegexes/regexes.json"
+     ],
+     "owasp": [
+      "A07:2021 - Identification and Authentication Failures",
+      "A07:2025 - Authentication Failures"
+     ],
+     "cwe": [
+      "CWE-798: Use of Hard-coded Credentials"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Hard-coded Secrets"
+     ],
+     "source": "https://semgrep.dev/r/generic.secrets.security.detected-generic-api-key.detected-generic-api-key",
+     "shortlink": "https://sg.run/qxj8"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  },
+  {
+   "check_id": "generic.secrets.security.detected-private-key.detected-private-key",
+   "path": "settings.py",
+   "start": {
+    "line": 6,
+    "col": 18,
+    "offset": 246
+   },
+   "end": {
+    "line": 7,
+    "col": 32,
+    "offset": 306
+   },
+   "extra": {
+    "message": "Private Key detected. This is a sensitive credential and should not be hardcoded here. Instead, store this in a separate, private file.",
+    "metadata": {
+     "cwe": [
+      "CWE-798: Use of Hard-coded Credentials"
+     ],
+     "source-rule-url": "https://github.com/grab/secret-scanner/blob/master/scanner/signatures/pattern.go",
+     "category": "security",
+     "technology": [
+      "secrets"
+     ],
+     "confidence": "LOW",
+     "owasp": [
+      "A07:2021 - Identification and Authentication Failures",
+      "A07:2025 - Authentication Failures"
+     ],
+     "references": [
+      "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures"
+     ],
+     "cwe2022-top25": true,
+     "cwe2021-top25": true,
+     "subcategory": [
+      "audit"
+     ],
+     "likelihood": "LOW",
+     "impact": "MEDIUM",
+     "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+     "vulnerability_class": [
+      "Hard-coded Secrets"
+     ],
+     "source": "https://semgrep.dev/r/generic.secrets.security.detected-private-key.detected-private-key",
+     "shortlink": "https://sg.run/b7dr"
+    },
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  }
+ ],
+ "errors": [],
+ "paths": {
+  "scanned": [
+   "Dockerfile",
+   "README.md",
+   "app.py",
+   "infra/main.tf",
+   "k8s/deployment.yaml",
+   "pom.xml",
+   "requirements.txt",
+   "settings.py"
+  ]
+ },
+ "time": {
+  "rules": [],
+  "rules_parse_time": 0.720311164855957,
+  "profiling_times": {
+   "config_time": 1.9548430442810059,
+   "core_time": 2.819479465484619,
+   "ignores_time": 0.0011615753173828125,
+   "total_time": 4.785000324249268
+  },
+  "parsing_time": {
+   "total_time": 0.0,
+   "per_file_time": {
+    "mean": 0.0,
+    "std_dev": 0.0
+   },
+   "very_slow_stats": {
+    "time_ratio": 0.0,
+    "count_ratio": 0.0
+   },
+   "very_slow_files": []
+  },
+  "scanning_time": {
+   "total_time": 0.8456289768218994,
+   "per_file_time": {
+    "mean": 0.040268046515328546,
+    "std_dev": 0.002842294913792251
+   },
+   "very_slow_stats": {
+    "time_ratio": 0.0,
+    "count_ratio": 0.0
+   },
+   "very_slow_files": []
+  },
+  "matching_time": {
+   "total_time": 0.0,
+   "per_file_and_rule_time": {
+    "mean": 0.0,
+    "std_dev": 0.0
+   },
+   "very_slow_stats": {
+    "time_ratio": 0.0,
+    "count_ratio": 0.0
+   },
+   "very_slow_rules_on_files": []
+  },
+  "tainting_time": {
+   "total_time": 0.0,
+   "per_def_and_rule_time": {
+    "mean": 0.0,
+    "std_dev": 0.0
+   },
+   "very_slow_stats": {
+    "time_ratio": 0.0,
+    "count_ratio": 0.0
+   },
+   "very_slow_rules_on_defs": []
+  },
+  "fixpoint_timeouts": [],
+  "prefiltering": {
+   "project_level_time": 0.0,
+   "file_level_time": 0.0,
+   "rules_with_project_prefilters_ratio": 0.0,
+   "rules_with_file_prefilters_ratio": 0.9621513944223108,
+   "rules_selected_ratio": 0.15139442231075698,
+   "rules_matched_ratio": 0.15139442231075698
+  },
+  "targets": [],
+  "total_bytes": 0,
+  "max_memory_bytes": 789596288
+ },
+ "engine_requested": "OSS",
+ "skipped_rules": [],
+ "profiling_results": []
+}

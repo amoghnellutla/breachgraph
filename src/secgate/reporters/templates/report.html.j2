@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>secgate report: {{ target_name }}</title>
+<style>
+:root {
+  --bg: #f7f7f8; --panel: #ffffff; --text: #1d1d22; --muted: #62626e; --border: #e3e3e8;
+  --p1: #c62828; --p2: #e8590c; --p3: #b08800; --p4: #6b7280; --ok: #1a7f37; --code: #f0f0f3;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111114; --panel: #1a1a1f; --text: #e8e8ee; --muted: #9a9aa8; --border: #2c2c34;
+          --p1: #ff6b6b; --p2: #ff922b; --p3: #fcc419; --p4: #9ca3af; --ok: #51cf66; --code: #24242b; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.muted { color: var(--muted); }
+.verdict { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 600; margin: 12px 0; }
+.verdict.pass { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.verdict.fail { background: color-mix(in srgb, var(--p1) 15%, transparent); color: var(--p1); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.card .n { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.P1 { color: var(--p1); } .P2 { color: var(--p2); } .P3 { color: var(--p3); } .P4 { color: var(--p4); }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 16px 0; overflow-x: auto; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.filters input, .filters select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text); font: inherit; }
+.filters input { flex: 1 1 220px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+tr.finding { cursor: pointer; }
+tr.finding:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+tr.detail td { background: var(--bg); }
+.pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); margin-right: 4px; white-space: nowrap; }
+.pill.kev { border-color: var(--p1); color: var(--p1); font-weight: 600; }
+.pill.gate { background: var(--p1); border-color: var(--p1); color: #fff; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+pre { background: var(--code); padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+.loc { word-break: break-all; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+dt { color: var(--muted); }
+ul.warn { margin: 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🛡️ secgate security report</h1>
+  <div class="muted">{{ result.target }} · {{ result.started_at.strftime("%Y-%m-%d %H:%M UTC") }} · secgate {{ result.secgate_version }}</div>
+  <div class="verdict {{ 'pass' if result.gate.passed else 'fail' }}">
+    {{ "Gate passed" if result.gate.passed else "Gate failed" }}
+    {%- if result.gate.reasons %}: {{ result.gate.reasons | join("; ") }}{% endif %}
+  </div>
+  <div class="muted">Threshold: {{ result.gate.threshold }}{% if result.baseline_used %} · baseline applied (only new findings gate){% endif %}</div>
+
+  <div class="cards">
+    {% for p in ["P1", "P2", "P3", "P4"] %}
+    <div class="card"><div class="n {{ p }}">{{ open_by_prio.get(p, 0) }}</div><div class="muted">{{ p }} open</div></div>
+    {% endfor %}
+    <div class="card"><div class="n">{{ gating }}</div><div class="muted">gating</div></div>
+    <div class="card"><div class="n">{{ suppressed }}</div><div class="muted">suppressed</div></div>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead><tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Duration</th><th>Version / message</th></tr></thead>
+      <tbody>
+      {% for t in result.tools %}
+        <tr><td>{{ t.name }}</td><td>{{ t.status.value }}</td><td>{{ t.findings }}</td><td>{{ "%.1fs" | format(t.duration_s) }}</td>
+            <td class="muted">{{ t.version or "" }} {{ t.message or "" }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if result.warnings %}<h3>Warnings</h3><ul class="warn">{% for w in result.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="filters">
+      <input id="q" type="search" placeholder="Filter by text, CVE, CWE, path…" aria-label="Filter">
+      <select id="prio" aria-label="Priority"><option value="">All priorities</option>{% for p in ["P1","P2","P3","P4"] %}<option>{{ p }}</option>{% endfor %}</select>
+      <select id="tool" aria-label="Tool"><option value="">All tools</option>{% for t in tools %}<option>{{ t }}</option>{% endfor %}</select>
+      <select id="cat" aria-label="Category"><option value="">All categories</option>{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select>
+      <select id="status" aria-label="Status"><option value="">All statuses</option><option>new</option><option>baseline</option><option>suppressed</option></select>
+    </div>
+    <table id="findings">
+      <thead><tr><th>Priority</th><th>Finding</th><th>Location</th><th>Category</th><th>Tools</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for f in result.findings %}
+        <tr class="finding" data-prio="{{ f.priority.value }}" data-tools="{{ f.sources | join(' ') }}"
+            data-cat="{{ f.category.value }}" data-status="{{ f.status.value }}"
+            data-text="{{ (f.title ~ ' ' ~ f.rule_id ~ ' ' ~ f.location.path ~ ' ' ~ (f.cwe | join(' ')) ~ ' ' ~ (f.vuln_ids | join(' '))) | lower }}">
+          <td><strong class="{{ f.priority.value }}">{{ f.priority.value }}</strong> <span class="muted">{{ f.risk_score }}</span></td>
+          <td>{{ f.title }}<br>
+            {% if f.gating %}<span class="pill gate">blocks merge</span>{% endif %}
+            {% if f.enrichment.kev %}<span class="pill kev">KEV</span>{% endif %}
+            {% if f.enrichment.epss is not none %}<span class="pill">EPSS {{ "%.1f" | format(f.enrichment.epss * 100) }}%</span>{% endif %}
+            <span class="pill">{{ f.severity.value }}</span>
+            {% for c in f.cwe[:2] %}<span class="pill">{{ c }}</span>{% endfor %}
+          </td>
+          <td class="loc"><code>{{ f.location.path }}{% if f.location.start_line %}:{{ f.location.start_line }}{% endif %}</code></td>
+          <td>{{ f.category.value }}</td>
+          <td>{{ f.sources | join(", ") }}</td>
+          <td>{{ f.status.value }}</td>
+        </tr>
+        <tr class="detail" hidden><td colspan="6">
+          <dl>
+            <dt>Rule</dt><dd><code>{{ f.tool }}:{{ f.rule_id }}</code>{% for r in f.related_rules %}, <code>{{ r }}</code>{% endfor %}</dd>
+            <dt>Why this priority</dt><dd>{{ f.score_reasons | join("; ") }}</dd>
+            {% if f.package %}<dt>Package</dt><dd>{{ f.package.name }} {{ f.package.version or "" }}{% if f.package.fixed_version %} → fixed in {{ f.package.fixed_version }}{% endif %}</dd>{% endif %}
+            {% if f.owasp %}<dt>OWASP</dt><dd>{{ f.owasp | join(", ") }}</dd>{% endif %}
+            {% if f.suppression_reason %}<dt>Suppressed</dt><dd>{{ f.suppression_reason }}</dd>{% endif %}
+            <dt>Fingerprint</dt><dd><code>{{ f.fingerprint }}</code></dd>
+          </dl>
+          {% if f.description %}<p>{{ f.description }}</p>{% endif %}
+          {% if f.location.snippet %}<pre>{{ f.location.snippet }}</pre>{% endif %}
+          {% if f.remediation %}<p><strong>Fix:</strong> {{ f.remediation }}</p>{% endif %}
+          {% if f.references %}<p>{% for r in f.references[:5] if r.startswith(("https://", "http://")) %}<a href="{{ r }}" rel="noopener noreferrer" target="_blank">{{ r }}</a><br>{% endfor %}</p>{% endif %}
+        </td></tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No findings. Nice.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll("tr.finding"));
+  rows.forEach(function (r) {
+    r.addEventListener("click", function () { r.nextElementSibling.hidden = !r.nextElementSibling.hidden; });
+  });
+  var q = document.getElementById("q"), sel = ["prio", "tool", "cat", "status"].map(function (id) { return document.getElementById(id); });
+  function apply() {
+    var text = q.value.toLowerCase();
+    rows.forEach(function (r) {
+      var show = (!text || r.dataset.text.indexOf(text) !== -1)
+        && (!sel[0].value || r.dataset.prio === sel[0].value)
+        && (!sel[1].value || r.dataset.tools.split(" ").indexOf(sel[1].value) !== -1)
+        && (!sel[2].value || r.dataset.cat === sel[2].value)
+        && (!sel[3].value || r.dataset.status === sel[3].value);
+      r.hidden = !show;
+      if (!show) r.nextElementSibling.hidden = true;
+    });
+  }
+  q.addEventListener("input", apply);
+  sel.forEach(function (s) { s.addEventListener("change", apply); });
+})();
+</script>
+</body>
+</html>

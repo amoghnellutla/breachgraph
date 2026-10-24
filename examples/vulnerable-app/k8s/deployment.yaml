@@ -1,0 +1,24 @@
+# INTENTIONALLY INSECURE: demo target for secgate. Never apply.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnerable-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vulnerable-app
+  template:
+    metadata:
+      labels:
+        app: vulnerable-app
+    spec:
+      hostNetwork: true
+      containers:
+        - name: app
+          image: vulnerable-app:latest
+          ports:
+            - containerPort: 5000
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true

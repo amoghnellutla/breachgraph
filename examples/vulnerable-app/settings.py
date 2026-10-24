@@ -1,0 +1,20 @@
+# INTENTIONALLY VULNERABLE: hardcoded credentials for the secgate demo.
+# These values are random bytes generated for this demo. They are not real credentials.
+
+PAYMENTS_API_KEY = "a1f9e4c43413342af0c254c7997a326f4cb9d672"
+
+SIGNING_KEY = """-----BEGIN PRIVATE KEY-----
+3CzYRPazpNlBpfHKxRCHLyK8Z2YKV8K+9KWfsJzjexgR0Fc5wfyolQzTspMtuBrB
+McOmeglqv0QibWlocwI90K32ojaE/TkDSG7N8hBrYtSzUOUd/tvzw/ht+FTTmloC
+SJdH38lRrxG+ZOXFJeQxZQXolvAR0kJ3Faz/TUMglkPYilo9IK9SksZMENZzAGvU
+vgcxCQl/8nbxqCc8mLJjHracfNiAY5UWcwLFTUE+cqMYfhR6skeoLaXr10r4MPDz
+Zqa/93+OSkMTzghcusY2DONZh3zPnRk9twU1ZeCFjalbIyQTRPSQO8rWYnOY6bwN
+sBWl4MRzFSB7ECqhVsPk2A22qsyrXr5p0b+7Ee8/8Vg03fs8M8fccZ+2kMUQ+/jB
+nldDXo3fwse9IbboUP4ceS8l07C6dN9mz9lqOJu8e0ICERKWmwiWJvTfPG6L8Lwo
+dS1COFTnCfZmG8yablK2vJGCLrH95eEyEJrhb98NSjmOG3kF4HfXluBfi1KtYp6/
+lsmVq70bcXUkVv1NW+/mMYlmynDN4Sc9ccOiSEjIgnL8jG6fJ4SmCw7HrflAzBKr
+PvazPM3a1fCQenprE6Xjy75peXh0GOqKX8+Eyz4HvYoNdZWGsiq/DpKoGKqTqnEr
+Dsk8hcaRIJ+sJLbKE+p/UkHqoLA84udhjhG5wgKJ7M7kWmohep8ZOmVcR8aco2rD
+yw87ymrY60ddenz61Z2fdafnq0g6eAIYZo1Wf274g1LOeMpHxT+06qUimGm22YIT
+CVg0YjA76gukCoVJIxWMpOtMRpdijn1F
+-----END PRIVATE KEY-----"""

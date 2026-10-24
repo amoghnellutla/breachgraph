@@ -1,0 +1,42 @@
+[
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 4,
+  "EndLine": 4,
+  "StartColumn": 2,
+  "EndColumn": 62,
+  "Match": "PAYMENTS_API_KEY = \"REDACTED\"",
+  "Secret": "REDACTED",
+  "File": "settings.py",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.6775672,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "settings.py:generic-api-key:4"
+ },
+ {
+  "RuleID": "private-key",
+  "Description": "Identified a Private Key, which may compromise cryptographic security and sensitive data encryption.",
+  "StartLine": 6,
+  "EndLine": 20,
+  "StartColumn": 19,
+  "EndColumn": 26,
+  "Match": "REDACTED",
+  "Secret": "REDACTED",
+  "File": "settings.py",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 6.0309434,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "settings.py:private-key:6"
+ }
+]

@@ -1,0 +1,96 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff format --check src tests
+      - run: ruff check src tests
+      - run: mypy
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11", "3.12", "3.13"]
+        include:
+          - os: windows-latest
+            python: "3.12"
+          - os: macos-latest
+            python: "3.12"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest --cov=secgate --cov-report=term-missing --cov-fail-under=80
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: secgate:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test every bundled scanner
+        run: |
+          docker run --rm secgate:ci doctor 2>&1 | tee doctor.txt
+          ! grep -E "semgrep|gitleaks|trivy|checkov" doctor.txt | grep -q " no "
+      - name: End-to-end scan of the vulnerable demo app
+        run: |
+          set +e
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" secgate:ci \
+            scan examples/vulnerable-app -o demo-report --format json,sarif,html,md
+          code=$?
+          set -e
+          test "$code" -eq 1  # the demo app must fail the gate
+          python3 - <<'PY'
+          import json
+          r = json.load(open("demo-report/secgate.json"))
+          tools = {t["name"]: t["status"] for t in r["tools"]}
+          assert all(tools[t] == "ok" for t in ("semgrep", "gitleaks", "trivy", "checkov")), tools
+          rules = {f["rule_id"] for f in r["findings"]}
+          assert "CVE-2021-44228" in rules, "Log4Shell not found"
+          kev = [f for f in r["findings"] if f["enrichment"]["kev"]]
+          assert kev, "KEV enrichment produced nothing"
+          assert any(len(f["sources"]) > 1 for f in r["findings"]), "no cross-tool dedupe"
+          print(f"OK: {len(r['findings'])} findings, {len(kev)} KEV")
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: demo-report
+          path: demo-report

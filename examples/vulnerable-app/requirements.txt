@@ -1,0 +1,6 @@
+flask==0.12.2
+jinja2==2.10
+pyyaml==5.3
+requests==2.19.1
+urllib3==1.24.1
+werkzeug==0.15.3
