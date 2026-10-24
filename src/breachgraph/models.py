@@ -106,11 +106,30 @@ class Location(BaseModel):
         return normalize_path(value)
 
 
+class Reachability(StrEnum):
+    """Whether a vulnerable dependency is actually used by first-party code.
+
+    This is *import-level* reachability, not a full interprocedural call graph: it answers
+    "does our code use this package, and can a request reach the code that does?".
+    """
+
+    ENTRYPOINT = "entrypoint"  # imported by a module reachable from an HTTP entry point
+    DIRECT = "direct"  # imported in first-party code, no entry point traced to it
+    UNUSED = "unused"  # declared/transitive but never imported in first-party code
+    UNKNOWN = "unknown"  # ecosystem not analyzed, or no source to analyze
+
+    @property
+    def rank(self) -> int:
+        return {"entrypoint": 3, "direct": 2, "unknown": 1, "unused": 0}[self.value]
+
+
 class Package(BaseModel):
     name: str
     version: str | None = None
     fixed_version: str | None = None
     ecosystem: str | None = None
+    reachability: Reachability | None = None
+    reach_evidence: list[str] = Field(default_factory=list)  # "file imports <name>"
 
 
 class Enrichment(BaseModel):

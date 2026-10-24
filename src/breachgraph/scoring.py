@@ -7,7 +7,7 @@ adjustment is recorded in ``score_reasons`` so the ranking can be explained in a
 from __future__ import annotations
 
 from breachgraph.config import Config
-from breachgraph.models import Category, Confidence, Finding, Priority, Severity
+from breachgraph.models import Category, Confidence, Finding, Priority, Reachability, Severity
 from breachgraph.paths import matches_any
 
 BASE = {
@@ -78,6 +78,17 @@ def score(f: Finding, config: Config) -> None:
 
     if f.package and not f.package.fixed_version and f.category in (Category.SCA, Category.CONTAINER):
         reasons.append("no fix available yet")
+
+    if f.package and f.package.reachability is not None:
+        reach = f.package.reachability
+        if reach is Reachability.UNUSED and config.reachability.deprioritize_unused:
+            s -= 3.0  # package never imported by first-party code
+            reasons.append("not imported by first-party code (likely unreachable)")
+        elif reach is Reachability.ENTRYPOINT:
+            s += 1.0
+            reasons.append("reachable from an HTTP entry point")
+        elif reach is Reachability.DIRECT:
+            reasons.append("imported by first-party code")
 
     f.risk_score = round(max(0.0, min(10.0, s)), 1)
     f.priority = Priority.P1 if e.kev else _priority(f.risk_score)

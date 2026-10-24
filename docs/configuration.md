@@ -77,6 +77,11 @@ enrich:
   epss: true
   cache_hours: 24
 
+reachability:                 # does first-party code actually import the vulnerable package?
+  enabled: true
+  deprioritize_unused: true   # lower the score of CVEs in packages the code never imports
+  gate_on_unused: false       # an unused-dependency CVE alone won't fail the gate
+
 attack_graph:
   enabled: true
   crown_value: 7            # a node at/above this value (0-10) is a crown jewel
@@ -110,6 +115,8 @@ Each finding gets a 0–10 risk score, and the priority comes from that score:
 | Reported by ≥ 2 tools | +0.5 |
 | High-confidence credential | +1 |
 | Test/docs path | −2 |
+| Dependency reachable from an HTTP entry point | +1 |
+| Dependency not imported by first-party code (likely unreachable) | −3 |
 
 P1 ≥ 9, P2 ≥ 7, P3 ≥ 4, P4 < 4. The reasons behind each score are listed in every report.
 

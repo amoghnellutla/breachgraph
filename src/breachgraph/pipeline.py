@@ -23,6 +23,7 @@ from breachgraph.policy import (
     evaluate_gate,
     load_baseline,
 )
+from breachgraph.reachability import annotate_reachability
 from breachgraph.scanners import IMPORTERS, SCANNERS, ScanContext, ScannerOutcome
 from breachgraph.scoring import score_all
 
@@ -108,6 +109,12 @@ def process(
     items = drop_excluded(finalize(findings), config)
     items = dedupe(items)
     result.warnings += enrich(items, config.enrich, offline=opts.offline)
+    if config.reachability.enabled:
+        try:
+            annotate_reachability(target, items, config)
+        except Exception as exc:  # reachability is best-effort; never break a scan
+            log.exception("reachability analysis failed")
+            result.warnings.append(f"reachability analysis skipped: {exc}")
     score_all(items, config)
     if opts.baseline:
         if opts.baseline.exists():

@@ -168,6 +168,7 @@ ul.warn { margin: 0; padding-left: 18px; }
             {% if f.enrichment.kev %}<span class="pill kev">KEV</span>{% endif %}
             {% if f.enrichment.epss is not none %}<span class="pill">EPSS {{ "%.1f" | format(f.enrichment.epss * 100) }}%</span>{% endif %}
             <span class="pill">{{ f.severity.value }}</span>
+            {% if f.package and f.package.reachability and f.package.reachability.value == "unused" %}<span class="pill" title="package not imported by first-party code">unused dep</span>{% elif f.package and f.package.reachability and f.package.reachability.value == "entrypoint" %}<span class="pill kev">reachable</span>{% endif %}
             {% for c in f.cwe[:2] %}<span class="pill">{{ c }}</span>{% endfor %}
           </td>
           <td class="loc"><code>{{ f.location.path }}{% if f.location.start_line %}:{{ f.location.start_line }}{% endif %}</code></td>
@@ -180,6 +181,7 @@ ul.warn { margin: 0; padding-left: 18px; }
             <dt>Rule</dt><dd><code>{{ f.tool }}:{{ f.rule_id }}</code>{% for r in f.related_rules %}, <code>{{ r }}</code>{% endfor %}</dd>
             <dt>Why this priority</dt><dd>{{ f.score_reasons | join("; ") }}</dd>
             {% if f.package %}<dt>Package</dt><dd>{{ f.package.name }} {{ f.package.version or "" }}{% if f.package.fixed_version %} → fixed in {{ f.package.fixed_version }}{% endif %}</dd>{% endif %}
+            {% if f.package and f.package.reachability %}<dt>Reachability</dt><dd>{{ f.package.reachability.value }}{% if f.package.reach_evidence %} — {{ f.package.reach_evidence | join("; ") }}{% endif %}</dd>{% endif %}
             {% if f.owasp %}<dt>OWASP</dt><dd>{{ f.owasp | join(", ") }}</dd>{% endif %}
             {% if f.suppression_reason %}<dt>Suppressed</dt><dd>{{ f.suppression_reason }}</dd>{% endif %}
             <dt>Fingerprint</dt><dd><code>{{ f.fingerprint }}</code></dd>

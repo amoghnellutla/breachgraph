@@ -146,6 +146,12 @@ class CrownJewel(_Strict):
     kind: str | None = None  # restrict to one node kind: datastore, secret, identity...
 
 
+class ReachabilityConfig(_Strict):
+    enabled: bool = True
+    deprioritize_unused: bool = True  # lower the score of CVEs in packages first-party code never imports
+    gate_on_unused: bool = False  # if False, an unused-dependency CVE alone won't fail the gate
+
+
 class AttackGraph(_Strict):
     enabled: bool = True
     crown_value: int = Field(default=7, ge=1, le=10)  # a node at/above this value is a crown jewel
@@ -166,6 +172,7 @@ class Config(_Strict):
     require_suppression_expiry: bool = True
     severity_overrides: list[SeverityOverride] = Field(default_factory=list)
     enrich: Enrich = Field(default_factory=Enrich)
+    reachability: ReachabilityConfig = Field(default_factory=ReachabilityConfig)
     attack_graph: AttackGraph = Field(default_factory=AttackGraph)
     timeout: int = 900
 

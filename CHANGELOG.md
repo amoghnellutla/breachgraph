@@ -18,6 +18,11 @@ All notable changes to this project are documented here. The format follows
   can fail on new attack paths (`attack_graph.fail_on_new_path`).
 - `breachgraph graph` command to build the graph standalone.
 - `examples/vulnerable-platform` demo with a real internet-to-S3 path.
+- **Reachability analysis**: for each dependency CVE, checks whether first-party code actually
+  imports the package (Python/JS/TS/Java/Go via tree-sitter) and whether the importing module is
+  reachable from an HTTP entry point. Unused (transitive-only) CVEs are deprioritized and don't
+  gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
+  in the attack graph.
 
 ## [0.1.0] - 2026-10-23
 

@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from breachgraph.config import Config, Suppression
-from breachgraph.models import Category, Finding, GateResult, ScanResult, Status, ToolStatus
+from breachgraph.models import (
+    Category,
+    Finding,
+    GateResult,
+    Reachability,
+    ScanResult,
+    Status,
+    ToolStatus,
+)
 from breachgraph.paths import glob_match, matches_any
 
 BASELINE_VERSION = 1
@@ -112,6 +120,13 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
     for f in result.findings:
         f.gating = False
         if f.status not in statuses:
+            continue
+        # A CVE in a package first-party code never imports doesn't gate, unless configured to.
+        if (
+            not config.reachability.gate_on_unused
+            and f.package is not None
+            and f.package.reachability is Reachability.UNUSED
+        ):
             continue
         why = None
         if rules.kev and f.enrichment.kev:
