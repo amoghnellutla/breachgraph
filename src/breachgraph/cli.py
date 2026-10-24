@@ -269,6 +269,29 @@ def _github(result: ScanResult, comment: bool, issues: str | None, close_fixed: 
         client.close()
 
 
+def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
+    ag = result.attack_graph
+    if ag is None or not ag.enabled:
+        return
+    if not ag.paths:
+        if ag.stats.get("crown_jewels"):
+            console.print("[green]No attack path[/] from the internet to a crown-jewel asset.")
+        return
+    console.print(f"\n[bold red]🎯 {len(ag.paths)} attack path(s) to crown-jewel assets[/]")
+    for i, p in enumerate(ag.paths[:limit], 1):
+        flag = " [bold red]BLOCKS[/]" if p.gating else ""
+        hops = ["Internet"]
+        for s in p.steps:
+            hops.append(f"[bold red]{s.dst}[/]({s.via})" if s.via else s.dst)
+        console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}")
+        console.print("     " + " → ".join(hops))
+    if ag.choke_points:
+        console.print("  [bold]Fix first:[/]")
+        for c in ag.choke_points[:5]:
+            loc = f" ({c.path}:{c.line})" if c.path else ""
+            console.print(f"    • {c.title}{loc} — breaks {c.paths_cut} path(s)")
+
+
 def _print_summary(result: ScanResult) -> None:
     open_findings = [f for f in result.findings if f.status.value != "suppressed"]
     table = Table(title=f"Top findings ({len(open_findings)} open)", show_lines=False, expand=False)
@@ -287,6 +310,7 @@ def _print_summary(result: ScanResult) -> None:
         )
     if open_findings:
         console.print(table)
+    _print_attack_paths(result)
     for w in result.warnings:
         console.print(f"[yellow]warning:[/] {w}")
     if result.gate.passed:
@@ -319,6 +343,57 @@ def report_cmd(
     fmt_list = _split(formats) or ["html", "md", "sarif"]
     for fmt, p in write_reports(result, output_dir, fmt_list).items():
         console.print(f"{fmt:>6} {p}")
+
+
+@app.command("graph")
+def graph_cmd(
+    path: Annotated[Path, typer.Argument(help="Directory to analyze.")] = Path(),
+    config_file: Annotated[Path | None, typer.Option("--config", "-c")] = None,
+    findings_json: Annotated[
+        Path | None,
+        typer.Option("--findings", help="A breachgraph.json to pull code/infra findings from."),
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Write the graph as JSON to this file.")
+    ] = None,
+) -> None:
+    """Build the code-to-cloud attack graph only (no scanners) and print the attack paths.
+
+    Code vulnerabilities (SSRF, injection, ...) come from a prior scan via --findings; without
+    them only infrastructure-only paths (public buckets, open databases) are found.
+    """
+    from breachgraph.graph import build_attack_graph
+    from breachgraph.graph.summary import summarize
+
+    target = path.resolve()
+    if not target.is_dir():
+        console.print(f"[red]error:[/] {target} is not a directory")
+        raise typer.Exit(2)
+    try:
+        config = load_config(config_file or find_config(target))
+    except ConfigError as exc:
+        console.print(f"[red]config error:[/] {exc}")
+        raise typer.Exit(2) from exc
+
+    findings = []
+    if findings_json:
+        try:
+            prior = ScanResult.model_validate_json(findings_json.read_text(encoding="utf-8"))
+            findings = prior.findings
+        except (OSError, ValidationError) as exc:
+            console.print(f"[red]cannot read {findings_json}:[/] {exc}")
+            raise typer.Exit(2) from exc
+
+    ag = build_attack_graph(target, findings, config)
+    summary = summarize(ag, findings, config.attack_graph, baseline_used=False)
+    result = ScanResult(breachgraph_version=__version__, target=str(target), attack_graph=summary)
+    _print_attack_paths(result)
+    if not ag.paths:
+        console.print(f"[dim]{ag.stats}[/]")
+    if output:
+        output.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
+        console.print(f"[dim]graph written to {output}[/]")
+    raise typer.Exit(1 if summary.gating_paths else 0)
 
 
 @app.command("doctor")

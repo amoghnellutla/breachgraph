@@ -121,3 +121,40 @@ def test_report_rejects_foreign_json(tmp_path: Path) -> None:
     bad.write_text('{"hello": 1}', encoding="utf-8")
     res = runner.invoke(app, ["report", str(bad), "-o", str(tmp_path / "o")])
     assert res.exit_code == 2
+
+
+PLATFORM = Path(__file__).parent.parent / "examples" / "vulnerable-platform"
+
+
+def test_graph_command_infra_only(tmp_path: Path) -> None:
+    res = runner.invoke(app, ["graph", str(PLATFORM)])
+    assert res.exit_code == 0  # no code vuln -> no path to S3
+
+
+def test_graph_command_with_findings(tmp_path: Path) -> None:
+    from breachgraph.models import Category, Confidence, Finding, Location, ScanResult, Severity
+
+    fj = tmp_path / "f.json"
+    r = ScanResult(
+        breachgraph_version="t",
+        target=".",
+        findings=[
+            Finding(
+                tool="semgrep",
+                rule_id="cmdi",
+                title="Command injection",
+                severity=Severity.HIGH,
+                category=Category.SAST,
+                confidence=Confidence.HIGH,
+                cwe=["CWE-78"],
+                location=Location(path="services/api/app.py", start_line=30),
+                fingerprint="c1",
+            ),
+        ],
+    )
+    fj.write_text(r.model_dump_json(), encoding="utf-8")
+    out = tmp_path / "graph.json"
+    res = runner.invoke(app, ["graph", str(PLATFORM), "--findings", str(fj), "-o", str(out)])
+    assert res.exit_code == 1  # gating attack path found
+    assert out.is_file()
+    assert "customer-data" in out.read_text(encoding="utf-8")
