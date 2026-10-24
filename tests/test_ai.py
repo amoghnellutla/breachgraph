@@ -233,3 +233,54 @@ def test_refusal_degrades_to_warning(ai_ready: None, monkeypatch: pytest.MonkeyP
     assert run.triaged == 0
     assert result.findings[0].ai is None
     assert any("declined" in w for w in run.warnings)
+
+
+def test_pipeline_runs_ai_when_enabled(ai_ready: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    from breachgraph.config import Config
+    from breachgraph.models import ToolRun, ToolStatus
+    from breachgraph.pipeline import ScanOptions, process
+
+    install_fake(
+        monkeypatch,
+        triage_json={
+            "findings": [
+                {
+                    "id": "will-be-remapped",
+                    "verdict": "needs_review",
+                    "confidence": "low",
+                    "summary": "s",
+                    "reasoning": "r",
+                    "remediation": "fix",
+                }
+            ]
+        },
+        narrative="Narrative.",
+    )
+    cfg = Config.model_validate({"ai": {"enabled": True}})
+    result = process(
+        [finding("f1")],
+        [ToolRun(name="semgrep", status=ToolStatus.IMPORTED, findings=1)],
+        cfg,
+        PLATFORM,
+        ScanOptions(offline=True),
+    )
+    assert "ai" in result.metadata
+    assert result.metadata["ai"]["model"] == "claude-opus-5-5"
+
+
+def test_pipeline_ai_unavailable_warns_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
+    from breachgraph.config import Config
+    from breachgraph.models import ToolRun, ToolStatus
+    from breachgraph.pipeline import ScanOptions, process
+
+    monkeypatch.setattr(ai_mod, "available", lambda: (False, "no key"))
+    cfg = Config.model_validate({"ai": {"enabled": True}})
+    result = process(
+        [finding("f1")],
+        [ToolRun(name="semgrep", status=ToolStatus.IMPORTED, findings=1)],
+        cfg,
+        PLATFORM,
+        ScanOptions(offline=True),
+    )
+    assert any("AI triage unavailable" in w for w in result.warnings)
+    assert result.findings[0].ai is None
