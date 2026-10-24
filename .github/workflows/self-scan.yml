@@ -1,4 +1,4 @@
-# secgate scans its own repository with the image built from this commit (dogfooding).
+# triagegate scans its own repository with the image built from this commit (dogfooding).
 name: self-scan
 
 on:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  secgate:
+  triagegate:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,10 +28,10 @@ jobs:
         with:
           context: .
           load: true
-          tags: secgate:self
+          tags: triagegate:self
           cache-from: type=gha
       - uses: ./
         with:
-          image: secgate:self
+          image: triagegate:self
           comment: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
           issues: ${{ github.event_name != 'pull_request' && 'P1' || '' }}

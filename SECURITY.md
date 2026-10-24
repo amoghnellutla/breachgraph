@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue** for security problems in secgate.
+Please **do not open a public issue** for security problems in triagegate.
 
 Report privately via GitHub: **Security → Report a vulnerability** on this repository
 (private vulnerability reporting). You will get an acknowledgement within 3 business days and a
@@ -15,8 +15,8 @@ proof of concept.
 
 In scope:
 
-- Code in this repository (the `secgate` package, the GitHub Action, the Docker image build).
-- Ways that malicious repository content or scanner output could make secgate execute code,
+- Code in this repository (the `triagegate` package, the GitHub Action, the Docker image build).
+- Ways that malicious repository content or scanner output could make triagegate execute code,
   leak secrets, write outside the output directory, or inject content into PR comments, issues
   or HTML reports.
 
@@ -34,6 +34,6 @@ Only the latest minor release receives security fixes.
 - Scanner binaries are pinned and verified against SHA-256 values committed in the `Dockerfile`.
 - Release images are signed with cosign (keyless) and published with SBOM and provenance attestations.
 - Third-party GitHub Actions are pinned to full commit SHAs.
-- Secrets are redacted by Gitleaks and redacted again by secgate. Secret values are never written to reports.
+- Secrets are redacted by Gitleaks and redacted again by triagegate. Secret values are never written to reports.
 - Scanner output is treated as untrusted: HTML is auto-escaped, only `http(s)` links are rendered,
   and `@` mentions are neutralized in GitHub comments and issues.

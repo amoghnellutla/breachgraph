@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from secgate.config import Config, ConfigError, Suppression, load_config
-from secgate.models import (
+from tests.conftest import make_finding, make_vuln
+from triagegate.config import Config, ConfigError, Suppression, load_config
+from triagegate.models import (
     Category,
     Confidence,
     Priority,
@@ -14,8 +15,8 @@ from secgate.models import (
     ToolRun,
     ToolStatus,
 )
-from secgate.normalize import finalize
-from secgate.policy import (
+from triagegate.normalize import finalize
+from triagegate.policy import (
     apply_baseline,
     apply_suppressions,
     drop_excluded,
@@ -23,8 +24,7 @@ from secgate.policy import (
     load_baseline,
     write_baseline,
 )
-from secgate.scoring import score_all
-from tests.conftest import make_finding, make_vuln
+from triagegate.scoring import score_all
 
 
 def scored(*findings, config: Config | None = None):  # type: ignore[no-untyped-def]
@@ -92,7 +92,7 @@ def test_results_sorted_by_risk() -> None:
 
 def _result(findings, baseline_used: bool = False) -> ScanResult:  # type: ignore[no-untyped-def]
     return ScanResult(
-        secgate_version="t", target=".", findings=findings, baseline_used=baseline_used
+        triagegate_version="t", target=".", findings=findings, baseline_used=baseline_used
     )
 
 
@@ -203,13 +203,13 @@ def test_drop_excluded_keeps_non_repo_locations() -> None:
 
 
 def test_load_config_rejects_unknown_keys(tmp_path: Path) -> None:
-    p = tmp_path / ".secgate.yml"
+    p = tmp_path / ".triagegate.yml"
     p.write_text("version: 1\nfail_on:\n  priorty: P1\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="priorty"):
         load_config(p)
 
 
 def test_load_config_empty_file(tmp_path: Path) -> None:
-    p = tmp_path / ".secgate.yml"
+    p = tmp_path / ".triagegate.yml"
     p.write_text("", encoding="utf-8")
     assert load_config(p).fail_on.priority is Priority.P2

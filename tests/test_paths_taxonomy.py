@@ -1,8 +1,8 @@
 import pytest
 
-from secgate.models import Category, Severity
-from secgate.normalize.taxonomy import normalize_cwes, normalize_owasp, owasp_for
-from secgate.paths import glob_match, normalize_path
+from triagegate.models import Category, Severity
+from triagegate.normalize.taxonomy import normalize_cwes, normalize_owasp, owasp_for
+from triagegate.paths import glob_match, normalize_path
 
 
 @pytest.mark.parametrize(

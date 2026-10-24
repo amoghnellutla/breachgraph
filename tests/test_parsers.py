@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from secgate.config import Config
-from secgate.models import Category, Confidence, Severity
-from secgate.scanners import IMPORTERS, ScanContext
-from secgate.scanners.base import load_json
 from tests.conftest import FIXTURES
+from triagegate.config import Config
+from triagegate.models import Category, Confidence, Severity
+from triagegate.scanners import IMPORTERS, ScanContext
+from triagegate.scanners.base import load_json
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
 

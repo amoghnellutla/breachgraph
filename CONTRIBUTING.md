@@ -1,11 +1,11 @@
 # Contributing
 
-Thanks for helping make secgate better!
+Thanks for helping make triagegate better!
 
 ## Development setup
 
 ```bash
-git clone https://github.com/OWNER/secgate && cd secgate
+git clone https://github.com/OWNER/triagegate && cd triagegate
 python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 pytest
@@ -18,8 +18,8 @@ captured in `tests/fixtures/`, and the CLI tests use `--import`.
 To run the real scanners, build the image:
 
 ```bash
-docker build -t secgate:dev .
-docker run --rm -v "$PWD:/src" secgate:dev scan examples/vulnerable-app --keep-raw -o .tmp/demo
+docker build -t triagegate:dev .
+docker run --rm -v "$PWD:/src" triagegate:dev scan examples/vulnerable-app --keep-raw -o .tmp/demo
 ```
 
 `--keep-raw` saves each scanner's raw JSON in `.tmp/demo/raw/`. That is how fixtures are captured.

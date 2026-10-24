@@ -1,5 +1,5 @@
-# secgate: all scanners, pinned and checksum-verified, in one image.
-#   docker run --rm -v "$PWD:/src" ghcr.io/OWNER/secgate scan /src
+# triagegate: all scanners, pinned and checksum-verified, in one image.
+#   docker run --rm -v "$PWD:/src" ghcr.io/OWNER/triagegate scan /src
 #
 # Bump versions with the matching SHA-256 from each project's release checksums file.
 # The base image is pinned by digest; Dependabot proposes updates.
@@ -37,25 +37,25 @@ RUN python -m venv /opt/semgrep && /opt/semgrep/bin/pip install --no-cache-dir "
     && python -m venv /opt/checkov && /opt/checkov/bin/pip install --no-cache-dir "checkov==${CHECKOV_VERSION}"
 COPY pyproject.toml README.md LICENSE /build/
 COPY src /build/src
-RUN python -m venv /opt/secgate && /opt/secgate/bin/pip install --no-cache-dir /build
+RUN python -m venv /opt/triagegate && /opt/triagegate/bin/pip install --no-cache-dir /build
 
 FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70
-LABEL org.opencontainers.image.title="secgate" \
+LABEL org.opencontainers.image.title="triagegate" \
       org.opencontainers.image.description="Security gate: Semgrep, Gitleaks, Trivy, Checkov, ZAP with dedupe, KEV/EPSS risk scoring and policy" \
       org.opencontainers.image.licenses="Apache-2.0"
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && git config --system --add safe.directory '*' \
-    && useradd --uid 10001 --create-home secgate
+    && useradd --uid 10001 --create-home triagegate
 COPY --from=binaries /dl/trivy /dl/gitleaks /usr/local/bin/
 COPY --from=python-tools /opt /opt
 RUN ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep \
     && ln -s /opt/checkov/bin/checkov /usr/local/bin/checkov \
-    && ln -s /opt/secgate/bin/secgate /usr/local/bin/secgate
+    && ln -s /opt/triagegate/bin/triagegate /usr/local/bin/triagegate
 
 # Writable caches for any UID (CI runners often use --user "$(id -u):$(id -g)").
 ENV HOME=/tmp/home \
-    SECGATE_CACHE_DIR=/tmp/secgate-cache \
+    TRIAGEGATE_CACHE_DIR=/tmp/triagegate-cache \
     TRIVY_CACHE_DIR=/tmp/trivy-cache \
     SEMGREP_SEND_METRICS=off \
     PYTHONUNBUFFERED=1
@@ -64,5 +64,5 @@ USER 10001
 WORKDIR /src
 # A CLI that runs and exits: there is no long-running process to health-check.
 HEALTHCHECK NONE
-ENTRYPOINT ["secgate"]
+ENTRYPOINT ["triagegate"]
 CMD ["scan", "."]

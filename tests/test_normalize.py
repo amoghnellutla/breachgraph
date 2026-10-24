@@ -1,6 +1,6 @@
-from secgate.models import Category, Confidence, Location, Severity
-from secgate.normalize import dedupe, finalize
 from tests.conftest import make_finding, make_vuln
+from triagegate.models import Category, Confidence, Location, Severity
+from triagegate.normalize import dedupe, finalize
 
 
 def test_fingerprint_survives_line_shift() -> None:

@@ -3,14 +3,14 @@ requires = ["hatchling>=1.24"]
 build-backend = "hatchling.build"
 
 [project]
-name = "secgate"
+name = "triagegate"
 version = "0.1.0"
 description = "One security gate for your CI: runs Semgrep, Gitleaks, Trivy, Checkov and ZAP, deduplicates and risk-scores findings (CISA KEV + EPSS), and enforces policy with baselines."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
-authors = [{ name = "secgate contributors" }]
+authors = [{ name = "triagegate contributors" }]
 keywords = ["security", "devsecops", "sast", "sca", "sarif", "semgrep", "trivy", "gitleaks", "checkov", "appsec"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -47,18 +47,18 @@ dev = [
 ]
 
 [project.scripts]
-secgate = "secgate.cli:app"
+triagegate = "triagegate.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/OWNER/secgate"
-Documentation = "https://github.com/OWNER/secgate/tree/main/docs"
-Issues = "https://github.com/OWNER/secgate/issues"
+Homepage = "https://github.com/OWNER/triagegate"
+Documentation = "https://github.com/OWNER/triagegate/tree/main/docs"
+Issues = "https://github.com/OWNER/triagegate/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/secgate"]
+packages = ["src/triagegate"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/secgate", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["src/triagegate", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -76,12 +76,12 @@ ignore = ["S603", "S607"]  # subprocess use is the whole point; args are lists, 
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "S314", "E501"]
-"src/secgate/reporters/html.py" = ["E501"]  # nosemgrep comment must stay on one line
+"src/triagegate/reporters/html.py" = ["E501"]  # nosemgrep comment must stay on one line
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
-packages = ["secgate"]
+packages = ["triagegate"]
 mypy_path = "src"
 plugins = ["pydantic.mypy"]
 

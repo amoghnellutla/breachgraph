@@ -27,7 +27,7 @@ flowchart LR
 ## Design decisions
 
 **One normalized model.** Every adapter turns tool output into the same `Finding`
-(`src/secgate/models.py`). Everything downstream (dedupe, scoring, policy, reporters) is
+(`src/triagegate/models.py`). Everything downstream (dedupe, scoring, policy, reporters) is
 tool-agnostic, so adding a scanner touches one file.
 
 **Fingerprints from content, not line numbers.** Code findings hash the normalized matched
@@ -35,7 +35,7 @@ snippet, and dependency findings hash package + CVE (not the installed version).
 baselines and GitHub issue tracking stable when unrelated lines move. Secrets use the line,
 because their snippet is redacted.
 
-**Dedupe in two stages** (`src/secgate/normalize/__init__.py`):
+**Dedupe in two stages** (`src/triagegate/normalize/__init__.py`):
 
 1. *Exact.* Same fingerprint; same CVE in the same package and file; or several rules from one
    SAST tool flagging overlapping lines with the same CWE (Semgrep's Flask, Django and generic
@@ -48,7 +48,7 @@ because their snippet is redacted.
    finding before this constraint was added.
 
 **Prioritize by exploitability.** A CVSS 9.8 nobody exploits matters less than a CVSS 7.5 in
-CISA's KEV catalog. secgate pulls KEV and EPSS (free, cached for 24h, and optional when offline)
+CISA's KEV catalog. triagegate pulls KEV and EPSS (free, cached for 24h, and optional when offline)
 and records the reason for every score adjustment.
 
 **Fail on new, not on history.** Baselines and suppressions with expiry dates make it possible
@@ -66,10 +66,10 @@ and SLSA provenance attestations.
 
 ## Adding a scanner
 
-1. Create `src/secgate/scanners/<tool>.py` with a `Scanner` subclass:
+1. Create `src/triagegate/scanners/<tool>.py` with a `Scanner` subclass:
    - `steps()` returns the commands to run, plus the file each one writes.
    - `parse()` turns the decoded JSON into `Finding` objects.
-2. Register it in `src/secgate/scanners/__init__.py`.
-3. Add a config class in `src/secgate/config.py`.
+2. Register it in `src/triagegate/scanners/__init__.py`.
+3. Add a config class in `src/triagegate/config.py`.
 4. Capture real output into `tests/fixtures/<tool>.json` and add parser tests.
 5. Install the binary (pinned and checksum-verified) in the `Dockerfile`.

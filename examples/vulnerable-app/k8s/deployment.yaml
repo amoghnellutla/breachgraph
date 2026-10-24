@@ -1,4 +1,4 @@
-# INTENTIONALLY INSECURE: demo target for secgate. Never apply.
+# INTENTIONALLY INSECURE: demo target for triagegate. Never apply.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

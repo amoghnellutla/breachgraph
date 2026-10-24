@@ -2,7 +2,7 @@
 
 **Do not deploy this. Do not copy code from it.**
 
-This directory exists so you can watch secgate work end to end. Each file contains deliberate,
+This directory exists so you can watch triagegate work end to end. Each file contains deliberate,
 well-known security flaws that the bundled scanners should catch:
 
 | File | Planted issues | Caught by |
@@ -16,7 +16,7 @@ well-known security flaws that the bundled scanners should catch:
 | `k8s/deployment.yaml` | Privileged container, host network, no resource limits | Trivy + Checkov |
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/secgate scan examples/vulnerable-app
+docker run --rm -v "$PWD:/src" ghcr.io/OWNER/triagegate scan examples/vulnerable-app
 ```
 
 The secrets are random strings shaped to match the detection rules. They are not real

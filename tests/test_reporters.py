@@ -4,13 +4,13 @@ from datetime import date
 
 import jsonschema
 
-from secgate.config import Config, Suppression
-from secgate.models import Category, ScanResult, Status, ToolRun, ToolStatus
-from secgate.normalize import dedupe, finalize
-from secgate.policy import apply_suppressions, evaluate_gate
-from secgate.reporters import html, junit, markdown, sarif
-from secgate.scoring import score_all
 from tests.conftest import FIXTURES, make_finding, make_vuln
+from triagegate.config import Config, Suppression
+from triagegate.models import Category, ScanResult, Status, ToolRun, ToolStatus
+from triagegate.normalize import dedupe, finalize
+from triagegate.policy import apply_suppressions, evaluate_gate
+from triagegate.reporters import html, junit, markdown, sarif
+from triagegate.scoring import score_all
 
 
 def sample_result() -> ScanResult:
@@ -54,7 +54,7 @@ def sample_result() -> ScanResult:
     score_all(items, config)
     apply_suppressions(items, config)
     result = ScanResult(
-        secgate_version="0.1.0",
+        triagegate_version="0.1.0",
         target="/repo",
         findings=items,
         tools=[
@@ -88,7 +88,7 @@ def test_sarif_content() -> None:
     suppressed = [r for r in run["results"] if "suppressions" in r]
     assert len(suppressed) == 1
     for r in run["results"]:
-        assert r["partialFingerprints"]["secgateFingerprint/v1"]
+        assert r["partialFingerprints"]["triagegateFingerprint/v1"]
         assert r["locations"][0]["physicalLocation"]["region"]["startLine"] >= 1
 
 

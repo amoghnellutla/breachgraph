@@ -112,7 +112,7 @@ jobs:
             echo
             echo '```bash'
             echo "docker pull ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}"
-            echo "pip install secgate==${GITHUB_REF_NAME#v}"
+            echo "pip install triagegate==${GITHUB_REF_NAME#v}"
             echo '```'
             echo
             echo "Image digest: \`${DIGEST}\`, verify with:"
@@ -124,7 +124,7 @@ jobs:
             echo '```'
           } > notes.md
           gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md --generate-notes
-      - name: Move floating major tag (uses: OWNER/secgate@v0)
+      - name: Move floating major tag (uses: OWNER/triagegate@v0)
         run: |
           major="${GITHUB_REF_NAME%%.*}"
           git config user.name "github-actions[bot]"

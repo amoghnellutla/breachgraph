@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from secgate.models import Category, Finding, Location, Package, Severity
+from triagegate.models import Category, Finding, Location, Package, Severity
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -47,6 +47,6 @@ def make_vuln(cve: str = "CVE-2021-44228", pkg: str = "log4j-core", **kw: Any) -
 
 @pytest.fixture(autouse=True)
 def _isolated_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SECGATE_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("TRIAGEGATE_CACHE_DIR", str(tmp_path / "cache"))
     for var in ("GITHUB_ACTIONS", "GITHUB_TOKEN", "GITHUB_STEP_SUMMARY", "GITHUB_EVENT_PATH"):
         monkeypatch.delenv(var, raising=False)

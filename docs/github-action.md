@@ -3,8 +3,8 @@
 ## Minimal setup
 
 ```yaml
-# .github/workflows/secgate.yml
-name: secgate
+# .github/workflows/triagegate.yml
+name: triagegate
 on:
   pull_request:
   push:
@@ -16,11 +16,11 @@ permissions:
   pull-requests: write     # sticky PR comment
 
 jobs:
-  secgate:
+  triagegate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: OWNER/secgate@v0
+      - uses: OWNER/triagegate@v0
 ```
 
 On each PR you get:
@@ -28,15 +28,15 @@ On each PR you get:
 - **A PR comment**, updated in place on every push, listing the findings that block the merge.
 - **Inline annotations** in the PR diff, through GitHub code scanning (SARIF).
 - **A job summary** with the same table.
-- **A `secgate-report` artifact** containing the HTML report, SARIF, JSON, JUnit and a CycloneDX SBOM.
+- **A `triagegate-report` artifact** containing the HTML report, SARIF, JSON, JUnit and a CycloneDX SBOM.
 
 ## Inputs
 
 | Input | Default | Description |
 |---|---|---|
 | `path` | `.` | Directory to scan |
-| `config` | | Path to `.secgate.yml` |
-| `baseline` | | Baseline file (auto-detected at `<path>/.secgate-baseline.json`) |
+| `config` | | Path to `.triagegate.yml` |
+| `baseline` | | Baseline file (auto-detected at `<path>/.triagegate-baseline.json`) |
 | `fail-on` | | `P1`–`P4` or `none`; overrides config |
 | `only` / `skip` | | Comma-separated scanner names |
 | `dast-url` | | Run a ZAP baseline scan against a running app |
@@ -44,9 +44,9 @@ On each PR you get:
 | `comment` | `true` | Sticky PR comment |
 | `issues` | | Open an issue per finding at this priority or above (e.g. `P1`). Issues are closed automatically when the finding disappears from the default branch |
 | `upload-sarif` | `true` | Upload to code scanning |
-| `output-dir` | `secgate-report` | Report directory |
+| `output-dir` | `triagegate-report` | Report directory |
 | `version` / `image` | `v0` | Image tag / full image reference |
-| `extra-args` | | Extra `secgate scan` arguments (e.g. `--no-fail`) |
+| `extra-args` | | Extra `triagegate scan` arguments (e.g. `--no-fail`) |
 
 Outputs: `passed`, `findings`, `gating`, `sarif`.
 
@@ -55,14 +55,14 @@ Outputs: `passed`, `findings`, `gating`, `sarif`.
 **Adopt on a legacy repo.** Accept today's findings, then fail only on new ones:
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/secgate scan --write-baseline .secgate-baseline.json
-git add .secgate-baseline.json && git commit -m "secgate baseline"
+docker run --rm -v "$PWD:/src" ghcr.io/OWNER/triagegate scan --write-baseline .triagegate-baseline.json
+git add .triagegate-baseline.json && git commit -m "triagegate baseline"
 ```
 
 **Report-only mode** while you tune the policy:
 
 ```yaml
-      - uses: OWNER/secgate@v0
+      - uses: OWNER/triagegate@v0
         with:
           extra-args: --no-fail
 ```
@@ -71,7 +71,7 @@ git add .secgate-baseline.json && git commit -m "secgate baseline"
 
 ```yaml
       - run: docker compose up -d && ./wait-for-it.sh localhost:8080
-      - uses: OWNER/secgate@v0
+      - uses: OWNER/triagegate@v0
         with:
           dast-url: http://localhost:8080
 ```
@@ -80,7 +80,7 @@ git add .secgate-baseline.json && git commit -m "secgate baseline"
 
 ```yaml
       - run: docker build -t myapp:${{ github.sha }} .
-      - uses: OWNER/secgate@v0
+      - uses: OWNER/triagegate@v0
         with:
           images: myapp:${{ github.sha }}
 ```
@@ -91,7 +91,7 @@ git add .secgate-baseline.json && git commit -m "secgate baseline"
     permissions:
       issues: write
     steps:
-      - uses: OWNER/secgate@v0
+      - uses: OWNER/triagegate@v0
         with:
           issues: P1
 ```

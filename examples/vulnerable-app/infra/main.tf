@@ -1,10 +1,10 @@
-# INTENTIONALLY INSECURE: demo target for secgate. Never apply.
+# INTENTIONALLY INSECURE: demo target for triagegate. Never apply.
 provider "aws" {
   region = "us-east-1"
 }
 
 resource "aws_s3_bucket" "uploads" {
-  bucket = "secgate-demo-public-uploads"
+  bucket = "triagegate-demo-public-uploads"
 }
 
 resource "aws_s3_bucket_public_access_block" "uploads" {

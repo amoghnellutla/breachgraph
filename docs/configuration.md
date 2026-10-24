@@ -1,10 +1,10 @@
 # Configuration reference
 
-secgate reads `.secgate.yml` (or `.secgate.yaml`) from the scanned directory, or the file passed
+triagegate reads `.triagegate.yml` (or `.triagegate.yaml`) from the scanned directory, or the file passed
 with `--config`. Every key is optional, and an empty file is valid. Unknown keys are rejected,
 so a typo such as `priorty` fails loudly instead of being silently ignored.
 
-Run `secgate init` to generate a commented starter file.
+Run `triagegate init` to generate a commented starter file.
 
 ```yaml
 version: 1
@@ -23,6 +23,8 @@ scanners:
     scanners: [vuln, misconfig]  # add "license" for license compliance
     sbom: true                   # CycloneDX SBOM written to the output dir
     ignore_unfixed: false        # hide CVEs that have no fixed version yet
+    offline_scan: false          # skip registry lookups (air-gapped CI); used automatically
+                                 # as a fallback when Maven Central etc. rate-limit (HTTP 429)
     images: []                   # container images to scan, e.g. ["myapp:latest"]
   checkov:
     enabled: true
@@ -97,14 +99,14 @@ P1 ≥ 9, P2 ≥ 7, P3 ≥ 4, P4 < 4. The reasons behind each score are listed i
 
 ## Baselines
 
-A baseline lets you adopt secgate on an existing codebase without fixing everything first:
+A baseline lets you adopt triagegate on an existing codebase without fixing everything first:
 
 ```bash
-secgate scan --write-baseline .secgate-baseline.json   # accept today's findings
-git add .secgate-baseline.json
+triagegate scan --write-baseline .triagegate-baseline.json   # accept today's findings
+git add .triagegate-baseline.json
 ```
 
-When `.secgate-baseline.json` exists in the scanned directory it is applied automatically.
+When `.triagegate-baseline.json` exists in the scanned directory it is applied automatically.
 Findings in it are marked `baseline`, and with `fail_on.new_only: true` only **new** findings
 can fail the build. Fingerprints are based on code content rather than line numbers, so editing
 other parts of a file does not turn old findings into new ones.

@@ -5,13 +5,13 @@ import httpx
 import pytest
 import respx
 
-from secgate.config import Config
-from secgate.integrations.github import GitHubClient, GitHubContext
-from secgate.models import Priority, ScanResult
-from secgate.normalize import finalize
-from secgate.reporters.markdown import MARKER
-from secgate.scoring import score_all
 from tests.conftest import make_vuln
+from triagegate.config import Config
+from triagegate.integrations.github import GitHubClient, GitHubContext
+from triagegate.models import Priority, ScanResult
+from triagegate.normalize import finalize
+from triagegate.reporters.markdown import MARKER
+from triagegate.scoring import score_all
 
 API = "https://api.github.com"
 
@@ -68,7 +68,7 @@ def _result() -> ScanResult:
     items = finalize([make_vuln()])
     items[0].enrichment.kev = True
     score_all(items, Config())
-    return ScanResult(secgate_version="t", target=".", findings=items)
+    return ScanResult(triagegate_version="t", target=".", findings=items)
 
 
 @respx.mock
@@ -78,7 +78,7 @@ def test_issue_sync_creates_and_closes(ctx: GitHubContext) -> None:
         return_value=httpx.Response(
             200,
             json=[
-                {"number": 5, "body": "<!-- secgate-fp:stale --> gone"},
+                {"number": 5, "body": "<!-- triagegate-fp:stale --> gone"},
             ],
         )
     )
@@ -91,8 +91,8 @@ def test_issue_sync_creates_and_closes(ctx: GitHubContext) -> None:
     summary = GitHubClient(ctx).sync_issues(result, Priority.P1, close_fixed=True)
     assert summary == "issues: 1 created, 1 closed"
     body = json.loads(create.calls[0].request.content)
-    assert f"secgate-fp:{result.findings[0].fingerprint}" in body["body"]
-    assert "secgate" in body["labels"]
+    assert f"triagegate-fp:{result.findings[0].fingerprint}" in body["body"]
+    assert "triagegate" in body["labels"]
     assert comment.called and close.called
 
 
@@ -101,7 +101,9 @@ def test_issue_sync_skips_existing(ctx: GitHubContext) -> None:
     result = _result()
     fp = result.findings[0].fingerprint
     respx.get(f"{API}/repos/o/r/issues").mock(
-        return_value=httpx.Response(200, json=[{"number": 9, "body": f"<!-- secgate-fp:{fp} -->"}])
+        return_value=httpx.Response(
+            200, json=[{"number": 9, "body": f"<!-- triagegate-fp:{fp} -->"}]
+        )
     )
     create = respx.post(f"{API}/repos/o/r/issues")
     assert (
