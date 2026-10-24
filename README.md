@@ -2,11 +2,14 @@
 
 # 🛡️ breachgraph
 
-**One security gate for your CI pipeline.**
+**Find the attack paths that matter — from code to cloud.**
 
-Runs Semgrep, Gitleaks, Trivy, Checkov and OWASP ZAP in one step. Duplicates are merged, every
-finding is ranked by real-world exploitability (CISA KEV + EPSS), and the build fails only on
-what matters: *new* issues above your threshold.
+breachgraph runs the open-source scanners you already trust (Semgrep, Gitleaks, Trivy, Checkov,
+ZAP), then does what they can't: it builds one **code-to-cloud graph** and finds the real
+**attack paths** — the chains where an internet-facing route, a vulnerability, a container and an
+over-broad IAM role line up so an outsider can reach your crown-jewel data. It ranks findings by
+whether they actually lie on such a path, so you fix the ten things that can hurt you, not the
+three hundred that can't.
 
 [![ci](https://github.com/OWNER/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/breachgraph/actions/workflows/ci.yml)
 [![self-scan](https://github.com/OWNER/breachgraph/actions/workflows/self-scan.yml/badge.svg)](https://github.com/OWNER/breachgraph/actions/workflows/self-scan.yml)
@@ -17,31 +20,40 @@ what matters: *new* issues above your threshold.
 
 ---
 
-## Why
+## Why this is different
 
-Running scanners in CI is easy. Living with their output is not:
+Most tools hand you a list. A big security team already has Snyk, CodeQL and a cloud scanner —
+what they lack is the *connection between layers*. A medium-severity SSRF is boring on its own.
+SSRF on an internet-facing route, in a pod with host networking, whose node role can read the
+customer-data bucket, is a breach. No single scanner sees that chain, because each one looks at
+only one layer.
 
-- **Noise.** Five tools produce 300 findings, and the same misconfiguration shows up two or three times.
-- **No priority.** Hundreds of "critical" CVSS scores, and nothing says which one is actually exploited in the wild.
-- **All-or-nothing gates.** Turning on blocking mode on an existing repo fails every PR on day one, so teams turn it off.
-- **Scattered results.** Five report formats in five places, and developers read none of them.
+breachgraph joins the layers — **code → container → Kubernetes → cloud IAM → data** — into one
+graph and asks the question that matters: *what can an attacker actually reach, and how?*
 
-breachgraph fixes this with a **normalize → dedupe → enrich → score → policy** pipeline on top of the
-open-source scanners you already trust.
+**It is not a gimmick:** every step that represents gaining control requires a real weakness.
+Being reachable on the network is not the same as being owned. With zero code vulnerabilities,
+breachgraph reports **no path** to your data even if the pod is public and its role is over-broad
+— you can [see that guarantee as a test](tests/test_graph_paths.py). Fix the one cheapest link
+(the "choke point") and the whole path disappears.
+
+<p align="center"><img src="docs/img/attack-paths.png" alt="breachgraph attack paths" width="860"></p>
 
 ## What you get
 
 | | |
 |---|---|
+| 🎯 **Attack-path analysis** | Joins code, containers, Kubernetes and Terraform/AWS into one graph and finds every chain from the internet to a crown-jewel asset. Each independent entry point surfaces separately; each path names the cheapest fix |
+| ☁️ **Real cloud reasoning** | Evaluates IAM policies (scoping, managed policies, explicit-Deny-wins, **privilege-escalation** primitives), EKS **IRSA** and node roles, public exposure (LBs, security groups, public buckets/DBs, unauth Lambda URLs), Kubernetes RBAC and container escape |
 | 🔍 **Coverage** | SAST (Semgrep) · secrets (Gitleaks) · dependency CVEs, IaC, container images, licenses (Trivy) · IaC (Checkov) · DAST (ZAP) · plus **any SARIF** tool (CodeQL, Bandit, gosec…) via `--import` |
-| 🧹 **Deduplication** | Cross-tool clustering (e.g. Trivy `AVD-DS-0002` ≡ Checkov `CKV_DOCKER_3`) and same-tool rule overlap. In the demo app, 227 raw results become 201 findings without merging distinct issues |
-| 🎯 **Risk-based priority** | CVSS/severity adjusted by **CISA KEV** (actively exploited → always P1), **FIRST EPSS** exploit probability, confidence, multi-tool agreement and test-code paths. Every score explains itself |
-| 🚦 **Gate that teams keep on** | Content-based fingerprints + **baselines**, so only *new* findings fail the build. **Suppressions require a reason and an expiry date** |
-| 💬 **Feedback where developers are** | Sticky PR comment · inline code-scanning annotations (SARIF) · job summary · auto-managed GitHub issues for P1s |
-| 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML · Markdown · JUnit · CycloneDX SBOM |
+| 🧹 **Deduplication** | Cross-tool clustering (e.g. Trivy `AVD-DS-0002` ≡ Checkov `CKV_DOCKER_3`) and same-tool rule overlap — at most one finding per tool in each cluster |
+| 📊 **Risk-based priority** | CVSS/severity adjusted by **CISA KEV** (actively exploited → always P1), **FIRST EPSS**, confidence, multi-tool agreement and reachability to crown jewels. Every score explains itself |
+| 🚦 **Gate that teams keep on** | Content-based fingerprints + **baselines**, so only *new* findings and *new* attack paths fail the build. **Suppressions require a reason and an expiry date** |
+| 💬 **Feedback where developers are** | Sticky PR comment with the attack-path diagram · inline code-scanning annotations (SARIF) · job summary · auto-managed GitHub issues |
+| 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML (interactive attack-path flows) · Markdown · JUnit · CycloneDX SBOM |
 | 🔒 **Trustworthy itself** | Scanner binaries pinned and SHA-256 verified · actions pinned to commit SHAs · signed images with SBOM + provenance · secrets always redacted · untrusted scanner output escaped |
 
-<p align="center"><img src="docs/img/html-report.png" alt="breachgraph HTML report" width="820"></p>
+<p align="center"><img src="docs/img/html-report.png" alt="breachgraph findings report" width="820"></p>
 
 ## Quick start
 
@@ -135,17 +147,46 @@ suppressions:
 
 Full reference: [docs/configuration.md](docs/configuration.md).
 
+## Attack paths
+
+[`examples/vulnerable-platform`](examples/vulnerable-platform) is a small microservice (Flask API
+on EKS with IRSA, plus Terraform) with a real internet-to-S3 path. breachgraph reports:
+
+```
+🎯 2 attack path(s) to crown-jewel assets
+  1. [high] risk 14.0 BLOCKS
+     Internet → Ingress api → Deployment shop/api → GET /thumbnail
+       → ServiceAccount shop/api (code_execution) → IAM role api-pod-role
+       → S3 bucket shop-customer-data-prod
+  2. [high] risk 12.73 BLOCKS
+     Internet → Ingress api → Deployment shop/api → GET /fetch
+       → IAM role eks-node-role (ssrf → node metadata) → S3 bucket shop-customer-data-prod
+  Fix first:
+    • Command injection via os.popen (services/api/app.py:30) — breaks 1 path(s)
+    • SSRF via requests.get (services/api/app.py:23) — breaks 1 path(s)
+```
+
+Two independent ways in (command injection gives the pod role; SSRF steals the node role via the
+metadata endpoint) surface separately, because fixing one does not fix the other. Run it yourself:
+
+```bash
+breachgraph scan examples/vulnerable-platform     # scanners + attack graph
+breachgraph graph examples/vulnerable-platform    # attack graph only
+```
+
+How reachability and IAM are modeled: [docs/attack-graph.md](docs/attack-graph.md).
+
 ## How it works
 
 ```mermaid
 flowchart LR
     A[Semgrep · Gitleaks · Trivy · Checkov · ZAP · SARIF] --> B[Normalize<br/>CWE · OWASP · fingerprint]
-    B --> C[Dedupe]
-    C --> D[Enrich<br/>KEV · EPSS]
-    D --> E[Score P1–P4]
-    E --> F[Baseline ·<br/>suppressions]
-    F --> G{Gate}
-    G --> H[SARIF · PR comment · HTML · issues]
+    B --> C[Dedupe] --> D[Enrich<br/>KEV · EPSS] --> E[Score P1–P4]
+    E --> G2[Attack graph<br/>code→cloud paths]
+    CFG[Kubernetes · Terraform · routes] --> G2
+    G2 --> F[Baseline ·<br/>suppressions]
+    F --> GATE{Gate}
+    GATE --> H[SARIF · PR comment · HTML · issues]
 ```
 
 Design notes and how to add a scanner: [docs/architecture.md](docs/architecture.md).
@@ -167,6 +208,7 @@ breachgraph scan [PATH]      Scan and gate
   --github-issues P1       open/close issues per finding
   --offline                skip KEV/EPSS
   --no-fail                report only
+breachgraph graph [PATH]          build the attack graph only (--findings a prior scan)
 breachgraph report results.json   re-render reports, optionally with a new policy
 breachgraph doctor                show installed scanners
 breachgraph init                  write a starter .breachgraph.yml and workflow
@@ -176,11 +218,11 @@ Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner
 
 ## Roadmap
 
-- [ ] AI-assisted triage plugin: LLM explanations and fix suggestions grounded in scanner evidence, with a cost cap
-- [ ] Reachability hints for dependency CVEs (is the vulnerable function imported?)
-- [ ] OSV-Scanner and Grype adapters
-- [ ] GitLab merge request notes and code quality report
-- [ ] Trend history across runs
+- [ ] **Reachability** for dependency CVEs: call-graph analysis to confirm the vulnerable function is actually reachable from an entry point (Python/JS first)
+- [ ] **Bring-your-own-key AI triage**: an optional layer where *you* attach your own Anthropic API key, and an agent explains each attack path and proposes a fix, grounded in the graph evidence. No key is required to use breachgraph, and the project never spends tokens on your behalf
+- [ ] Azure and GCP in the attack graph (AWS and Kubernetes ship today)
+- [ ] CI/CD pipeline hardening (GitHub Actions injection, unpinned actions) and malicious-package detection
+- [ ] OSV-Scanner and Grype adapters; GitLab merge-request notes; trend history across runs
 
 ## Contributing
 

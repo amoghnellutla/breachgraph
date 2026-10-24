@@ -10,7 +10,7 @@ exclude_paths:
   - .tmp/
   - demo-report/
   # Deliberately vulnerable demo target and captured scanner output used as test fixtures.
-  - examples/vulnerable-app/
+  - examples/
   - tests/fixtures/
 
 fail_on:

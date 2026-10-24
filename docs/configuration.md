@@ -77,8 +77,24 @@ enrich:
   epss: true
   cache_hours: 24
 
+attack_graph:
+  enabled: true
+  crown_value: 7            # a node at/above this value (0-10) is a crown jewel
+  crown_jewels:             # raise the value of assets that match (name or id)
+    - match: "customer"
+      value: 10
+    - match: "*prod*"
+      kind: datastore       # optional: datastore|secret|identity|...
+      value: 9
+  fail_on_new_path: true    # a new internet->crown-jewel path fails the gate
+  min_confidence: medium    # high|medium|low — paths below this don't gate
+  max_depth: 12
+  max_paths: 40
+
 timeout: 900
 ```
+
+See [attack-graph.md](attack-graph.md) for how paths are built and ranked.
 
 ## How the priority is calculated
 

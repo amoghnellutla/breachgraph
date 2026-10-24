@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Attack-path analysis**: a code-to-cloud graph (Kubernetes, Terraform/AWS, HTTP routes in
+  Python/JS/TS/Java/Go) that finds chains from the internet to crown-jewel assets. Every
+  control step requires a real weakness, so network exposure alone never reaches credentials.
+- Real AWS IAM evaluation (scoping, managed policies, explicit-Deny-wins, privilege escalation),
+  EKS IRSA and node roles, Kubernetes RBAC and container-escape detection, exposure analysis.
+- Choke-point analysis: the cheapest fixes that break the most paths.
+- Attack paths render in the HTML report (flow diagram), the PR comment and the console; the gate
+  can fail on new attack paths (`attack_graph.fail_on_new_path`).
+- `breachgraph graph` command to build the graph standalone.
+- `examples/vulnerable-platform` demo with a real internet-to-S3 path.
+
 ## [0.1.0] - 2026-10-23
 
 ### Added
