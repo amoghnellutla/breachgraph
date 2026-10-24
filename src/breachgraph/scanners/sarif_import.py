@@ -85,16 +85,12 @@ class SarifImporter(Scanner):
                     Finding(
                         tool=tool,
                         rule_id=str(rule_id),
-                        title=first_sentence(
-                            (rule.get("shortDescription") or {}).get("text") or message
-                        ),
+                        title=first_sentence((rule.get("shortDescription") or {}).get("text") or message),
                         description=message,
                         severity=severity,
                         category=_category(tags),
                         confidence=Confidence.MEDIUM,
-                        location=Location(
-                            path=path, start_line=start, end_line=end, snippet=snippet
-                        ),
+                        location=Location(path=path, start_line=start, end_line=end, snippet=snippet),
                         cwe=[t for t in tags if "cwe" in t.lower()],
                         references=[help_uri] if help_uri else [],
                         remediation=(rule.get("help") or {}).get("text"),

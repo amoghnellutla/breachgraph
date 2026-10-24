@@ -72,9 +72,7 @@ def test_low_confidence_penalty() -> None:
 
 
 def test_severity_override() -> None:
-    cfg = Config.model_validate(
-        {"severity_overrides": [{"rule": "semgrep:rule.one", "severity": "low"}]}
-    )
+    cfg = Config.model_validate({"severity_overrides": [{"rule": "semgrep:rule.one", "severity": "low"}]})
     (out,) = scored(make_finding(), config=cfg)
     assert out.severity is Severity.LOW
 
@@ -91,9 +89,7 @@ def test_results_sorted_by_risk() -> None:
 
 
 def _result(findings, baseline_used: bool = False) -> ScanResult:  # type: ignore[no-untyped-def]
-    return ScanResult(
-        breachgraph_version="t", target=".", findings=findings, baseline_used=baseline_used
-    )
+    return ScanResult(breachgraph_version="t", target=".", findings=findings, baseline_used=baseline_used)
 
 
 def test_gate_fails_on_threshold_and_passes_below() -> None:
@@ -106,9 +102,7 @@ def test_gate_fails_on_threshold_and_passes_below() -> None:
 
 def test_gate_secret_always_blocks() -> None:
     items = scored(
-        make_finding(
-            tool="gitleaks", category=Category.SECRETS, severity=Severity.LOW, path="tests/x.py"
-        )
+        make_finding(tool="gitleaks", category=Category.SECRETS, severity=Severity.LOW, path="tests/x.py")
     )
     gate = evaluate_gate(_result(items), Config())
     assert not gate.passed and items[0].gating
@@ -142,23 +136,17 @@ def test_new_only_false_gates_baseline_too() -> None:
 def test_suppression_by_rule_and_path() -> None:
     cfg = Config(
         suppressions=[
-            Suppression(
-                rule="rule.one", path="legacy/**", reason="accepted", expires=date(2099, 1, 1)
-            )
+            Suppression(rule="rule.one", path="legacy/**", reason="accepted", expires=date(2099, 1, 1))
         ]
     )
-    items = scored(
-        make_finding(path="legacy/a.py", snippet="1"), make_finding(path="src/a.py", snippet="2")
-    )
+    items = scored(make_finding(path="legacy/a.py", snippet="1"), make_finding(path="src/a.py", snippet="2"))
     apply_suppressions(items, cfg)
     by_path = {f.location.path: f.status for f in items}
     assert by_path == {"legacy/a.py": Status.SUPPRESSED, "src/a.py": Status.NEW}
 
 
 def test_expired_suppression_resurfaces_with_warning() -> None:
-    cfg = Config(
-        suppressions=[Suppression(vuln="CVE-2021-44228", reason="x", expires=date(2020, 1, 1))]
-    )
+    cfg = Config(suppressions=[Suppression(vuln="CVE-2021-44228", reason="x", expires=date(2020, 1, 1))])
     items = scored(make_vuln())
     warnings = apply_suppressions(items, cfg, today=date(2026, 1, 1))
     assert items[0].status is Status.NEW
@@ -193,9 +181,7 @@ def test_drop_excluded_keeps_non_repo_locations() -> None:
         [
             make_finding(path="node_modules/x/index.js"),
             make_finding(path="src/a.py", snippet="z"),
-            make_finding(
-                tool="zap", category=Category.DAST, path="https://x/node_modules/", in_repo=False
-            ),
+            make_finding(tool="zap", category=Category.DAST, path="https://x/node_modules/", in_repo=False),
         ]
     )
     kept = {f.location.path for f in drop_excluded(items, Config())}

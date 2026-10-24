@@ -71,20 +71,14 @@ def apply_baseline(findings: list[Finding], baseline: set[str]) -> None:
 def _matches(s: Suppression, f: Finding) -> bool:
     if s.fingerprint and s.fingerprint not in f.fingerprints:
         return False
-    if (
-        s.rule
-        and s.rule not in (f.rule_id, f"{f.tool}:{f.rule_id}")
-        and s.rule not in f.related_rules
-    ):
+    if s.rule and s.rule not in (f.rule_id, f"{f.tool}:{f.rule_id}") and s.rule not in f.related_rules:
         return False
     if s.vuln and s.vuln.upper() not in (v.upper() for v in f.vuln_ids):
         return False
     return not (s.path and not glob_match(f.location.path, s.path))
 
 
-def apply_suppressions(
-    findings: list[Finding], config: Config, today: date | None = None
-) -> list[str]:
+def apply_suppressions(findings: list[Finding], config: Config, today: date | None = None) -> list[str]:
     today = today or date.today()
     warnings: list[str] = []
     expired_reported: set[int] = set()

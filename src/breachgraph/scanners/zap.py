@@ -71,9 +71,7 @@ class ZapScanner(Scanner):
                 for inst in instances[:20]:  # ZAP can list thousands of identical instances
                     uri = inst.get("uri") or site.get("@name", "")
                     detail = " ".join(
-                        p
-                        for p in (inst.get("method"), inst.get("param"), inst.get("evidence"))
-                        if p
+                        p for p in (inst.get("method"), inst.get("param"), inst.get("evidence")) if p
                     )
                     cwe = str(alert.get("cweid") or "")
                     findings.append(
@@ -89,9 +87,7 @@ class ZapScanner(Scanner):
                             cwe=[f"CWE-{cwe}"] if cwe.isdigit() and cwe != "0" else [],
                             remediation=_text(alert.get("solution")) or None,
                             references=[
-                                ln.strip()
-                                for ln in _text(alert.get("reference")).splitlines()
-                                if ln.strip()
+                                ln.strip() for ln in _text(alert.get("reference")).splitlines() if ln.strip()
                             ][:5],
                         )
                     )

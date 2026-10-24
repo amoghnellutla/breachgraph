@@ -75,9 +75,7 @@ class GitleaksScanner(Scanner):
                 match = match.replace(secret, "REDACTED")  # belt and braces on top of --redact
             entropy = float(r.get("Entropy") or 0)
             confidence = (
-                Confidence.HIGH
-                if critical
-                else (Confidence.LOW if 0 < entropy < 3.0 else Confidence.MEDIUM)
+                Confidence.HIGH if critical else (Confidence.LOW if 0 < entropy < 3.0 else Confidence.MEDIUM)
             )
             commit = r.get("Commit") or ""
             desc = str(r.get("Description") or rule)

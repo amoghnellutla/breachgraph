@@ -42,13 +42,9 @@ def test_context_absent_without_token(monkeypatch: pytest.MonkeyPatch) -> None:
 @respx.mock
 def test_comment_is_updated_not_duplicated(ctx: GitHubContext) -> None:
     respx.get(f"{API}/repos/o/r/issues/7/comments").mock(
-        return_value=httpx.Response(
-            200, json=[{"id": 1, "body": "hi"}, {"id": 2, "body": f"{MARKER}\nold"}]
-        )
+        return_value=httpx.Response(200, json=[{"id": 1, "body": "hi"}, {"id": 2, "body": f"{MARKER}\nold"}])
     )
-    patch = respx.patch(f"{API}/repos/o/r/issues/comments/2").mock(
-        return_value=httpx.Response(200, json={})
-    )
+    patch = respx.patch(f"{API}/repos/o/r/issues/comments/2").mock(return_value=httpx.Response(200, json={}))
     post = respx.post(f"{API}/repos/o/r/issues/7/comments")
     assert GitHubClient(ctx).upsert_pr_comment(f"{MARKER}\nnew") == "PR comment updated"
     assert patch.called and not post.called
@@ -57,9 +53,7 @@ def test_comment_is_updated_not_duplicated(ctx: GitHubContext) -> None:
 @respx.mock
 def test_comment_created_when_missing(ctx: GitHubContext) -> None:
     respx.get(f"{API}/repos/o/r/issues/7/comments").mock(return_value=httpx.Response(200, json=[]))
-    post = respx.post(f"{API}/repos/o/r/issues/7/comments").mock(
-        return_value=httpx.Response(201, json={})
-    )
+    post = respx.post(f"{API}/repos/o/r/issues/7/comments").mock(return_value=httpx.Response(201, json={}))
     assert GitHubClient(ctx).upsert_pr_comment("x") == "PR comment created"
     assert post.called
 
@@ -83,9 +77,7 @@ def test_issue_sync_creates_and_closes(ctx: GitHubContext) -> None:
         )
     )
     create = respx.post(f"{API}/repos/o/r/issues").mock(return_value=httpx.Response(201, json={}))
-    comment = respx.post(f"{API}/repos/o/r/issues/5/comments").mock(
-        return_value=httpx.Response(201, json={})
-    )
+    comment = respx.post(f"{API}/repos/o/r/issues/5/comments").mock(return_value=httpx.Response(201, json={}))
     close = respx.patch(f"{API}/repos/o/r/issues/5").mock(return_value=httpx.Response(200, json={}))
 
     summary = GitHubClient(ctx).sync_issues(result, Priority.P1, close_fixed=True)
@@ -101,13 +93,10 @@ def test_issue_sync_skips_existing(ctx: GitHubContext) -> None:
     result = _result()
     fp = result.findings[0].fingerprint
     respx.get(f"{API}/repos/o/r/issues").mock(
-        return_value=httpx.Response(
-            200, json=[{"number": 9, "body": f"<!-- breachgraph-fp:{fp} -->"}]
-        )
+        return_value=httpx.Response(200, json=[{"number": 9, "body": f"<!-- breachgraph-fp:{fp} -->"}])
     )
     create = respx.post(f"{API}/repos/o/r/issues")
     assert (
-        GitHubClient(ctx).sync_issues(result, Priority.P1, close_fixed=True)
-        == "issues: 0 created, 0 closed"
+        GitHubClient(ctx).sync_issues(result, Priority.P1, close_fixed=True) == "issues: 0 created, 0 closed"
     )
     assert not create.called

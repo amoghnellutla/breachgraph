@@ -44,9 +44,7 @@ class PipelineError(Exception):
 def select_scanners(config: Config, opts: ScanOptions) -> list[str]:
     unknown = [n for n in [*opts.only, *opts.skip] if n not in SCANNERS]
     if unknown:
-        raise PipelineError(
-            f"unknown scanner(s): {', '.join(unknown)}; known: {', '.join(SCANNERS)}"
-        )
+        raise PipelineError(f"unknown scanner(s): {', '.join(unknown)}; known: {', '.join(SCANNERS)}")
     imported = {tool for tool, _ in opts.imports}
     names = []
     for name, scanner in SCANNERS.items():
@@ -114,9 +112,7 @@ def process(
             apply_baseline(items, load_baseline(opts.baseline))
             result.baseline_used = True
         else:
-            result.warnings.append(
-                f"baseline {opts.baseline} not found; treating all findings as new"
-            )
+            result.warnings.append(f"baseline {opts.baseline} not found; treating all findings as new")
     result.warnings += apply_suppressions(items, config)
     result.findings = items
     for run in tools:
@@ -157,6 +153,4 @@ def scan(
             on_done(outcome.run)
 
     findings = [f for o in outcomes for f in o.findings]
-    return process(
-        findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started
-    )
+    return process(findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started)

@@ -63,9 +63,7 @@ def build(result: ScanResult) -> dict[str, Any]:
                         *(f"OWASP-{o}" for o in f.owasp),
                     ],
                     "security-severity": f"{f.risk_score:.1f}",
-                    "precision": {"high": "high", "medium": "medium", "low": "low"}[
-                        f.confidence.value
-                    ],
+                    "precision": {"high": "high", "medium": "medium", "low": "low"}[f.confidence.value],
                 },
             }
             if f.references:
@@ -135,9 +133,7 @@ def build(result: ScanResult) -> dict[str, Any]:
                 "results": results,
                 "invocations": [
                     {
-                        "executionSuccessful": all(
-                            t.status.value != "failed" for t in result.tools
-                        ),
+                        "executionSuccessful": all(t.status.value != "failed" for t in result.tools),
                         "toolExecutionNotifications": [
                             {"level": "warning", "message": {"text": w}} for w in result.warnings
                         ],

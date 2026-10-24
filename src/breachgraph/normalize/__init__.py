@@ -260,10 +260,7 @@ def dedupe(findings: list[Finding]) -> list[Finding]:
                     continue
                 s = _strength(clusters[i], clusters[j], rule_keys[i], rule_keys[j])
                 if s:
-                    gap = abs(
-                        (clusters[i].location.start_line or 0)
-                        - (clusters[j].location.start_line or 0)
-                    )
+                    gap = abs((clusters[i].location.start_line or 0) - (clusters[j].location.start_line or 0))
                     candidates.append((-s, gap, i, j))
     candidates.sort()
 

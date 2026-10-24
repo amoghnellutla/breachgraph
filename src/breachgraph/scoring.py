@@ -76,11 +76,7 @@ def score(f: Finding, config: Config) -> None:
         s -= 2.0
         reasons.append("test/docs path")
 
-    if (
-        f.package
-        and not f.package.fixed_version
-        and f.category in (Category.SCA, Category.CONTAINER)
-    ):
+    if f.package and not f.package.fixed_version and f.category in (Category.SCA, Category.CONTAINER):
         reasons.append("no fix available yet")
 
     f.risk_score = round(max(0.0, min(10.0, s)), 1)

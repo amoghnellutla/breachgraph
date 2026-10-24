@@ -56,9 +56,7 @@ _OWASP_CWES: dict[str, tuple[int, ...]] = {
 }
 # fmt: on
 
-CWE_TO_OWASP: dict[str, str] = {
-    f"CWE-{cwe}": cat for cat, cwes in _OWASP_CWES.items() for cwe in cwes
-}
+CWE_TO_OWASP: dict[str, str] = {f"CWE-{cwe}": cat for cat, cwes in _OWASP_CWES.items() for cwe in cwes}
 
 CATEGORY_DEFAULT_OWASP = {
     Category.SCA: "A06:2021",

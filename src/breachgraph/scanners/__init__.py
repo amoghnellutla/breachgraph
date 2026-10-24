@@ -7,8 +7,7 @@ from breachgraph.scanners.trivy import TrivyScanner
 from breachgraph.scanners.zap import ZapScanner
 
 SCANNERS: dict[str, Scanner] = {
-    s.name: s
-    for s in (SemgrepScanner(), GitleaksScanner(), TrivyScanner(), CheckovScanner(), ZapScanner())
+    s.name: s for s in (SemgrepScanner(), GitleaksScanner(), TrivyScanner(), CheckovScanner(), ZapScanner())
 }
 IMPORTERS: dict[str, Scanner] = {**SCANNERS, "sarif": SarifImporter()}
 

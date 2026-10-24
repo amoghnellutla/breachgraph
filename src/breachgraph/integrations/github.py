@@ -103,9 +103,7 @@ class GitHubClient:
         if not self.ctx.pr_number:
             return "not a pull_request event; PR comment skipped"
         url = f"/repos/{self.ctx.repo}/issues/{self.ctx.pr_number}/comments"
-        existing = next(
-            (c for c in self._paginate(url, {}) if MARKER in (c.get("body") or "")), None
-        )
+        existing = next((c for c in self._paginate(url, {}) if MARKER in (c.get("body") or "")), None)
         if existing:
             resp = self.http.patch(
                 f"/repos/{self.ctx.repo}/issues/comments/{existing['id']}", json={"body": body}
@@ -127,12 +125,7 @@ class GitHubClient:
                 fp = body.split("<!-- breachgraph-fp:", 1)[1].split(" -->", 1)[0]
                 open_issues[fp] = issue
 
-        current = {
-            fp
-            for f in result.findings
-            if f.status is not Status.SUPPRESSED
-            for fp in f.fingerprints
-        }
+        current = {fp for f in result.findings if f.status is not Status.SUPPRESSED for fp in f.fingerprints}
         created = closed = 0
         for f in result.findings:
             if f.status is Status.SUPPRESSED or f.priority.rank < min_priority.rank:
@@ -172,8 +165,7 @@ class GitHubClient:
             link = f"[`{loc}`]({self.ctx.link_base}/{f.location.path}{anchor})"
         lines = [
             _FP_MARKER.format(f.fingerprint),
-            f"**Priority:** {f.priority.value} (risk {f.risk_score}/10): "
-            + "; ".join(f.score_reasons),
+            f"**Priority:** {f.priority.value} (risk {f.risk_score}/10): " + "; ".join(f.score_reasons),
             f"**Location:** {link}",
             f"**Rule:** `{f.tool}:{f.rule_id}`"
             + (f" (also: {', '.join(f.related_rules)})" if f.related_rules else ""),

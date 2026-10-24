@@ -55,9 +55,7 @@ def load_epss(
 ) -> dict[str, tuple[float, float]]:
     file = cache / "epss.json"
     try:
-        stored: dict[str, Any] = (
-            json.loads(file.read_text(encoding="utf-8")) if file.exists() else {}
-        )
+        stored: dict[str, Any] = json.loads(file.read_text(encoding="utf-8")) if file.exists() else {}
     except json.JSONDecodeError:
         stored = {}
     now = time.time()
@@ -80,9 +78,7 @@ def load_epss(
     if missing:
         file.write_text(json.dumps(stored), encoding="utf-8")
     return {
-        c: (stored[c]["epss"], stored[c]["pct"])
-        for c in cves
-        if stored.get(c, {}).get("epss") is not None
+        c: (stored[c]["epss"], stored[c]["pct"]) for c in cves if stored.get(c, {}).get("epss") is not None
     }
 
 

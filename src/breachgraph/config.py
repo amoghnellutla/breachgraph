@@ -153,9 +153,7 @@ class Config(_Strict):
     @model_validator(mode="after")
     def _expiry_required(self) -> Config:
         if self.require_suppression_expiry:
-            missing = [
-                s.fingerprint or s.rule or s.vuln for s in self.suppressions if not s.expires
-            ]
+            missing = [s.fingerprint or s.rule or s.vuln for s in self.suppressions if not s.expires]
             if missing:
                 raise ValueError(
                     "suppressions must set 'expires' (or set require_suppression_expiry: false): "

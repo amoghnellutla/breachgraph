@@ -18,9 +18,7 @@ DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
 
 @pytest.fixture
 def ctx(tmp_path: Path) -> ScanContext:
-    cfg = Config.model_validate(
-        {"exclude_paths": ["node_modules/", "examples/legacy/", "**/*.min.js"]}
-    )
+    cfg = Config.model_validate({"exclude_paths": ["node_modules/", "examples/legacy/", "**/*.min.js"]})
     return ScanContext(target=DEMO, work_dir=tmp_path, config=cfg)
 
 
@@ -137,9 +135,7 @@ def test_scan_survives_adapter_bug(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     result = scan(
         DEMO,
         Config(),
-        ScanOptions(
-            only=["checkov"], imports=[("semgrep", FIXTURES / "semgrep.json")], offline=True
-        ),
+        ScanOptions(only=["checkov"], imports=[("semgrep", FIXTURES / "semgrep.json")], offline=True),
         tmp_path / "work",
     )
     tools = {t.name: t for t in result.tools}

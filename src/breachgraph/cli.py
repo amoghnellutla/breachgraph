@@ -82,13 +82,11 @@ def scan_cmd(
     ] = None,
     write_baseline_to: Annotated[
         Path | None,
-        typer.Option(
-            "--write-baseline", help="Write all current findings to this baseline file and exit 0."
-        ),
+        typer.Option("--write-baseline", help="Write all current findings to this baseline file and exit 0."),
     ] = None,
-    output_dir: Annotated[
-        Path, typer.Option("--output-dir", "-o", help="Where reports are written.")
-    ] = Path("breachgraph-report"),
+    output_dir: Annotated[Path, typer.Option("--output-dir", "-o", help="Where reports are written.")] = Path(
+        "breachgraph-report"
+    ),
     formats: Annotated[
         list[str] | None,
         typer.Option(
@@ -97,9 +95,7 @@ def scan_cmd(
             help=f"Report formats: {', '.join(FORMATS)} (repeat or comma-separate).",
         ),
     ] = None,
-    only: Annotated[
-        list[str] | None, typer.Option("--only", help="Run only these scanners.")
-    ] = None,
+    only: Annotated[list[str] | None, typer.Option("--only", help="Run only these scanners.")] = None,
     skip: Annotated[list[str] | None, typer.Option("--skip", help="Skip these scanners.")] = None,
     imports: Annotated[
         list[str] | None,
@@ -113,9 +109,7 @@ def scan_cmd(
         str | None,
         typer.Option("--fail-on", help="Override the priority threshold: P1-P4 or 'none'."),
     ] = None,
-    no_fail: Annotated[
-        bool, typer.Option("--no-fail", help="Always exit 0 (report-only mode).")
-    ] = False,
+    no_fail: Annotated[bool, typer.Option("--no-fail", help="Always exit 0 (report-only mode).")] = False,
     offline: Annotated[bool, typer.Option("--offline", help="Skip KEV/EPSS lookups.")] = False,
     dast_url: Annotated[
         str | None, typer.Option("--dast-url", help="Run a ZAP baseline scan against this URL.")
@@ -191,9 +185,7 @@ def scan_cmd(
     )
 
     def on_done(run: ToolRun) -> None:
-        style = {"ok": "green", "imported": "cyan", "skipped": "dim", "failed": "red"}[
-            run.status.value
-        ]
+        style = {"ok": "green", "imported": "cyan", "skipped": "dim", "failed": "red"}[run.status.value]
         extra = f" {run.message}" if run.message and run.status is not ToolStatus.OK else ""
         console.print(
             f"  [{style}]{run.status.value:>8}[/] {run.name:<9} {run.findings:>4} findings"
@@ -262,9 +254,7 @@ def _github(result: ScanResult, comment: bool, issues: str | None, close_fixed: 
     if not (comment or issues):
         return
     if gh is None:
-        console.print(
-            "[yellow]GitHub integration needs GITHUB_TOKEN and GITHUB_REPOSITORY; skipped[/]"
-        )
+        console.print("[yellow]GitHub integration needs GITHUB_TOKEN and GITHUB_REPOSITORY; skipped[/]")
         return
     client = GitHubClient(gh)
     try:
@@ -302,9 +292,7 @@ def _print_summary(result: ScanResult) -> None:
     if result.gate.passed:
         console.print(f"[bold green]Gate passed[/] ({result.gate.threshold})")
     else:
-        console.print(
-            f"[bold red]Gate failed:[/] {'; '.join(result.gate.reasons)} ({result.gate.threshold})"
-        )
+        console.print(f"[bold red]Gate failed:[/] {'; '.join(result.gate.reasons)} ({result.gate.threshold})")
 
 
 @app.command("report")
@@ -347,14 +335,10 @@ def doctor_cmd() -> None:
             table.add_row(name, "[green]yes[/]", s.version() or exe)
         else:
             missing += 1
-            table.add_row(
-                name, "[red]no[/]", f"install `{s.binary}` or use the breachgraph Docker image"
-            )
+            table.add_row(name, "[red]no[/]", f"install `{s.binary}` or use the breachgraph Docker image")
     console.print(table)
     if missing:
-        console.print(
-            "[dim]Missing scanners are skipped. The Docker image ships all of them pinned.[/]"
-        )
+        console.print("[dim]Missing scanners are skipped. The Docker image ships all of them pinned.[/]")
 
 
 _INIT_CONFIG = """\

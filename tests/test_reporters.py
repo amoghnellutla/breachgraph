@@ -16,9 +16,7 @@ from tests.conftest import FIXTURES, make_finding, make_vuln
 def sample_result() -> ScanResult:
     findings = finalize(
         [
-            make_finding(
-                cwe=["CWE-89"], title="SQL injection via string concat", references=["https://x/y"]
-            ),
+            make_finding(cwe=["CWE-89"], title="SQL injection via string concat", references=["https://x/y"]),
             make_finding(
                 tool="gitleaks",
                 rule_id="generic-api-key",
@@ -48,9 +46,7 @@ def sample_result() -> ScanResult:
     )
     next(f for f in findings if f.rule_id == "CVE-2021-44228").enrichment.kev = True
     items = dedupe(findings)
-    config = Config(
-        suppressions=[Suppression(rule="rule.two", reason="test only", expires=date(2099, 1, 1))]
-    )
+    config = Config(suppressions=[Suppression(rule="rule.two", reason="test only", expires=date(2099, 1, 1))])
     score_all(items, config)
     apply_suppressions(items, config)
     result = ScanResult(
@@ -76,9 +72,7 @@ def test_sarif_validates_against_official_schema() -> None:
 def test_sarif_content() -> None:
     doc = sarif.build(sample_result())
     run = doc["runs"][0]
-    uris = {
-        r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] for r in run["results"]
-    }
+    uris = {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] for r in run["results"]}
     assert "http://localhost:5000/" not in uris  # DAST is excluded from code scanning
     assert "pom.xml" in uris
     rule_ids = {r["id"] for r in run["tool"]["driver"]["rules"]}

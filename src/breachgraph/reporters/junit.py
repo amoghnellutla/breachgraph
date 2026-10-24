@@ -30,14 +30,8 @@ def render(result: ScanResult) -> str:
             )
             body = f"{f.title}\n{'; '.join(f.score_reasons)}\n{f.remediation or ''}".strip()
             if f.gating:
-                ET.SubElement(
-                    case, "failure", message=f"[{f.priority.value}] {f.title}"[:500]
-                ).text = body
+                ET.SubElement(case, "failure", message=f"[{f.priority.value}] {f.title}"[:500]).text = body
             else:
-                ET.SubElement(
-                    case, "system-out"
-                ).text = f"[{f.priority.value}/{f.status.value}] {body}"
+                ET.SubElement(case, "system-out").text = f"[{f.priority.value}/{f.status.value}] {body}"
     ET.indent(suites)
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(suites, encoding="unicode") + "\n"
-    )
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(suites, encoding="unicode") + "\n"

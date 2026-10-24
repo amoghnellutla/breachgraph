@@ -172,9 +172,7 @@ class TrivyScanner(Scanner):
         if v.get("Title"):
             title += f": {v['Title']}"
         if fixed:
-            remediation = (
-                f"Upgrade {pkg} from {installed} to {fixed.split(',')[0].strip()} or later."
-            )
+            remediation = f"Upgrade {pkg} from {installed} to {fixed.split(',')[0].strip()} or later."
         else:
             status = v.get("Status") or "no fix available"
             remediation = (
