@@ -1,4 +1,4 @@
-# INTENTIONALLY VULNERABLE: hardcoded credentials for the triagegate demo.
+# INTENTIONALLY VULNERABLE: hardcoded credentials for the breachgraph demo.
 # These values are random bytes generated for this demo. They are not real credentials.
 
 PAYMENTS_API_KEY = "a1f9e4c43413342af0c254c7997a326f4cb9d672"

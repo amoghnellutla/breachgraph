@@ -7,11 +7,11 @@ from typing import Any
 
 import pytest
 
+from breachgraph.config import Config
+from breachgraph.models import ToolStatus
+from breachgraph.pipeline import PipelineError, ScanOptions, scan, select_scanners
+from breachgraph.scanners import SCANNERS, ScanContext
 from tests.conftest import FIXTURES
-from triagegate.config import Config
-from triagegate.models import ToolStatus
-from triagegate.pipeline import PipelineError, ScanOptions, scan, select_scanners
-from triagegate.scanners import SCANNERS, ScanContext
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
 
@@ -34,7 +34,7 @@ def test_semgrep_command(ctx: ScanContext) -> None:
     assert cmd[cmd.index("--config") + 1] == "p/default"
     excludes = [cmd[i + 1] for i, a in enumerate(cmd) if a == "--exclude"]
     assert "node_modules" in excludes and "examples/legacy" in excludes
-    assert "**/*.min.js" not in excludes  # globs are filtered by triagegate afterwards
+    assert "**/*.min.js" not in excludes  # globs are filtered by breachgraph afterwards
 
 
 def test_gitleaks_always_redacts(ctx: ScanContext) -> None:
@@ -83,7 +83,7 @@ def fake_run(fixture: str | None, code: int = 0, stderr: str = ""):  # type: ign
 
 
 def test_run_success(ctx: ScanContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TRIAGEGATE_SEMGREP_BIN", "/fake/semgrep")
+    monkeypatch.setenv("BREACHGRAPH_SEMGREP_BIN", "/fake/semgrep")
     monkeypatch.setattr(subprocess, "run", fake_run("semgrep.json"))
     outcome = SCANNERS["semgrep"].run(ctx)
     assert outcome.run.status is ToolStatus.OK
@@ -91,7 +91,7 @@ def test_run_success(ctx: ScanContext, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_run_crash_reports_stderr(ctx: ScanContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TRIAGEGATE_SEMGREP_BIN", "/fake/semgrep")
+    monkeypatch.setenv("BREACHGRAPH_SEMGREP_BIN", "/fake/semgrep")
     monkeypatch.setattr(subprocess, "run", fake_run(None, code=2, stderr="invalid rule config"))
     outcome = SCANNERS["semgrep"].run(ctx)
     assert outcome.run.status is ToolStatus.FAILED
@@ -99,7 +99,7 @@ def test_run_crash_reports_stderr(ctx: ScanContext, monkeypatch: pytest.MonkeyPa
 
 
 def test_run_timeout(ctx: ScanContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TRIAGEGATE_SEMGREP_BIN", "/fake/semgrep")
+    monkeypatch.setenv("BREACHGRAPH_SEMGREP_BIN", "/fake/semgrep")
 
     def boom(cmd: list[str], **kw: Any) -> None:
         raise subprocess.TimeoutExpired(cmd, 1)
@@ -110,7 +110,7 @@ def test_run_timeout(ctx: ScanContext, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_missing_binary_is_skipped(ctx: ScanContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TRIAGEGATE_GITLEAKS_BIN", raising=False)
+    monkeypatch.delenv("BREACHGRAPH_GITLEAKS_BIN", raising=False)
     monkeypatch.setattr(shutil, "which", lambda _: None)
     outcome = SCANNERS["gitleaks"].run(ctx)
     assert outcome.run.status is ToolStatus.SKIPPED
@@ -151,7 +151,7 @@ def test_scan_survives_adapter_bug(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 def test_trivy_retries_offline_when_registry_rate_limits(
     ctx: ScanContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("TRIAGEGATE_TRIVY_BIN", "/fake/trivy")
+    monkeypatch.setenv("BREACHGRAPH_TRIVY_BIN", "/fake/trivy")
     ctx.config.scanners.trivy.sbom = False
     calls: list[list[str]] = []
 

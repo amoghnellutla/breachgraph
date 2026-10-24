@@ -10,6 +10,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-triagegate-report/
+breachgraph-report/
 .env
 .tmp/

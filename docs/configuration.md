@@ -1,10 +1,10 @@
 # Configuration reference
 
-triagegate reads `.triagegate.yml` (or `.triagegate.yaml`) from the scanned directory, or the file passed
+breachgraph reads `.breachgraph.yml` (or `.breachgraph.yaml`) from the scanned directory, or the file passed
 with `--config`. Every key is optional, and an empty file is valid. Unknown keys are rejected,
 so a typo such as `priorty` fails loudly instead of being silently ignored.
 
-Run `triagegate init` to generate a commented starter file.
+Run `breachgraph init` to generate a commented starter file.
 
 ```yaml
 version: 1
@@ -99,14 +99,14 @@ P1 ≥ 9, P2 ≥ 7, P3 ≥ 4, P4 < 4. The reasons behind each score are listed i
 
 ## Baselines
 
-A baseline lets you adopt triagegate on an existing codebase without fixing everything first:
+A baseline lets you adopt breachgraph on an existing codebase without fixing everything first:
 
 ```bash
-triagegate scan --write-baseline .triagegate-baseline.json   # accept today's findings
-git add .triagegate-baseline.json
+breachgraph scan --write-baseline .breachgraph-baseline.json   # accept today's findings
+git add .breachgraph-baseline.json
 ```
 
-When `.triagegate-baseline.json` exists in the scanned directory it is applied automatically.
+When `.breachgraph-baseline.json` exists in the scanned directory it is applied automatically.
 Findings in it are marked `baseline`, and with `fail_on.new_only: true` only **new** findings
 can fail the build. Fingerprints are based on code content rather than line numbers, so editing
 other parts of a file does not turn old findings into new ones.

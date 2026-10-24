@@ -49,7 +49,7 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: pytest --cov=triagegate --cov-report=term-missing --cov-fail-under=80
+      - run: pytest --cov=breachgraph --cov-report=term-missing --cov-fail-under=80
 
   docker:
     runs-on: ubuntu-latest
@@ -62,24 +62,24 @@ jobs:
         with:
           context: .
           load: true
-          tags: triagegate:ci
+          tags: breachgraph:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Smoke test every bundled scanner
         run: |
-          docker run --rm triagegate:ci doctor 2>&1 | tee doctor.txt
+          docker run --rm breachgraph:ci doctor 2>&1 | tee doctor.txt
           ! grep -E "semgrep|gitleaks|trivy|checkov" doctor.txt | grep -q " no "
       - name: End-to-end scan of the vulnerable demo app
         run: |
           set +e
-          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" triagegate:ci \
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" breachgraph:ci \
             scan examples/vulnerable-app -o demo-report --format json,sarif,html,md
           code=$?
           set -e
           test "$code" -eq 1  # the demo app must fail the gate
           python3 - <<'PY'
           import json
-          r = json.load(open("demo-report/triagegate.json"))
+          r = json.load(open("demo-report/breachgraph.json"))
           tools = {t["name"]: t["status"] for t in r["tools"]}
           assert all(tools[t] == "ok" for t in ("semgrep", "gitleaks", "trivy", "checkov")), tools
           rules = {f["rule_id"] for f in r["findings"]}

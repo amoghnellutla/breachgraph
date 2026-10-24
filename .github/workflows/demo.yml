@@ -1,4 +1,4 @@
-# Live demo: scans the intentionally vulnerable app so anyone can see triagegate's output
+# Live demo: scans the intentionally vulnerable app so anyone can see breachgraph's output
 # (PR comment, job summary, HTML report artifact) without installing anything.
 name: demo
 
@@ -25,11 +25,11 @@ jobs:
         with:
           context: .
           load: true
-          tags: triagegate:demo
+          tags: breachgraph:demo
           cache-from: type=gha
       - uses: ./
         with:
-          image: triagegate:demo
+          image: breachgraph:demo
           path: examples/vulnerable-app
           output-dir: demo-report
           extra-args: --no-fail # show results without failing the demo

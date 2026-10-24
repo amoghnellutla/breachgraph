@@ -5,13 +5,13 @@ import httpx
 import pytest
 import respx
 
+from breachgraph.config import Config
+from breachgraph.integrations.github import GitHubClient, GitHubContext
+from breachgraph.models import Priority, ScanResult
+from breachgraph.normalize import finalize
+from breachgraph.reporters.markdown import MARKER
+from breachgraph.scoring import score_all
 from tests.conftest import make_vuln
-from triagegate.config import Config
-from triagegate.integrations.github import GitHubClient, GitHubContext
-from triagegate.models import Priority, ScanResult
-from triagegate.normalize import finalize
-from triagegate.reporters.markdown import MARKER
-from triagegate.scoring import score_all
 
 API = "https://api.github.com"
 
@@ -68,7 +68,7 @@ def _result() -> ScanResult:
     items = finalize([make_vuln()])
     items[0].enrichment.kev = True
     score_all(items, Config())
-    return ScanResult(triagegate_version="t", target=".", findings=items)
+    return ScanResult(breachgraph_version="t", target=".", findings=items)
 
 
 @respx.mock
@@ -78,7 +78,7 @@ def test_issue_sync_creates_and_closes(ctx: GitHubContext) -> None:
         return_value=httpx.Response(
             200,
             json=[
-                {"number": 5, "body": "<!-- triagegate-fp:stale --> gone"},
+                {"number": 5, "body": "<!-- breachgraph-fp:stale --> gone"},
             ],
         )
     )
@@ -91,8 +91,8 @@ def test_issue_sync_creates_and_closes(ctx: GitHubContext) -> None:
     summary = GitHubClient(ctx).sync_issues(result, Priority.P1, close_fixed=True)
     assert summary == "issues: 1 created, 1 closed"
     body = json.loads(create.calls[0].request.content)
-    assert f"triagegate-fp:{result.findings[0].fingerprint}" in body["body"]
-    assert "triagegate" in body["labels"]
+    assert f"breachgraph-fp:{result.findings[0].fingerprint}" in body["body"]
+    assert "breachgraph" in body["labels"]
     assert comment.called and close.called
 
 
@@ -102,7 +102,7 @@ def test_issue_sync_skips_existing(ctx: GitHubContext) -> None:
     fp = result.findings[0].fingerprint
     respx.get(f"{API}/repos/o/r/issues").mock(
         return_value=httpx.Response(
-            200, json=[{"number": 9, "body": f"<!-- triagegate-fp:{fp} -->"}]
+            200, json=[{"number": 9, "body": f"<!-- breachgraph-fp:{fp} -->"}]
         )
     )
     create = respx.post(f"{API}/repos/o/r/issues")

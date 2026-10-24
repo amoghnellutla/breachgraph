@@ -1,6 +1,6 @@
 ﻿<div align="center">
 
-# 🛡️ triagegate
+# 🛡️ breachgraph
 
 **One security gate for your CI pipeline.**
 
@@ -8,8 +8,8 @@ Runs Semgrep, Gitleaks, Trivy, Checkov and OWASP ZAP in one step. Duplicates are
 finding is ranked by real-world exploitability (CISA KEV + EPSS), and the build fails only on
 what matters: *new* issues above your threshold.
 
-[![ci](https://github.com/OWNER/triagegate/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/triagegate/actions/workflows/ci.yml)
-[![self-scan](https://github.com/OWNER/triagegate/actions/workflows/self-scan.yml/badge.svg)](https://github.com/OWNER/triagegate/actions/workflows/self-scan.yml)
+[![ci](https://github.com/OWNER/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/breachgraph/actions/workflows/ci.yml)
+[![self-scan](https://github.com/OWNER/breachgraph/actions/workflows/self-scan.yml/badge.svg)](https://github.com/OWNER/breachgraph/actions/workflows/self-scan.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
@@ -26,7 +26,7 @@ Running scanners in CI is easy. Living with their output is not:
 - **All-or-nothing gates.** Turning on blocking mode on an existing repo fails every PR on day one, so teams turn it off.
 - **Scattered results.** Five report formats in five places, and developers read none of them.
 
-triagegate fixes this with a **normalize → dedupe → enrich → score → policy** pipeline on top of the
+breachgraph fixes this with a **normalize → dedupe → enrich → score → policy** pipeline on top of the
 open-source scanners you already trust.
 
 ## What you get
@@ -41,26 +41,26 @@ open-source scanners you already trust.
 | 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML · Markdown · JUnit · CycloneDX SBOM |
 | 🔒 **Trustworthy itself** | Scanner binaries pinned and SHA-256 verified · actions pinned to commit SHAs · signed images with SBOM + provenance · secrets always redacted · untrusted scanner output escaped |
 
-<p align="center"><img src="docs/img/html-report.png" alt="triagegate HTML report" width="820"></p>
+<p align="center"><img src="docs/img/html-report.png" alt="breachgraph HTML report" width="820"></p>
 
 ## Quick start
 
 ### GitHub Actions
 
 ```yaml
-# .github/workflows/triagegate.yml
-name: triagegate
+# .github/workflows/breachgraph.yml
+name: breachgraph
 on: [pull_request, push]
 permissions:
   contents: read
   security-events: write   # code scanning upload
   pull-requests: write     # PR comment
 jobs:
-  triagegate:
+  breachgraph:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: OWNER/triagegate@v0
+      - uses: OWNER/breachgraph@v0
 ```
 
 More recipes (baselines, DAST, container images, issue tracking) are in [docs/github-action.md](docs/github-action.md).
@@ -68,16 +68,16 @@ More recipes (baselines, DAST, container images, issue tracking) are in [docs/gi
 ### Docker (any CI, or your laptop)
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/triagegate scan .
-open triagegate-report/triagegate.html
+docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan .
+open breachgraph-report/breachgraph.html
 ```
 
 ### pip
 
 ```bash
-pip install triagegate
-triagegate doctor          # shows which scanners are on PATH
-triagegate scan .
+pip install breachgraph
+breachgraph doctor          # shows which scanners are on PATH
+breachgraph scan .
 ```
 
 The pip package only orchestrates. It runs whichever scanners are installed and skips the rest.
@@ -87,7 +87,7 @@ The Docker image bundles all of them at pinned versions.
 
 ```yaml
 include:
-  - remote: https://raw.githubusercontent.com/OWNER/triagegate/v0/templates/gitlab-ci.yml
+  - remote: https://raw.githubusercontent.com/OWNER/breachgraph/v0/templates/gitlab-ci.yml
 ```
 
 ## Try it on the demo app
@@ -96,7 +96,7 @@ include:
 with Terraform, Kubernetes and Dockerfile misconfigurations, fake secrets and Log4Shell:
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/triagegate scan examples/vulnerable-app
+docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan examples/vulnerable-app
 ```
 
 ```
@@ -115,14 +115,14 @@ Gate failed: 104 finding(s) at or above the threshold (priority >= P2, any KEV, 
 
 ```bash
 # 1. Accept what exists today
-triagegate scan --write-baseline .triagegate-baseline.json && git add .triagegate-baseline.json
+breachgraph scan --write-baseline .breachgraph-baseline.json && git add .breachgraph-baseline.json
 
 # 2. Turn the gate on. From now on only NEW findings fail PRs.
-# 3. Burn down the baseline over time; accepted risks go into .triagegate.yml with an expiry:
+# 3. Burn down the baseline over time; accepted risks go into .breachgraph.yml with an expiry:
 ```
 
 ```yaml
-# .triagegate.yml
+# .breachgraph.yml
 fail_on:
   priority: P2        # new P1/P2 findings fail the build
   kev: true           # so does anything actively exploited
@@ -153,9 +153,9 @@ Design notes and how to add a scanner: [docs/architecture.md](docs/architecture.
 ## CLI
 
 ```
-triagegate scan [PATH]      Scan and gate
-  -c, --config FILE        .triagegate.yml (auto-detected)
-  -b, --baseline FILE      accepted findings (auto-detected .triagegate-baseline.json)
+breachgraph scan [PATH]      Scan and gate
+  -c, --config FILE        .breachgraph.yml (auto-detected)
+  -b, --baseline FILE      accepted findings (auto-detected .breachgraph-baseline.json)
   --write-baseline FILE    accept all current findings
   -f, --format LIST        json,sarif,html,md,junit
   --only / --skip LIST     choose scanners
@@ -167,9 +167,9 @@ triagegate scan [PATH]      Scan and gate
   --github-issues P1       open/close issues per finding
   --offline                skip KEV/EPSS
   --no-fail                report only
-triagegate report results.json   re-render reports, optionally with a new policy
-triagegate doctor                show installed scanners
-triagegate init                  write a starter .triagegate.yml and workflow
+breachgraph report results.json   re-render reports, optionally with a new policy
+breachgraph doctor                show installed scanners
+breachgraph init                  write a starter .breachgraph.yml and workflow
 ```
 
 Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner error (opt-in).
@@ -185,7 +185,7 @@ Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner
 ## Contributing
 
 Issues and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability in
-triagegate itself, see [SECURITY.md](SECURITY.md).
+breachgraph itself, see [SECURITY.md](SECURITY.md).
 
 ## License
 

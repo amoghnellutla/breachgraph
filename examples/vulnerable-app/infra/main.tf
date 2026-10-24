@@ -1,10 +1,10 @@
-# INTENTIONALLY INSECURE: demo target for triagegate. Never apply.
+# INTENTIONALLY INSECURE: demo target for breachgraph. Never apply.
 provider "aws" {
   region = "us-east-1"
 }
 
 resource "aws_s3_bucket" "uploads" {
-  bucket = "triagegate-demo-public-uploads"
+  bucket = "breachgraph-demo-public-uploads"
 }
 
 resource "aws_s3_bucket_public_access_block" "uploads" {

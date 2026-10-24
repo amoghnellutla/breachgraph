@@ -5,8 +5,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from breachgraph.cli import app
 from tests.conftest import FIXTURES
-from triagegate.cli import app
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
 runner = CliRunner()
@@ -46,14 +46,14 @@ def test_scan_fails_gate_and_writes_reports(tmp_path: Path) -> None:
     assert res.exit_code == 1, res.output
     out = tmp_path / "out"
     for name in [
-        "triagegate.json",
-        "triagegate.sarif",
-        "triagegate.html",
-        "triagegate.md",
-        "triagegate-junit.xml",
+        "breachgraph.json",
+        "breachgraph.sarif",
+        "breachgraph.html",
+        "breachgraph.md",
+        "breachgraph-junit.xml",
     ]:
         assert (out / name).is_file(), name
-    data = json.loads((out / "triagegate.json").read_text(encoding="utf-8"))
+    data = json.loads((out / "breachgraph.json").read_text(encoding="utf-8"))
     assert not data["gate"]["passed"]
     assert {t["status"] for t in data["tools"]} == {"imported"}
 
@@ -69,7 +69,7 @@ def test_baseline_roundtrip(tmp_path: Path) -> None:
     assert json.loads(baseline.read_text(encoding="utf-8"))["findings"]
     res = scan(tmp_path, "--baseline", str(baseline))
     assert res.exit_code == 0, res.output  # everything is accepted -> nothing new
-    data = json.loads((tmp_path / "out" / "triagegate.json").read_text(encoding="utf-8"))
+    data = json.loads((tmp_path / "out" / "breachgraph.json").read_text(encoding="utf-8"))
     assert data["baseline_used"]
     assert {f["status"] for f in data["findings"]} == {"baseline"}
 
@@ -90,7 +90,7 @@ def test_report_rerender(tmp_path: Path) -> None:
         app,
         [
             "report",
-            str(tmp_path / "out" / "triagegate.json"),
+            str(tmp_path / "out" / "breachgraph.json"),
             "-o",
             str(tmp_path / "re"),
             "-f",
@@ -98,22 +98,22 @@ def test_report_rerender(tmp_path: Path) -> None:
         ],
     )
     assert res.exit_code == 0, res.output
-    assert (tmp_path / "re" / "triagegate.html").is_file()
+    assert (tmp_path / "re" / "breachgraph.html").is_file()
 
 
 def test_init(tmp_path: Path) -> None:
     res = runner.invoke(app, ["init", str(tmp_path)])
     assert res.exit_code == 0
-    assert (tmp_path / ".triagegate.yml").is_file()
-    assert (tmp_path / ".github" / "workflows" / "triagegate.yml").is_file()
-    from triagegate.config import load_config
+    assert (tmp_path / ".breachgraph.yml").is_file()
+    assert (tmp_path / ".github" / "workflows" / "breachgraph.yml").is_file()
+    from breachgraph.config import load_config
 
-    load_config(tmp_path / ".triagegate.yml")  # the starter config must be valid
+    load_config(tmp_path / ".breachgraph.yml")  # the starter config must be valid
 
 
 def test_version() -> None:
     res = runner.invoke(app, ["--version"])
-    assert res.exit_code == 0 and "triagegate" in res.output
+    assert res.exit_code == 0 and "breachgraph" in res.output
 
 
 def test_report_rejects_foreign_json(tmp_path: Path) -> None:

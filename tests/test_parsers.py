@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
+from breachgraph.config import Config
+from breachgraph.models import Category, Confidence, Severity
+from breachgraph.scanners import IMPORTERS, ScanContext
+from breachgraph.scanners.base import load_json
 from tests.conftest import FIXTURES
-from triagegate.config import Config
-from triagegate.models import Category, Confidence, Severity
-from triagegate.scanners import IMPORTERS, ScanContext
-from triagegate.scanners.base import load_json
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
 

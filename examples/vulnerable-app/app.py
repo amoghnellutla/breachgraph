@@ -1,4 +1,4 @@
-# INTENTIONALLY VULNERABLE: demo target for triagegate. Never deploy.
+# INTENTIONALLY VULNERABLE: demo target for breachgraph. Never deploy.
 import os
 import pickle
 import sqlite3

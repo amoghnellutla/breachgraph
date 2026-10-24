@@ -14,10 +14,10 @@
    "Type": "pom",
    "Packages": [
     {
-     "ID": "dev.triagegate.demo:vulnerable-service:1.0.0::39605e00",
-     "Name": "dev.triagegate.demo:vulnerable-service",
+     "ID": "dev.breachgraph.demo:vulnerable-service:1.0.0::39605e00",
+     "Name": "dev.breachgraph.demo:vulnerable-service",
      "Identifier": {
-      "PURL": "pkg:maven/dev.triagegate.demo/vulnerable-service@1.0.0",
+      "PURL": "pkg:maven/dev.breachgraph.demo/vulnerable-service@1.0.0",
       "UID": "298bd6db41faac7e"
      },
      "Version": "1.0.0",

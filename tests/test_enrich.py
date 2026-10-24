@@ -1,9 +1,9 @@
 import httpx
 import respx
 
+from breachgraph.config import Enrich
+from breachgraph.enrich import EPSS_URL, KEV_URL, enrich
 from tests.conftest import make_finding, make_vuln
-from triagegate.config import Enrich
-from triagegate.enrich import EPSS_URL, KEV_URL, enrich
 
 KEV_BODY = {
     "vulnerabilities": [

@@ -1,30 +1,30 @@
-# triagegate for GitLab CI. Include it from your .gitlab-ci.yml:
+# breachgraph for GitLab CI. Include it from your .gitlab-ci.yml:
 #
 #   include:
-#     - remote: https://raw.githubusercontent.com/OWNER/triagegate/v0/templates/gitlab-ci.yml
+#     - remote: https://raw.githubusercontent.com/OWNER/breachgraph/v0/templates/gitlab-ci.yml
 #
 # Gating findings show up as failed tests in the merge request (JUnit), and the full HTML
 # report is kept as a job artifact.
 
-triagegate:
+breachgraph:
   stage: test
   image:
-    name: ghcr.io/OWNER/triagegate:v0
+    name: ghcr.io/OWNER/breachgraph:v0
     entrypoint: [""]
   variables:
-    TRIAGEGATE_ARGS: ""
-    TRIAGEGATE_CACHE_DIR: "$CI_PROJECT_DIR/.triagegate-cache"
-    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.triagegate-cache/trivy"
+    BREACHGRAPH_ARGS: ""
+    BREACHGRAPH_CACHE_DIR: "$CI_PROJECT_DIR/.breachgraph-cache"
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.breachgraph-cache/trivy"
   cache:
-    key: triagegate
-    paths: [.triagegate-cache/]
+    key: breachgraph
+    paths: [.breachgraph-cache/]
   script:
-    - triagegate scan . --output-dir triagegate-report --format json,sarif,html,md,junit $TRIAGEGATE_ARGS
+    - breachgraph scan . --output-dir breachgraph-report --format json,sarif,html,md,junit $BREACHGRAPH_ARGS
   artifacts:
     when: always
-    paths: [triagegate-report/]
+    paths: [breachgraph-report/]
     reports:
-      junit: triagegate-report/triagegate-junit.xml
+      junit: breachgraph-report/breachgraph-junit.xml
     expire_in: 30 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
