@@ -137,8 +137,33 @@ def process(
         elif run.status is ToolStatus.OK and run.message:
             result.warnings.append(f"{run.name}: {run.message}")
     result.gate = evaluate_gate(result, config)
+    if config.ai.enabled:
+        _run_ai(result, config, target)
     result.finished_at = datetime.now(UTC)
     return result
+
+
+def _run_ai(result: ScanResult, config: Config, target: Path) -> None:
+    from breachgraph.ai import AIUnavailable, triage
+
+    try:
+        run = triage(result, config.ai, target)
+    except AIUnavailable as exc:
+        result.warnings.append(f"AI triage unavailable: {exc}")
+        return
+    except Exception as exc:  # AI must never break a scan
+        log.exception("AI triage failed")
+        result.warnings.append(f"AI triage failed: {exc}")
+        return
+    result.warnings.extend(run.warnings)
+    result.metadata["ai"] = {
+        "triaged": run.triaged,
+        "narrative": run.narrative,
+        "model": run.model,
+        "cost_usd": round(run.cost_usd, 4),
+        "input_tokens": run.input_tokens,
+        "output_tokens": run.output_tokens,
+    }
 
 
 def scan(

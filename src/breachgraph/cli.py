@@ -138,6 +138,20 @@ def scan_cmd(
         bool,
         typer.Option("--keep-raw", help="Also save each scanner's raw output in OUTPUT_DIR/raw."),
     ] = False,
+    ai: Annotated[
+        bool,
+        typer.Option(
+            "--ai",
+            help="AI-assisted triage (needs your own ANTHROPIC_API_KEY). Explains findings and "
+            "attack paths with a verdict and fix. Advisory only; never changes the gate.",
+        ),
+    ] = False,
+    ai_model: Annotated[
+        str | None, typer.Option("--ai-model", help="Anthropic model id for --ai (e.g. a cheaper one).")
+    ] = None,
+    ai_budget: Annotated[
+        float | None, typer.Option("--ai-budget", help="Max estimated USD to spend on --ai.")
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
     """Scan a directory and gate on the results."""
@@ -158,6 +172,19 @@ def scan_cmd(
         config.scanners.zap.target_url = dast_url
     if images:
         config.scanners.trivy.images = [*config.scanners.trivy.images, *images]
+    if ai:
+        config.ai.enabled = True
+    if ai_model:
+        config.ai.model = ai_model
+    if ai_budget is not None:
+        config.ai.max_usd = ai_budget
+    if config.ai.enabled:
+        from breachgraph.ai import available
+
+        ok, reason = available()
+        if not ok:
+            console.print(f"[yellow]--ai requested but unavailable:[/] {reason}")
+            config.ai.enabled = False
 
     fmt_list = _split(formats) or ["json", "sarif", "html", "md"]
     bad = [f for f in fmt_list if f not in FORMATS]
@@ -278,6 +305,10 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
             console.print("[green]No attack path[/] from the internet to a crown-jewel asset.")
         return
     console.print(f"\n[bold red]🎯 {len(ag.paths)} attack path(s) to crown-jewel assets[/]")
+    if ag.ai_narrative:
+        console.print("[bold]🤖 AI summary:[/]")
+        for line in ag.ai_narrative.splitlines():
+            console.print(f"   {line}")
     for i, p in enumerate(ag.paths[:limit], 1):
         flag = " [bold red]BLOCKS[/]" if p.gating else ""
         hops = ["Internet"]
@@ -311,6 +342,12 @@ def _print_summary(result: ScanResult) -> None:
     if open_findings:
         console.print(table)
     _print_attack_paths(result)
+    ai_meta = result.metadata.get("ai")
+    if isinstance(ai_meta, dict):
+        console.print(
+            f"[dim]AI triage: {ai_meta.get('triaged', 0)} finding(s), "
+            f"~${ai_meta.get('cost_usd', 0):.3f} ({ai_meta.get('model', '')})[/]"
+        )
     for w in result.warnings:
         console.print(f"[yellow]warning:[/] {w}")
     if result.gate.passed:

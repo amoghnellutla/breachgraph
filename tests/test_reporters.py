@@ -178,3 +178,23 @@ def test_reporters_handle_missing_attack_graph() -> None:
     assert r.attack_graph is None
     assert "Attack paths" not in markdown.render(r)
     assert html.render(r)  # does not error
+
+
+def test_ai_insights_render() -> None:
+    from breachgraph.models import AIInsight, AIVerdict
+
+    result = _result_with_paths()
+    result.attack_graph.ai_narrative = "An attacker can reach the customer-data bucket."
+    result.findings[0].ai = AIInsight(
+        verdict=AIVerdict.TRUE_POSITIVE,
+        summary="Real SSRF.",
+        reasoning="User URL flows to requests.get.",
+        remediation="Add an allowlist.",
+        model="claude-opus-5-5",
+    )
+    md = markdown.render(result)
+    assert "AI summary" in md and "customer-data" in md
+    assert "🤖" in md
+    page = html.render(result)
+    assert "AI triage" in page and "Add an allowlist" in page
+    assert "Advisory only" in page

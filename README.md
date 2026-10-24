@@ -51,6 +51,7 @@ breachgraph reports **no path** to your data even if the pod is public and its r
 | 🚦 **Gate that teams keep on** | Content-based fingerprints + **baselines**, so only *new* findings and *new* attack paths fail the build. **Suppressions require a reason and an expiry date** |
 | 💬 **Feedback where developers are** | Sticky PR comment with the attack-path diagram · inline code-scanning annotations (SARIF) · job summary · auto-managed GitHub issues |
 | 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML (interactive attack-path flows) · Markdown · JUnit · CycloneDX SBOM |
+| 🤖 **Optional AI triage** | Bring your own Anthropic key: plain-English verdicts (real / likely-false-positive / needs-review), fixes, and an attack-path narrative. Advisory only, defensive-only, with a spend cap. See [docs/ai-triage.md](docs/ai-triage.md) |
 | 🔒 **Trustworthy itself** | Scanner binaries pinned and SHA-256 verified · actions pinned to commit SHAs · signed images with SBOM + provenance · secrets always redacted · untrusted scanner output escaped |
 
 <p align="center"><img src="docs/img/html-report.png" alt="breachgraph findings report" width="820"></p>
@@ -206,6 +207,7 @@ breachgraph scan [PATH]      Scan and gate
   --image REF              scan a container image
   --github-comment         sticky PR comment
   --github-issues P1       open/close issues per finding
+  --ai                     AI triage (bring your own ANTHROPIC_API_KEY): verdicts + fixes, advisory
   --offline                skip KEV/EPSS
   --no-fail                report only
 breachgraph graph [PATH]          build the attack graph only (--findings a prior scan)
@@ -218,8 +220,8 @@ Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner
 
 ## Roadmap
 
-- [ ] **Reachability** for dependency CVEs: call-graph analysis to confirm the vulnerable function is actually reachable from an entry point (Python/JS first)
-- [ ] **Bring-your-own-key AI triage**: an optional layer where *you* attach your own Anthropic API key, and an agent explains each attack path and proposes a fix, grounded in the graph evidence. No key is required to use breachgraph, and the project never spends tokens on your behalf
+- [x] **Reachability** for dependency CVEs: call-graph analysis to confirm the vulnerable function is actually reachable from an entry point (Python/JS first)
+- [x] **Bring-your-own-key AI triage** — optional; with your own Anthropic key, it explains findings and attack paths with a verdict and fix, grounded in the evidence. Advisory, defensive-only, with a spend cap. See [docs/ai-triage.md](docs/ai-triage.md)
 - [ ] Azure and GCP in the attack graph (AWS and Kubernetes ship today)
 - [ ] CI/CD pipeline hardening (GitHub Actions injection, unpinned actions) and malicious-package detection
 - [ ] OSV-Scanner and Grype adapters; GitLab merge-request notes; trend history across runs

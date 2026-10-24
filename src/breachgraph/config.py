@@ -146,6 +146,22 @@ class CrownJewel(_Strict):
     kind: str | None = None  # restrict to one node kind: datastore, secret, identity...
 
 
+class AIConfig(_Strict):
+    """Optional AI-assisted triage. Bring your own Anthropic API key (ANTHROPIC_API_KEY).
+
+    breachgraph never spends tokens on your behalf: this is off unless you enable it and a key
+    is present. It explains findings and attack paths and gives a true/false-positive verdict with
+    a fix — it does not change the gate, and it never generates exploit code.
+    """
+
+    enabled: bool = False
+    model: str = "claude-opus-5-5"  # any Anthropic model id; set a cheaper one to save cost
+    max_findings: int = 10  # triage at most this many top findings (cost control)
+    explain_paths: bool = True  # write a narrative + fix plan for the attack paths
+    max_usd: float = 1.0  # stop before exceeding this estimated spend
+    effort: Literal["low", "medium", "high"] = "low"  # reasoning effort (cost vs depth)
+
+
 class ReachabilityConfig(_Strict):
     enabled: bool = True
     deprioritize_unused: bool = True  # lower the score of CVEs in packages first-party code never imports
@@ -173,6 +189,7 @@ class Config(_Strict):
     severity_overrides: list[SeverityOverride] = Field(default_factory=list)
     enrich: Enrich = Field(default_factory=Enrich)
     reachability: ReachabilityConfig = Field(default_factory=ReachabilityConfig)
+    ai: AIConfig = Field(default_factory=AIConfig)
     attack_graph: AttackGraph = Field(default_factory=AttackGraph)
     timeout: int = 900
 

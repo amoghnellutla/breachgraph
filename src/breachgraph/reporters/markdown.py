@@ -44,7 +44,11 @@ def _table(findings: list[Finding], link_base: str | None, limit: int) -> list[s
             tags.append("**KEV**")
         if f.enrichment.epss is not None and f.enrichment.epss >= 0.1:
             tags.append(f"EPSS {f.enrichment.epss:.0%}")
+        if f.ai:
+            tags.append("🤖 " + _AI_VERDICT.get(f.ai.verdict.value, f.ai.verdict.value))
         title = _cell(f.title) + (" " + " ".join(tags) if tags else "")
+        if f.ai and f.ai.summary:
+            title += "<br>_" + _cell(f.ai.summary, 160) + "_"
         rows.append(
             f"| {_PRIO_ICON[f.priority]} {f.priority.value} | {title} | {_where(f, link_base)} "
             f"| {f.severity.value} | {', '.join(f.sources)} |"
@@ -54,6 +58,11 @@ def _table(findings: list[Finding], link_base: str | None, limit: int) -> list[s
     return rows
 
 
+_AI_VERDICT = {
+    "true_positive": "real",
+    "likely_false_positive": "likely false positive",
+    "needs_review": "needs review",
+}
 _WEAPON_ICON = {
     "code_execution": "💥",
     "ssrf": "🔁",
@@ -76,6 +85,10 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
             return ["> 🟢 **No attack path** found from the internet to a crown-jewel asset.", ""]
         return []
     out = [f"### 🎯 Attack paths ({len(ag.paths)})", ""]
+    if ag.ai_narrative:
+        out += ["> 🤖 **AI summary**", ""]
+        out += ["> " + line for line in defang(ag.ai_narrative).splitlines()]
+        out.append("")
     out.append(
         "An attacker on the internet can reach a high-value asset by chaining these steps. "
         "Each ⚠️ step needs a real vulnerability; fix any one to break the path."

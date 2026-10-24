@@ -97,6 +97,12 @@ ul.warn { margin: 0; padding-left: 18px; }
   {% if ag and ag.enabled %}
   <div class="panel">
     <h2 style="margin-top:0">🎯 Attack paths</h2>
+    {% if ag.ai_narrative %}
+    <div class="fixes" style="background: color-mix(in srgb, var(--p2) 10%, transparent)">
+      <strong>🤖 AI summary</strong>
+      <div style="white-space: pre-wrap; margin-top: 4px">{{ ag.ai_narrative }}</div>
+    </div>
+    {% endif %}
     {% if ag.paths %}
     <p class="muted">An attacker on the internet can reach a high-value asset by chaining these steps.
       Each highlighted step needs a real vulnerability — fix any one to break the path.</p>
@@ -190,6 +196,14 @@ ul.warn { margin: 0; padding-left: 18px; }
           {% if f.location.snippet %}<pre>{{ f.location.snippet }}</pre>{% endif %}
           {% if f.remediation %}<p><strong>Fix:</strong> {{ f.remediation }}</p>{% endif %}
           {% if f.references %}<p>{% for r in f.references[:5] if r.startswith(("https://", "http://")) %}<a href="{{ r }}" rel="noopener noreferrer" target="_blank">{{ r }}</a><br>{% endfor %}</p>{% endif %}
+          {% if f.ai %}
+          <div class="fixes" style="background: color-mix(in srgb, var(--p2) 10%, transparent)">
+            <strong>🤖 AI triage: {{ f.ai.verdict.value.replace("_", " ") }}</strong> <span class="muted">({{ f.ai.confidence.value }} confidence)</span>
+            <p style="margin:4px 0">{{ f.ai.reasoning }}</p>
+            {% if f.ai.remediation %}<p style="margin:4px 0"><strong>Suggested fix:</strong> {{ f.ai.remediation }}</p>{% endif %}
+            <p class="muted" style="margin:4px 0 0">Advisory only — does not change the gate. Model: {{ f.ai.model }}</p>
+          </div>
+          {% endif %}
         </td></tr>
       {% else %}
         <tr><td colspan="6" class="muted">No findings. Nice.</td></tr>

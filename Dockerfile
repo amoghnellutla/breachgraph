@@ -37,7 +37,7 @@ RUN python -m venv /opt/semgrep && /opt/semgrep/bin/pip install --no-cache-dir "
     && python -m venv /opt/checkov && /opt/checkov/bin/pip install --no-cache-dir "checkov==${CHECKOV_VERSION}"
 COPY pyproject.toml README.md LICENSE /build/
 COPY src /build/src
-RUN python -m venv /opt/breachgraph && /opt/breachgraph/bin/pip install --no-cache-dir /build
+RUN python -m venv /opt/breachgraph && /opt/breachgraph/bin/pip install --no-cache-dir "/build[ai]"
 
 FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70
 LABEL org.opencontainers.image.title="breachgraph" \

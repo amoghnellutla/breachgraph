@@ -140,6 +140,23 @@ class Enrichment(BaseModel):
     epss_percentile: float | None = None
 
 
+class AIVerdict(StrEnum):
+    TRUE_POSITIVE = "true_positive"
+    LIKELY_FALSE_POSITIVE = "likely_false_positive"
+    NEEDS_REVIEW = "needs_review"
+
+
+class AIInsight(BaseModel):
+    """AI-assisted triage for one finding. Advisory only — never changes the gate on its own."""
+
+    verdict: AIVerdict
+    confidence: Confidence = Confidence.MEDIUM
+    summary: str  # one-line plain-English explanation
+    reasoning: str  # why, grounded in the code/config evidence
+    remediation: str  # concrete fix guidance
+    model: str = ""
+
+
 class Finding(BaseModel):
     fingerprint: str = ""
     tool: str
@@ -169,6 +186,7 @@ class Finding(BaseModel):
     status: Status = Status.NEW
     suppression_reason: str | None = None
     gating: bool = False  # True when this finding causes the gate to fail
+    ai: AIInsight | None = None  # optional AI-assisted triage
 
     @property
     def cves(self) -> list[str]:
@@ -237,6 +255,7 @@ class AttackGraphSummary(BaseModel):
     choke_points: list[ChokePointView] = Field(default_factory=list)
     skipped: list[str] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
+    ai_narrative: str | None = None  # AI-written explanation of the attack paths and fix plan
 
     @property
     def gating_paths(self) -> list[AttackPathView]:
