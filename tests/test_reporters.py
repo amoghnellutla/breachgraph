@@ -119,3 +119,62 @@ def test_junit_marks_gating_findings_as_failures() -> None:
     assert failures >= 2  # KEV vuln + secret
     names = [c.get("name") for c in root.iter("testcase")]
     assert not any("rule.two" in (n or "") for n in names)  # suppressed findings are left out
+
+
+def _result_with_paths():
+    from pathlib import Path
+
+    from breachgraph.models import ToolRun, ToolStatus
+    from breachgraph.pipeline import ScanOptions, process
+
+    platform = Path(__file__).parent.parent / "examples" / "vulnerable-platform"
+    findings = [
+        make_finding(
+            tool="semgrep",
+            rule_id="ssrf",
+            title="SSRF via requests.get",
+            category=Category.SAST,
+            cwe=["CWE-918"],
+            path="services/api/app.py",
+            line=23,
+        ),
+        make_finding(
+            tool="semgrep",
+            rule_id="cmdi",
+            title="Command injection via os.popen",
+            category=Category.SAST,
+            cwe=["CWE-78"],
+            path="services/api/app.py",
+            line=30,
+        ),
+    ]
+    return process(
+        findings,
+        [ToolRun(name="semgrep", status=ToolStatus.IMPORTED, findings=2)],
+        Config(),
+        platform,
+        ScanOptions(offline=True),
+    )
+
+
+def test_markdown_shows_attack_paths() -> None:
+    md = markdown.render(_result_with_paths())
+    assert "Attack paths" in md
+    assert "customer-data" in md
+    assert "Fix these first" in md
+    assert "code_execution" in md or "Command injection" in md
+
+
+def test_html_shows_attack_paths() -> None:
+    page = html.render(_result_with_paths())
+    assert "Attack paths" in page
+    assert "S3 bucket shop-customer-data-prod" in page
+    assert "weapon" in page  # the flow diagram marks weapon hops
+    assert "blocks merge" in page
+
+
+def test_reporters_handle_missing_attack_graph() -> None:
+    r = sample_result()  # has no attack_graph
+    assert r.attack_graph is None
+    assert "Attack paths" not in markdown.render(r)
+    assert html.render(r)  # does not error

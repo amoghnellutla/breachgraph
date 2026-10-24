@@ -54,6 +54,63 @@ def _table(findings: list[Finding], link_base: str | None, limit: int) -> list[s
     return rows
 
 
+_WEAPON_ICON = {
+    "code_execution": "💥",
+    "ssrf": "🔁",
+    "data_injection": "💉",
+    "file_read": "📂",
+    "auth_bypass": "🔓",
+    "credential_exposure": "🔑",
+    "vulnerable_dependency": "📦",
+    "container_escape": "📦",
+    "metadata_reachable": "☁️",
+}
+
+
+def _attack_paths_md(result: ScanResult) -> list[str]:
+    ag = result.attack_graph
+    if ag is None or not ag.enabled:
+        return []
+    if not ag.paths:
+        if ag.stats.get("crown_jewels", 0):
+            return ["> 🟢 **No attack path** found from the internet to a crown-jewel asset.", ""]
+        return []
+    out = [f"### 🎯 Attack paths ({len(ag.paths)})", ""]
+    out.append(
+        "An attacker on the internet can reach a high-value asset by chaining these steps. "
+        "Each ⚠️ step needs a real vulnerability; fix any one to break the path."
+    )
+    out.append("")
+    for i, p in enumerate(ag.paths[:8], 1):
+        flag = " · **blocks merge**" if p.gating else ""
+        tag = "" if p.is_new or not result.baseline_used else " _(pre-existing)_"
+        out.append(
+            f"**Path {i} → {_cell(p.target, 60)}** · risk {p.score} · {p.confidence} confidence{flag}{tag}"
+        )
+        chain = []
+        for s in p.steps:
+            if s.via:
+                icon = _WEAPON_ICON.get(s.via, "⚠️")
+                loc = f" (`{s.evidence_path}:{s.evidence_line}`)" if s.evidence_path else ""
+                chain.append(f"{icon} **{_cell(s.dst, 40)}**{loc}")
+            else:
+                chain.append(_cell(s.dst, 40))
+        out.append("`Internet` → " + " → ".join(chain))
+        out.append("")
+    if ag.choke_points:
+        out.append("**Fix these first (each breaks the most paths):**")
+        for c in ag.choke_points[:5]:
+            loc = f" `{c.path}:{c.line}`" if c.path else ""
+            icon = _WEAPON_ICON.get(c.weakness, "⚠️")
+            out.append(f"- {icon} _{_cell(c.title, 70)}_{loc} — breaks {c.paths_cut} path(s)")
+        out.append("")
+    if ag.skipped:
+        out.append(f"<details><summary>Attack-graph blind spots ({len(ag.skipped)})</summary>\n")
+        out += [f"- {_cell(s, 200)}" for s in ag.skipped[:20]]
+        out += ["", "</details>", ""]
+    return out
+
+
 def render(result: ScanResult, link_base: str | None = None, details_url: str | None = None) -> str:
     gate = result.gate
     head = "✅ Security gate passed" if gate.passed else "❌ Security gate failed"
@@ -83,6 +140,8 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
         for t in result.tools
     )
     out += [f"**Scanners:** {tools}", ""]
+
+    out += _attack_paths_md(result)
 
     gating = [f for f in result.findings if f.gating]
     if gating:

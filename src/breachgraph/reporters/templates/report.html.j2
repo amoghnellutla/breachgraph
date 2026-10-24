@@ -40,6 +40,20 @@ tr.detail td { background: var(--bg); }
 .pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); margin-right: 4px; white-space: nowrap; }
 .pill.kev { border-color: var(--p1); color: var(--p1); font-weight: 600; }
 .pill.gate { background: var(--p1); border-color: var(--p1); color: #fff; }
+.path { border: 1px solid var(--border); border-left: 4px solid var(--p1); border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: var(--panel); }
+.path.low { border-left-color: var(--p3); }
+.path h4 { margin: 0 0 8px; font-size: 14px; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.hop { display: flex; align-items: center; }
+.hop .box { border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 12px; max-width: 220px; }
+.hop .box.weapon { border-color: var(--p1); background: color-mix(in srgb, var(--p1) 12%, transparent); font-weight: 600; }
+.hop .box.start { background: color-mix(in srgb, var(--muted) 15%, transparent); }
+.hop .box.jewel { border-color: var(--p3); background: color-mix(in srgb, var(--p3) 15%, transparent); font-weight: 600; }
+.hop .box small { display: block; color: var(--muted); font-weight: 400; }
+.arrow { padding: 0 8px; color: var(--muted); align-self: center; white-space: nowrap; font-size: 12px; }
+.arrow b { color: var(--p1); }
+.fixes { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.fixes code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
 code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
 pre { background: var(--code); padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
 .loc { word-break: break-all; }
@@ -78,6 +92,60 @@ ul.warn { margin: 0; padding-left: 18px; }
     </table>
     {% if result.warnings %}<h3>Warnings</h3><ul class="warn">{% for w in result.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
   </div>
+
+  {% set ag = result.attack_graph %}
+  {% if ag and ag.enabled %}
+  <div class="panel">
+    <h2 style="margin-top:0">🎯 Attack paths</h2>
+    {% if ag.paths %}
+    <p class="muted">An attacker on the internet can reach a high-value asset by chaining these steps.
+      Each highlighted step needs a real vulnerability — fix any one to break the path.</p>
+    {% for p in ag.paths %}
+    <div class="path {{ 'low' if p.confidence == 'low' else '' }}">
+      <h4>
+        {% if p.gating %}<span class="pill gate">blocks merge</span> {% endif %}
+        → {{ p.target }}
+        <span class="muted">· risk {{ p.score }} · {{ p.confidence }} confidence{% if result.baseline_used and not p.is_new %} · pre-existing{% endif %}</span>
+      </h4>
+      <div class="flow">
+        <div class="hop"><div class="box start">Internet</div></div>
+        {% for s in p.steps %}
+        <div class="hop">
+          <span class="arrow">{% if s.via %}──<b>{{ s.via.replace("_", " ") }}</b>──▶{% else %}──▶{% endif %}</span>
+          <div class="box {{ 'weapon' if s.via else '' }} {{ 'jewel' if loop.last else '' }}">
+            {{ s.dst }}
+            {% if s.via and s.weakness_title %}<small>{{ s.weakness_title }}</small>{% endif %}
+            {% if s.evidence_path and s.via %}<small>{{ s.evidence_path }}{% if s.evidence_line %}:{{ s.evidence_line }}{% endif %}</small>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% if ag.choke_points %}
+    <div class="fixes">
+      <strong>Fix these first — each breaks the most paths:</strong>
+      <ul style="margin:6px 0 0">
+        {% for c in ag.choke_points[:6] %}
+        <li>{{ c.title }}{% if c.path %} <code>{{ c.path }}{% if c.line %}:{{ c.line }}{% endif %}</code>{% endif %}
+          — breaks {{ c.paths_cut }} path(s)</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% else %}
+    <p>🟢 No attack path found from the internet to a crown-jewel asset
+      {% if ag.stats.get("crown_jewels") %}({{ ag.stats["crown_jewels"] }} crown jewel(s) checked){% endif %}.</p>
+    {% endif %}
+    {% if ag.skipped %}
+    <details><summary>Blind spots ({{ ag.skipped | length }})</summary>
+      <ul class="warn">{% for s in ag.skipped %}<li>{{ s }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+    <p class="muted" style="margin-bottom:0">Graph: {{ ag.stats.get("nodes", 0) }} assets,
+      {{ ag.stats.get("routes", 0) }} routes, {{ ag.stats.get("workloads", 0) }} workloads.</p>
+  </div>
+  {% endif %}
 
   <div class="panel">
     <div class="filters">
