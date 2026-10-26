@@ -122,8 +122,11 @@ class Graph(BaseModel):
         return existing
 
     def add_edge(self, edge: Edge) -> None:
+        # Edges that need different weaknesses are different ways in (e.g. code execution vs SSRF
+        # to the same identity), so they are kept apart.
+        key = (edge.src, edge.dst, edge.kind, sorted(edge.requires))
         for e in self.edges:
-            if (e.src, e.dst, e.kind) == (edge.src, edge.dst, edge.kind):
+            if (e.src, e.dst, e.kind, sorted(e.requires)) == key:
                 e.evidence.extend(x for x in edge.evidence if x not in e.evidence)
                 return
         self.edges.append(edge)

@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Azure and GCP in the attack graph** (Terraform). Azure: role assignments evaluated as
+  Actions/NotActions/DataActions over their scope, custom roles, Key Vault RBAC and access
+  policies, privilege escalation via `roleAssignments/write`, managed identities on VMs, App
+  Service, Functions, Container Apps and AKS, NSG/public-IP exposure, public blob containers and
+  database firewalls, AKS workload identity. GCP: IAM members/bindings/policies from organization
+  to resource level, predefined and custom roles, service-account impersonation chains,
+  `setIamPolicy` escalation, GCE/Cloud Run/Cloud Functions/GKE identities, firewall exposure,
+  public invokers, buckets, datasets and Cloud SQL, GKE Workload Identity. SSRF to the Azure or
+  GCP metadata endpoint is low confidence, because it needs a request header.
+
 - **Attack-path analysis**: a code-to-cloud graph (Kubernetes, Terraform/AWS, HTTP routes in
   Python/JS/TS/Java/Go) that finds chains from the internet to crown-jewel assets. Every
   control step requires a real weakness, so network exposure alone never reaches credentials.

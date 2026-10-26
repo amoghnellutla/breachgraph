@@ -43,8 +43,8 @@ breachgraph reports **no path** to your data even if the pod is public and its r
 
 | | |
 |---|---|
-| 🎯 **Attack-path analysis** | Joins code, containers, Kubernetes and Terraform/AWS into one graph and finds every chain from the internet to a crown-jewel asset. Each independent entry point surfaces separately; each path names the cheapest fix |
-| ☁️ **Real cloud reasoning** | Evaluates IAM policies (scoping, managed policies, explicit-Deny-wins, **privilege-escalation** primitives), EKS **IRSA** and node roles, public exposure (LBs, security groups, public buckets/DBs, unauth Lambda URLs), Kubernetes RBAC and container escape |
+| 🎯 **Attack-path analysis** | Joins code, containers, Kubernetes and Terraform (AWS, Azure, GCP) into one graph and finds every chain from the internet to a crown-jewel asset. Each independent entry point surfaces separately; each path names the cheapest fix |
+| ☁️ **Real cloud reasoning** | Evaluates AWS IAM policies (scoping, managed policies, explicit-Deny-wins, **privilege-escalation** primitives), Azure role assignments (Actions/NotActions/DataActions by scope, Key Vault access policies), GCP IAM bindings (predefined and custom roles, service-account impersonation), EKS IRSA, AKS and GKE workload identity, node identities, public exposure (LBs, security groups, public buckets/DBs, unauth Lambda URLs), Kubernetes RBAC and container escape |
 | 🔍 **Coverage** | SAST (Semgrep) · secrets (Gitleaks) · dependency CVEs, IaC, container images, licenses (Trivy) · IaC (Checkov) · DAST (ZAP) · plus **any SARIF** tool (CodeQL, Bandit, gosec…) via `--import` |
 | 🧹 **Deduplication** | Cross-tool clustering (e.g. Trivy `AVD-DS-0002` ≡ Checkov `CKV_DOCKER_3`) and same-tool rule overlap — at most one finding per tool in each cluster |
 | 📊 **Risk-based priority** | CVSS/severity adjusted by **CISA KEV** (actively exploited → always P1), **FIRST EPSS**, confidence, multi-tool agreement and reachability to crown jewels. Every score explains itself |
@@ -222,7 +222,7 @@ Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner
 
 - [x] **Reachability** for dependency CVEs: call-graph analysis to confirm the vulnerable function is actually reachable from an entry point (Python/JS first)
 - [x] **Bring-your-own-key AI triage**: optional; with your own Anthropic key, a verdict and fix per top finding, grounded in the enclosing code, route and attack path. Advisory, defensive-only, with a spend cap. See [docs/ai-triage.md](docs/ai-triage.md)
-- [ ] Azure and GCP in the attack graph (AWS and Kubernetes ship today)
+- [x] Azure and GCP in the attack graph
 - [ ] CI/CD pipeline hardening (GitHub Actions injection, unpinned actions) and malicious-package detection
 - [ ] OSV-Scanner and Grype adapters; GitLab merge-request notes; trend history across runs
 

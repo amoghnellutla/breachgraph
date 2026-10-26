@@ -220,7 +220,12 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                     )
             # SSRF to the cloud metadata/credentials endpoint -> the compute's role.
             if w.has({WeaknessClass.METADATA_REACHABLE}):
-                imdsv1 = w.attrs.get("imdsv2") is False or w.attrs.get("host_network") is True
+                # A plain GET is enough on IMDSv1 or from the host network. IMDSv2 (AWS) and the
+                # Metadata / Metadata-Flavor header (Azure, GCP) need an SSRF that controls headers.
+                header = w.attrs.get("metadata_header")
+                imdsv1 = (w.attrs.get("imdsv2") is False and not header) or w.attrs.get(
+                    "host_network"
+                ) is True
                 if w.attrs.get("platform") == "kubernetes":
                     targets = [
                         e.dst for e in adj.get("k8s:host:nodes", []) if e.kind is EdgeKind.USES_IDENTITY
@@ -237,7 +242,7 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                             evidence=route.evidence,
                             confidence=Confidence.HIGH if imdsv1 else Confidence.LOW,
                             note="server-side requests reach the cloud credential endpoint"
-                            + ("" if imdsv1 else " (IMDSv2 reduces this risk)"),
+                            + ("" if imdsv1 else f" ({header or 'IMDSv2'} reduces this risk)"),
                         )
                     )
             # File read -> any mounted secret file.
@@ -259,9 +264,7 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                 if e.kind is not EdgeKind.USES_IDENTITY:
                     continue
                 for e2 in adj.get(e.dst, []):
-                    if e2.kind is EdgeKind.CAN_ACCESS and str(
-                        graph.nodes[e2.dst].attrs.get("tf", "")
-                    ).startswith(("aws_db", "aws_rds")):
+                    if e2.kind is EdgeKind.CAN_ACCESS and graph.nodes[e2.dst].attrs.get("relational"):
                         graph.add_edge(
                             Edge(
                                 src=route.id,

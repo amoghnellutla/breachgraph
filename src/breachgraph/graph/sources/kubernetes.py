@@ -1,5 +1,5 @@
 """Kubernetes manifests -> workloads, exposure (Ingress / LoadBalancer / NodePort), service
-accounts (incl. EKS IRSA role links), mounted secrets and container-isolation weaknesses.
+accounts (incl. EKS IRSA and GKE Workload Identity links), mounted secrets and container-isolation weaknesses.
 
 Helm templates and Kustomize overlays are not rendered here; render them first
 (`helm template`, `kustomize build`) and scan the output. Unrendered templates are reported
@@ -66,6 +66,7 @@ INTERNAL_INGRESS_ANNOTATIONS = {
     "kubernetes.io/ingress.class": {"internal", "nginx-internal"},
 }
 IRSA_ANNOTATION = "eks.amazonaws.com/role-arn"
+GKE_WI_ANNOTATION = "iam.gke.io/gcp-service-account"
 ROLE_ARN_RE = re.compile(r"arn:aws[\w-]*:iam::[^:]*:role/(?:.*/)?([\w+=,.@-]+)$")
 
 
@@ -466,8 +467,10 @@ class KubernetesSource:
         sa_doc, sa_ev = self.service_accounts.get(f"{ns}/{sa}", ({}, ev))
         if automount is None:
             automount = sa_doc.get("automountServiceAccountToken", True)
-        role_arn = ((sa_doc.get("metadata") or {}).get("annotations") or {}).get(IRSA_ANNOTATION)
-        if automount is not False or role_arn:
+        annotations = (sa_doc.get("metadata") or {}).get("annotations") or {}
+        role_arn = annotations.get(IRSA_ANNOTATION)
+        gcp_sa = annotations.get(GKE_WI_ANNOTATION)
+        if automount is not False or role_arn or gcp_sa:
             said = f"k8s:serviceaccount:{ns}/{sa}"
             graph.add_node(
                 Node(
@@ -508,6 +511,27 @@ class KubernetesSource:
                         kind=EdgeKind.USES_IDENTITY,
                         evidence=[sa_ev],
                         note="EKS IRSA annotation",
+                    )
+                )
+            if gcp_sa:
+                gid = f"gcp:service_account:{str(gcp_sa).split('@', 1)[0]}"
+                graph.add_node(
+                    Node(
+                        id=gid,
+                        kind=NodeKind.IDENTITY,
+                        name=f"Service account {gcp_sa}",
+                        attrs={"platform": "gcp"},
+                        evidence=[sa_ev],
+                    )
+                )
+                graph.add_edge(
+                    Edge(
+                        src=said,
+                        dst=gid,
+                        kind=EdgeKind.USES_IDENTITY,
+                        evidence=[sa_ev],
+                        confidence=Confidence.MEDIUM,
+                        note="GKE Workload Identity annotation (also needs roles/iam.workloadIdentityUser)",
                     )
                 )
         return node.id

@@ -1,5 +1,7 @@
 """Terraform (AWS) -> exposure, identities, effective permissions and data stores.
 
+Azure and GCP resources from the same parse are handled in azure.py and gcp.py.
+
 Static analysis of .tf files (no `terraform plan` needed). Values that are only known at apply
 time (variables, computed ARNs) lower the confidence of the edges that depend on them instead of
 being guessed silently.
@@ -8,12 +10,9 @@ being guessed silently.
 from __future__ import annotations
 
 import fnmatch
-import io
 import re
 from dataclasses import dataclass, field
 from typing import Any
-
-import hcl2
 
 from breachgraph.graph.model import (
     CONTROL,
@@ -29,8 +28,13 @@ from breachgraph.graph.model import (
     WeaknessClass,
     internet,
 )
-from breachgraph.graph.sources.common import SourceContext, line_of
-from breachgraph.graph.sources.hcl import blocks, decode_policy, literal, refs, truthy
+from breachgraph.graph.sources.azure import AzureTerraform
+from breachgraph.graph.sources.common import SourceContext
+from breachgraph.graph.sources.gcp import GcpTerraform
+from breachgraph.graph.sources.hcl import decode_policy, literal, refs, truthy
+from breachgraph.graph.sources.tfload import Res, load_resources
+from breachgraph.graph.sources.tfload import list_blocks as _list_blocks
+from breachgraph.graph.sources.tfload import list_of as _list
 
 ACCOUNT_ADMIN_ID = "aws:account-admin"
 
@@ -122,16 +126,6 @@ class Stmt:
 
 
 @dataclass
-class Res:
-    rtype: str
-    name: str
-    body: dict[str, Any]
-    ev: Evidence
-    end_line: int | None = None
-    node_id: str | None = None
-
-
-@dataclass
 class _State:
     res: dict[str, Res] = field(default_factory=dict)  # "aws_iam_role.web" -> Res
     docs: dict[str, list[Stmt]] = field(default_factory=dict)  # "data.aws_iam_policy_document.x"
@@ -143,39 +137,11 @@ def _actions_match(pattern: str, action: str) -> bool:
     return fnmatch.fnmatchcase(action.lower(), pattern.lower())
 
 
-def _list(v: Any) -> list[str]:
-    if v is None:
-        return []
-    return [str(x) for x in (v if isinstance(v, list) else [v])]
-
-
 class TerraformSource:
     name = "terraform"
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
-        st = _State()
-        for path in ctx.files(".tf"):
-            text = ctx.read(path)
-            if text is None:
-                continue
-            rel = ctx.rel(path)
-            try:
-                doc = hcl2.load(io.StringIO(text))
-            except Exception:  # hcl2 raises lark errors of many types
-                ctx.skipped.append(f"{rel}: could not parse HCL")
-                continue
-            for section in ("resource", "data"):
-                for rtype, name, body in blocks(doc, section):
-                    key = f"{rtype}.{name}" if section == "resource" else f"data.{rtype}.{name}"
-                    header = f'{section} "{rtype}" "{name}"'
-                    start = line_of(text, header)
-                    st.res[key] = Res(
-                        rtype,
-                        name,
-                        body,
-                        Evidence(path=rel, line=start, detail=key, source="terraform"),
-                        end_line=_block_end(text, start),
-                    )
+        st = _State(res=load_resources(ctx))
         if not st.res:
             return
         for key, r in st.res.items():
@@ -187,6 +153,8 @@ class TerraformSource:
         self._compute(st, graph)
         self._exposure(st, graph)
         ctx.skipped.extend(st.unresolved)
+        AzureTerraform(st.res).collect(graph, ctx.skipped)
+        GcpTerraform(st.res).collect(graph, ctx.skipped)
 
     # ------------------------------------------------------------------ helpers
 
@@ -258,6 +226,7 @@ class TerraformSource:
                         "tf": key,
                         "tf_range": [r.ev.path, r.ev.line, r.end_line],
                         "arn_name": ident,
+                        "relational": r.rtype in ("aws_db_instance", "aws_rds_cluster"),
                     },
                     evidence=[r.ev],
                 )
@@ -824,25 +793,3 @@ def _managed(arn: str, ev: Evidence) -> list[Stmt]:
         return []
     ev2 = Evidence(path=ev.path, line=ev.line, detail=f"AWS managed policy {name}", source="terraform")
     return [Stmt("Allow", [a], [res], False, evidence=ev2) for a, res in grants]
-
-
-def _list_blocks(value: Any) -> list[dict[str, Any]]:
-    if value is None:
-        return []
-    items = value if isinstance(value, list) else [value]
-    return [x for x in items if isinstance(x, dict)]
-
-
-def _block_end(text: str, start: int | None) -> int | None:
-    """Line where the block starting at ``start`` closes (brace matching, strings ignored)."""
-    if not start:
-        return None
-    lines = text.splitlines()
-    depth, seen = 0, False
-    for i in range(start - 1, len(lines)):
-        stripped = re.sub(r'"(?:\\.|[^"\\])*"', '""', lines[i])
-        depth += stripped.count("{") - stripped.count("}")
-        seen = seen or "{" in stripped
-        if seen and depth <= 0:
-            return i + 1
-    return None

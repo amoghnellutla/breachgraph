@@ -6,7 +6,9 @@ import json
 import re
 from typing import Any
 
-_REF_RE = re.compile(r"\b((?:data\.)?aws_[a-z0-9_]+\.[A-Za-z0-9_-]+)(?:\[[^\]]*\])?(?:\.([a-z_]+))?")
+_REF_RE = re.compile(
+    r"\b((?:data\.)?(?:aws|azurerm|google)_[a-z0-9_]+\.[A-Za-z0-9_-]+)(?:\[[^\]]*\])?(?:\.([a-z_]+))?"
+)
 
 
 def unquote(value: Any) -> Any:
