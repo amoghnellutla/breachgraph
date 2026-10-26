@@ -8,8 +8,7 @@ Thanks for helping make breachgraph better!
 git clone https://github.com/OWNER/breachgraph && cd breachgraph
 python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
-pytest
-ruff format src tests && ruff check src tests && mypy
+python scripts/check.py          # format, lint, mypy and tests, like CI (--fix applies ruff fixes)
 ```
 
 The unit tests need **no scanners installed**. Parsers are tested against real tool output
