@@ -392,6 +392,14 @@ class AzureTerraform:
         custom = self._first(r.body.get("role_definition_id"), "azurerm_role_definition")
         if custom:
             perms = list_blocks(custom.body.get("permissions"))
+            if not perms:  # `data "azurerm_role_definition"` looking up a built-in role by name
+                looked_up = literal(custom.body.get("name"))
+                if looked_up in ROLES:
+                    return _Role(looked_up, *ROLES[looked_up], [])
+                self.skipped.append(
+                    f"{r.ev.label()}: Azure role '{looked_up}' is not modeled, assignment ignored"
+                )
+                return None
             return _Role(
                 self._name(custom),
                 [a for p in perms for a in list_of(p.get("actions"))],
@@ -628,7 +636,7 @@ class AzureTerraform:
             span = (str(r.body.get("start_ip_address")), str(r.body.get("end_ip_address")))
             if span != ("0.0.0.0", "255.255.255.255"):  # noqa: S104  (an address range, not a bind)
                 continue  # 0.0.0.0-0.0.0.0 means "Azure services", not the internet
-            server = self._first(r.body.get("server_id"), rules[r.rtype])
+            server = self._first([r.body.get("server_id"), r.body.get("server_name")], rules[r.rtype])
             if not (server and server.node_id):
                 continue
             if str(server.body.get("public_network_access_enabled", "true")).lower() == "false":

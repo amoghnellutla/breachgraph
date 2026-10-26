@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from breachgraph.cicd import PRIVILEGED_TRIGGERS, gated
-from breachgraph.cicd.workflows import SECRET_RE, Job, Step, Workflow, load_workflows
+from breachgraph.cicd.workflows import Job, Step, Workflow, job_secrets, load_workflows
 from breachgraph.graph.model import (
     CONTROL,
     INTERNET_ID,
@@ -54,11 +54,13 @@ def repository_slug(root: Path) -> str | None:
 def oidc_suffixes(wf: Workflow, job: Job) -> list[str]:
     """The `sub` claim GitHub issues to this job when an outsider triggers it, minus `repo:owner/name:`."""
     if job.environment:
-        return [f"environment:{job.environment}"]
-    if "pull_request_target" in wf.triggers:
-        return ["pull_request"]
-    # issue_comment, issues, discussion and workflow_run run on the default branch.
-    return ["ref:refs/heads/main", "ref:refs/heads/master"]
+        return [f"environment:{job.environment}"]  # an environment replaces the ref in `sub`
+    outsider = wf.triggers & PRIVILEGED_TRIGGERS
+    out = ["pull_request"] if "pull_request_target" in outsider else []
+    if outsider - {"pull_request_target"}:
+        # issue_comment, issues, discussion and workflow_run run on the default branch.
+        out += ["ref:refs/heads/main", "ref:refs/heads/master"]
+    return out
 
 
 def admits(patterns: list[str], slug: str | None, suffixes: list[str]) -> bool:
@@ -69,8 +71,13 @@ def admits(patterns: list[str], slug: str | None, suffixes: list[str]) -> bool:
             if slug and fnmatch.fnmatchcase(f"repo:{slug}:{suffix}", p):
                 return True
             parts = p.split(":", 2)
-            if not slug and len(parts) == 3 and parts[0] == "repo" and fnmatch.fnmatchcase(suffix, parts[2]):
+            if slug or parts[0] != "repo":
+                continue
+            # Repository unknown: judge the context part only (e.g. `ref:refs/heads/main`).
+            if len(parts) == 3 and fnmatch.fnmatchcase(suffix, parts[2]):
                 return True
+            if len(parts) == 2 and parts[1].endswith("*"):
+                return True  # `repo:org/*` covers every ref of the matching repositories
     return False
 
 
@@ -164,7 +171,7 @@ class ActionsSource:
         if m:
             rid = f"aws:iam_role:{m.group(1)}"
             node = trusted.get(rid)
-            if node is None and rid in graph.nodes:
+            if node is None and graph.nodes.get(rid) and graph.nodes[rid].attrs.get("tf"):
                 self.ctx.skipped.append(f"{ev.label()}: role {m.group(1)} does not trust GitHub Actions OIDC")
                 return
             if node is None:
@@ -222,15 +229,7 @@ class ActionsSource:
         )
 
     def _secrets(self, graph: Graph, nid: str, wf: Workflow, job: Job) -> None:
-        names: dict[str, int] = {}
-        for step in job.steps:
-            for m in SECRET_RE.finditer(repr((step.with_, step.env, step.run))):
-                names.setdefault(m.group(1), step.line)
-        for m in SECRET_RE.finditer(repr((job.env, wf.env))):
-            names.setdefault(m.group(1), job.line)
-        for name, line in names.items():
-            if name == "GITHUB_TOKEN":
-                continue
+        for name, line in job_secrets(wf, job).items():
             sid = f"gha:secret:{name}"
             ev = Evidence(path=wf.path, line=line, detail=f"secrets.{name}", source="github-actions")
             graph.add_node(

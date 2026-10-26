@@ -54,3 +54,21 @@ def test_severity_aliases() -> None:
     assert Severity.parse("moderate") is Severity.MEDIUM
     assert Severity.parse("UNKNOWN") is Severity.MEDIUM
     assert Severity.parse(None, default=Severity.LOW) is Severity.LOW
+
+
+def test_iter_files_prunes_excluded_dirs(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from breachgraph.paths import iter_files
+
+    for rel in [
+        "a.py",
+        ".venv/lib/x.py",
+        "node_modules/p/Dockerfile",
+        "src/b.py",
+        ".git/config",
+        "docs/c.md",
+    ]:
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("x", encoding="utf-8")
+    got = [rel for _, rel in iter_files(tmp_path, ["**/.venv/", "node_modules/", "docs/*.md"])]
+    assert got == ["a.py", "src/b.py"]

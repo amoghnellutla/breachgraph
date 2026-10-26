@@ -32,7 +32,7 @@ from breachgraph.graph.sources.azure import AzureTerraform
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.gcp import GcpTerraform
 from breachgraph.graph.sources.hcl import decode_policy, literal, refs, truthy
-from breachgraph.graph.sources.tfload import Res, load_resources
+from breachgraph.graph.sources.tfload import Res, module_views
 from breachgraph.graph.sources.tfload import list_blocks as _list_blocks
 from breachgraph.graph.sources.tfload import list_of as _list
 
@@ -144,20 +144,21 @@ class TerraformSource:
     name = "terraform"
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
-        st = _State(res=load_resources(ctx))
-        if not st.res:
-            return
-        for key, r in st.res.items():
-            if r.rtype == "aws_iam_policy_document" and key.startswith("data."):
-                st.docs[key] = self._doc_statements(r)
-        self._datastores(st, graph)
-        self._roles(st, graph)
-        self._permissions(st, graph)
-        self._compute(st, graph)
-        self._exposure(st, graph)
-        ctx.skipped.extend(st.unresolved)
-        AzureTerraform(st.res).collect(graph, ctx.skipped)
-        GcpTerraform(st.res).collect(graph, ctx.skipped)
+        skipped: list[str] = []
+        for view in module_views(ctx):
+            st = _State(res=view)
+            for key, r in st.res.items():
+                if r.rtype == "aws_iam_policy_document" and key.startswith("data."):
+                    st.docs[key] = self._doc_statements(r)
+            self._datastores(st, graph)
+            self._roles(st, graph)
+            self._permissions(st, graph)
+            self._compute(st, graph)
+            self._exposure(st, graph)
+            skipped += st.unresolved
+            AzureTerraform(st.res).collect(graph, skipped)
+            GcpTerraform(st.res).collect(graph, skipped)
+        ctx.skipped.extend(dict.fromkeys(skipped))  # views overlap: report each blind spot once
 
     # ------------------------------------------------------------------ helpers
 

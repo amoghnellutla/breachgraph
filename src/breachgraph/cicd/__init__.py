@@ -19,9 +19,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from breachgraph.cicd.workflows import SECRET_RE, Job, Step, Workflow, load_workflows
+from breachgraph.cicd.workflows import Job, Step, Workflow, job_secrets, load_workflows
 from breachgraph.models import Category, Confidence, Finding, Location, Severity
-from breachgraph.paths import matches_any, normalize_path
+from breachgraph.paths import iter_files
 
 TOOL = "cicd"
 
@@ -185,9 +185,7 @@ def _untrusted_checkout(wf: Workflow, job: Job) -> list[Finding]:
         runs = [s for s in job.steps[i + 1 :] if s.run or s.uses.startswith("./")]
         if not runs:
             continue  # checked out but never executed (e.g. only read by a linter action)
-        secrets = sorted(
-            {m.group(1) for s in job.steps for m in SECRET_RE.finditer(repr((s.with_, s.env, s.run)))}
-        )
+        secrets = sorted(job_secrets(wf, job))
         perms = wf.job_permissions(job)
         write = perms == "write-all" or (isinstance(perms, dict) and "write" in perms.values())
         gate = gated(wf, job, step)
@@ -238,26 +236,37 @@ _DEP_FILES = re.compile(
     r"\.github/workflows/[^/]+\.ya?ml|\.gitlab-ci\.yml|Jenkinsfile)$",
     re.I,
 )
-_PUBLIC_INDEX = re.compile(r"pypi\.org|pythonhosted\.org|download\.pytorch\.org", re.I)
+_PYPI = re.compile(r"(?:^|[/.@])(?:pypi[.]org|pythonhosted[.]org)(?![\w.-])", re.I)
+# Extra indexes that only host public builds of public packages: not a private name space.
+_PUBLIC_EXTRA = re.compile(r"download\.pytorch\.org|pypi\.nvidia\.com|data\.pyg\.org|wheels\.", re.I)
+_PRIMARY_INDEX = re.compile(
+    r"(?:--index-url[ =]|-i\s+https?://|^\s*index[-_]url\s*=|PIP_INDEX_URL\s*[=:])", re.I | re.M
+)
 
 
 def dependency_confusion(target: Path, exclude: list[str]) -> list[Finding]:
     out: list[Finding] = []
-    for path in sorted(target.rglob("*")):
-        if not path.is_file():
-            continue
-        rel = normalize_path(path.relative_to(target).as_posix())
-        if not _DEP_FILES.search(rel) or matches_any(rel, exclude) or path.stat().st_size > 1_000_000:
+    for path, rel in iter_files(target, exclude):
+        if not _DEP_FILES.search(rel) or path.stat().st_size > 1_000_000:
             continue
         try:
             lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
+        # PyPI as the *extra* index behind a private primary is the classic confusion setup.
+        private_primary = any(
+            _PRIMARY_INDEX.search(ln) and not _PYPI.search(ln)
+            for ln in lines
+            if not ln.lstrip().startswith("#")
+        )
         for n, line in enumerate(lines, 1):
             if line.lstrip().startswith("#") or not _EXTRA_INDEX.search(line):
                 continue
-            if _PUBLIC_INDEX.search(line) and "unsafe-best-match" not in line:
-                continue  # a second public index (e.g. PyTorch wheels) is not a private name space
+            if "unsafe-best-match" not in line.lower():
+                if _PUBLIC_EXTRA.search(line):
+                    continue
+                if _PYPI.search(line) and not private_primary:
+                    continue  # PyPI as the only index: nothing to confuse it with
             out.append(
                 Finding(
                     tool=TOOL,

@@ -338,8 +338,9 @@ def test_js_handler_context(tmp_path: Path) -> None:
 
 def test_secrets_never_leave_the_machine(tmp_path: Path) -> None:
     key = "AKIA" + "Z" * 12 + "2345"
+    password = "hunter2-" + "is-my-pw"  # split so secret scanners don't flag the test itself
     (tmp_path / "config.py").write_text(
-        f'BUCKET = "acme-customer-data-2024"\nAWS_KEY = "{key}"\nPASSWORD = "hunter2-is-my-pw"\n',
+        f'BUCKET = "acme-customer-data-2024"\nAWS_KEY = "{key}"\nPASSWORD = "{password}"\n',
         encoding="utf-8",
     )
     leak = Finding(

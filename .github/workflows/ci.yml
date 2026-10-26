@@ -68,7 +68,7 @@ jobs:
       - name: Smoke test every bundled scanner
         run: |
           docker run --rm breachgraph:ci doctor 2>&1 | tee doctor.txt
-          ! grep -E "semgrep|gitleaks|trivy|checkov" doctor.txt | grep -q " no "
+          ! grep -E "semgrep|gitleaks|trivy|checkov|zizmor" doctor.txt | grep -q " no "
       - name: End-to-end scan of the vulnerable demo app
         run: |
           set +e
@@ -88,6 +88,26 @@ jobs:
           assert kev, "KEV enrichment produced nothing"
           assert any(len(f["sources"]) > 1 for f in r["findings"]), "no cross-tool dedupe"
           print(f"OK: {len(r['findings'])} findings, {len(kev)} KEV")
+          PY
+      - name: End-to-end attack paths on the vulnerable platform
+        run: |
+          set +e
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" breachgraph:ci \
+            scan examples/vulnerable-platform -o platform-report --format json
+          code=$?
+          set -e
+          test "$code" -eq 1
+          python3 - <<'PY'
+          import json
+          r = json.load(open("platform-report/breachgraph.json"))
+          tools = {t["name"]: t["status"] for t in r["tools"]}
+          assert all(tools[t] == "ok" for t in ("semgrep", "trivy", "checkov", "zizmor", "cicd")), tools
+          paths = [[s["dst"] for s in p["steps"]] for p in r["attack_graph"]["paths"]]
+          ends = sorted(p[-1] for p in paths)
+          assert len(paths) == 4, paths
+          assert any("IAM role ci-deploy" in p for p in paths), "CI -> OIDC role -> bucket path missing"
+          assert any("GITHUB_TOKEN" in p[-1] for p in paths), "pwn request path missing"
+          print("OK:", len(paths), "attack paths:", ends)
           PY
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

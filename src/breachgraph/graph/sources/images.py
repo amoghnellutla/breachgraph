@@ -12,6 +12,7 @@ import yaml
 
 from breachgraph.graph.model import Evidence, Graph, Node, NodeKind
 from breachgraph.graph.sources.common import SourceContext
+from breachgraph.paths import iter_files
 
 
 class ImageSource:
@@ -22,10 +23,7 @@ class ImageSource:
         self.dockerfile_dirs: dict[str, str | None] = {}
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
-        for path in ctx.root.rglob("*"):
-            if not path.is_file():
-                continue
-            rel = ctx.rel(path)
+        for path, rel in iter_files(ctx.root, ctx.exclude):
             name = path.name.lower()
             if name == "dockerfile" or name.startswith("dockerfile."):
                 self.dockerfile_dirs.setdefault(str(PurePosixPath(rel).parent).replace(".", ""), None)

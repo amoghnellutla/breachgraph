@@ -34,8 +34,33 @@ class Res:
 
 
 def load_resources(ctx: SourceContext) -> dict[str, Res]:
-    """{"aws_iam_role.web": Res, "data.aws_iam_policy_document.x": Res, ...} across all .tf files."""
-    res: dict[str, Res] = {}
+    """{"aws_iam_role.web": Res, ...} across all .tf files (later duplicates win; see module_views)."""
+    return {key: r for view in module_views(ctx) for key, r in view.items()}
+
+
+def module_views(ctx: SourceContext) -> list[dict[str, Res]]:
+    """The resources each Terraform module (directory) sees, keyed "type.name".
+
+    References resolve within a module, so two modules may both declare `aws_s3_bucket.this`.
+    Without such collisions there is one view of everything. With them, each directory gets its
+    own resources plus every uniquely named resource elsewhere, so cross-module wildcards still
+    see all data stores while same-named blocks don't overwrite each other."""
+    entries = _load(ctx)
+    dirs: dict[str, dict[str, Res]] = {}
+    for key, r in entries:
+        dirs.setdefault(r.ev.path.rsplit("/", 1)[0] if "/" in r.ev.path else "", {})[key] = r
+    counts: dict[str, int] = {}
+    for own in dirs.values():
+        for key in own:
+            counts[key] = counts.get(key, 0) + 1
+    if all(n == 1 for n in counts.values()):
+        return [dict(entries)] if entries else []
+    shared = {key: r for own in dirs.values() for key, r in own.items() if counts[key] == 1}
+    return [{**shared, **own} for own in dirs.values()]
+
+
+def _load(ctx: SourceContext) -> list[tuple[str, Res]]:
+    res: list[tuple[str, Res]] = []
     for path in ctx.files(".tf"):
         text = ctx.read(path)
         if text is None:
@@ -50,13 +75,8 @@ def load_resources(ctx: SourceContext) -> dict[str, Res]:
             for rtype, name, body in blocks(doc, section):
                 key = f"{rtype}.{name}" if section == "resource" else f"data.{rtype}.{name}"
                 start = line_of(text, f'{section} "{rtype}" "{name}"')
-                res[key] = Res(
-                    rtype,
-                    name,
-                    body,
-                    Evidence(path=rel, line=start, detail=key, source="terraform"),
-                    end_line=block_end(text, start),
-                )
+                ev = Evidence(path=rel, line=start, detail=key, source="terraform")
+                res.append((key, Res(rtype, name, body, ev, end_line=block_end(text, start))))
     return res
 
 

@@ -371,3 +371,74 @@ def test_semgrep_actions_rules_merge_with_native_findings() -> None:
     merged = dedupe(finalize(semgrep + native))
     assert len(merged) == 2
     assert all(set(f.sources) == {"cicd", "semgrep"} for f in merged)
+
+
+def test_zizmor_skipped_without_workflows(tmp_path: Path) -> None:
+    (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
+    ctx = ScanContext(target=tmp_path, work_dir=tmp_path, config=Config())
+    outcome = ZizmorScanner().run(ctx)
+    assert outcome.run.status.value == "skipped" and "no GitHub Actions" in (outcome.run.message or "")
+
+
+# ------------------------------------------------------------------ review regressions
+
+
+def test_role_stub_outside_terraform_still_linked(tmp_path: Path) -> None:
+    """A role known only from a reference (e.g. an IRSA annotation) is not "untrusting"."""
+    tf = 'resource "aws_iam_role_policy_attachment" "x" {\n  role       = "deploy"\n  policy_arn = "arn"\n}\n'
+    g = Graph()
+    from breachgraph.graph.model import Node, NodeKind
+
+    g.add_node(Node(id=ROLE, kind=NodeKind.IDENTITY, name="IAM role deploy", attrs={"platform": "aws"}))
+    (tmp_path / "main.tf").write_text(tf, encoding="utf-8")
+    wf(tmp_path, BOT.format(role="arn:aws:iam::1:role/deploy"))
+    ctx = SourceContext(root=tmp_path, exclude=[])
+    ActionsSource().collect(ctx, g)
+    edge = next(e for e in g.edges if e.src == JOB and e.dst == ROLE)
+    assert edge.confidence is Confidence.MEDIUM and not any("does not trust" in s for s in ctx.skipped)
+
+
+def test_org_wide_trust_admitted_without_slug() -> None:
+    assert admits(["repo:my-org/*"], None, ["ref:refs/heads/main"])
+
+
+def test_mixed_triggers_get_every_sub(tmp_path: Path) -> None:
+    from breachgraph.graph.sources.actions import oidc_suffixes
+
+    w = parse_workflow("on: [pull_request_target, issue_comment]\njobs:\n  a:\n    steps: []\n", "x.yml")
+    assert w is not None
+    assert oidc_suffixes(w, w.jobs[0]) == ["pull_request", "ref:refs/heads/main", "ref:refs/heads/master"]
+
+
+def test_pwn_request_sees_job_level_secrets(tmp_path: Path) -> None:
+    flow = PWN.format(
+        cond="env:\n      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}",
+        ref="ref: ${{ github.event.pull_request.head.sha }}",
+        after="- run: npm install",
+    )
+    wf(tmp_path, flow)
+    findings, _ = analyze(tmp_path, [])
+    assert findings[0].severity is Severity.CRITICAL and "NPM_TOKEN" in findings[0].description
+
+
+def test_pypi_as_extra_behind_private_primary(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        "--index-url https://pkgs.corp.example/simple\n--extra-index-url https://pypi.org/simple\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "requirements-dev.txt").write_text(
+        "--extra-index-url https://pypi.org/simple\n", encoding="utf-8"
+    )
+    found = dependency_confusion(tmp_path, [])
+    assert [(f.location.path, f.location.start_line) for f in found] == [("requirements.txt", 2)]
+
+
+def test_broken_symlink_does_not_abort(tmp_path: Path) -> None:
+    import pytest
+
+    wf(tmp_path, INJECT.format(trigger="issues", cond="", field="issue.title"))
+    try:
+        (tmp_path / "deploy.sh").symlink_to(tmp_path / "missing.sh")
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks not permitted here")
+    assert [r for r, _ in rules(tmp_path)] == ["cicd/script-injection"]

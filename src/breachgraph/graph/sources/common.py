@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from breachgraph.paths import matches_any, normalize_path
+from breachgraph.paths import iter_files, normalize_path
 
 MAX_FILE_BYTES = 2_000_000
 
@@ -22,13 +22,9 @@ class SourceContext:
         return normalize_path(path.relative_to(self.root).as_posix())
 
     def files(self, *suffixes: str) -> Iterator[Path]:
-        for path in self.root.rglob("*"):
-            if not path.is_file() or path.suffix.lower() not in suffixes:
-                continue
-            rel = self.rel(path)
-            if matches_any(rel, self.exclude) or path.stat().st_size > MAX_FILE_BYTES:
-                continue
-            yield path
+        for path, _rel in iter_files(self.root, self.exclude):
+            if path.suffix.lower() in suffixes and path.stat().st_size <= MAX_FILE_BYTES:
+                yield path
 
     def read(self, path: Path) -> str | None:
         try:

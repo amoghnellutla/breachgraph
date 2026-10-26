@@ -770,3 +770,61 @@ def test_edges_needing_different_weaknesses_are_kept_apart() -> None:
     g.add_edge(Edge(src="a", dst="b", kind=EdgeKind.USES_IDENTITY, requires=[WeaknessClass.SSRF]))
     g.add_edge(Edge(src="a", dst="b", kind=EdgeKind.USES_IDENTITY, requires=[WeaknessClass.SSRF]))
     assert sorted(e.requires[0] for e in g.edges) == [WeaknessClass.CODE_EXECUTION, WeaknessClass.SSRF]
+
+
+# ------------------------------------------------------------------ review regressions
+
+
+def test_gcp_service_account_resource_path_form(tmp_path: Path) -> None:
+    from breachgraph.graph.sources.gcp import sa_id
+
+    assert (
+        sa_id("projects/p/serviceAccounts/deployer@p.iam.gserviceaccount.com")
+        == "gcp:service_account:deployer"
+    )
+    assert sa_id("serviceAccount:deployer@p.iam.gserviceaccount.com") == "gcp:service_account:deployer"
+
+
+def test_az_builtin_role_looked_up_by_data_source(tmp_path: Path) -> None:
+    hcl = (
+        AZ_STORAGE
+        + AZ_VM
+        + """
+data "azurerm_role_definition" "blob_reader" {
+  name = "Storage Blob Data Reader"
+}
+resource "azurerm_role_assignment" "a" {
+  scope              = azurerm_storage_account.data.id
+  role_definition_id = data.azurerm_role_definition.blob_reader.id
+  principal_id       = azurerm_linux_virtual_machine.web.identity[0].principal_id
+}
+"""
+    )
+    g, _ = tf(tmp_path, hcl)
+    assert edge(g, VM_IDENTITY, SA_NODE, EdgeKind.CAN_ACCESS) is not None
+
+
+def test_az_mysql_firewall_by_server_name(tmp_path: Path) -> None:
+    hcl = """
+resource "azurerm_mysql_flexible_server" "db" {
+  name = "shop-mysql"
+}
+resource "azurerm_mysql_flexible_server_firewall_rule" "all" {
+  name             = "all"
+  server_name      = azurerm_mysql_flexible_server.db.name
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "255.255.255.255"
+}
+"""
+    g, _ = tf(tmp_path, hcl)
+    assert (
+        edge(g, INTERNET_ID, "azure:mysql_flexible_server:shop-mysql:endpoint", EdgeKind.EXPOSES) is not None
+    )
+
+
+def test_same_resource_names_in_different_modules(tmp_path: Path) -> None:
+    write(tmp_path, "modules/a/main.tf", 'resource "aws_s3_bucket" "this" {\n  bucket = "bucket-a"\n}\n')
+    write(tmp_path, "modules/b/main.tf", 'resource "aws_s3_bucket" "this" {\n  bucket = "bucket-b"\n}\n')
+    g = Graph()
+    TerraformSource().collect(SourceContext(root=tmp_path, exclude=[]), g)
+    assert {"aws:s3_bucket:bucket-a", "aws:s3_bucket:bucket-b"} <= set(g.nodes)

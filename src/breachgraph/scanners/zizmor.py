@@ -6,10 +6,12 @@ environment (GH_TOKEN / GITHUB_TOKEN), as zizmor decides; without one it audits 
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, ClassVar
 
-from breachgraph.models import Category, Confidence, Finding, Location, Severity
-from breachgraph.scanners.base import ScanContext, Scanner, Step, as_list
+from breachgraph.models import Category, Confidence, Finding, Location, Severity, ToolRun, ToolStatus
+from breachgraph.paths import iter_files
+from breachgraph.scanners.base import ScanContext, Scanner, ScannerOutcome, Step, as_list
 
 _SEVERITY = {
     "high": Severity.HIGH,
@@ -43,6 +45,18 @@ class ZizmorScanner(Scanner):
         cmd = [exe, "--format", "json", "--no-exit-codes", "--no-progress", "--quiet"]
         cmd += [*self.settings(ctx.config).extra_args, "."]
         return [Step(cmd, out, stdout_to_output=True)]
+
+    def run(self, ctx: ScanContext) -> ScannerOutcome:
+        if not has_actions(ctx.target, ctx.config.exclude_paths):
+            # zizmor exits with an error when there is nothing to audit.
+            return ScannerOutcome(
+                ToolRun(
+                    name=self.name,
+                    status=ToolStatus.SKIPPED,
+                    message="no GitHub Actions workflows or actions",
+                )
+            )
+        return super().run(ctx)
 
     def accept_exit(self, code: int) -> bool:
         return code == 0  # --no-exit-codes: non-zero means zizmor itself failed
@@ -91,3 +105,12 @@ class ZizmorScanner(Scanner):
                 )
             )
         return findings
+
+
+def has_actions(root: Path, exclude: list[str]) -> bool:
+    for path, rel in iter_files(root, exclude):
+        if path.suffix.lower() in (".yml", ".yaml") and (
+            "/.github/workflows/" in f"/{rel}" or path.stem.lower() == "action"
+        ):
+            return True
+    return False

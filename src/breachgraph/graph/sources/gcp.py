@@ -143,7 +143,9 @@ def _allows(perms: list[str], excluded: list[str], perm: str) -> bool:
 
 def sa_id(email_or_id: str) -> str:
     """Node id for a service account, from its account_id or email."""
-    return f"gcp:service_account:{email_or_id.split('@', 1)[0]}"
+    # Accepts `name`, `name@project.iam.gserviceaccount.com` and `projects/P/serviceAccounts/EMAIL`.
+    name = email_or_id.rsplit("/", 1)[-1].removeprefix("serviceAccount:")
+    return f"gcp:service_account:{name.split('@', 1)[0]}"
 
 
 class GcpTerraform:

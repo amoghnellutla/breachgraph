@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from breachgraph.paths import matches_any, normalize_path
+from breachgraph.paths import iter_files
 
 _MAX_BYTES = 1_000_000
 SECRET_RE = re.compile(r"\bsecrets\.([A-Za-z_][A-Za-z0-9_]*)")
@@ -159,13 +159,10 @@ def load_workflows(root: Path, exclude: list[str]) -> tuple[list[Workflow], list
     """Every workflow under any `.github/workflows/` directory, plus files that failed to parse."""
     found: list[Workflow] = []
     skipped: list[str] = []
-    for path in sorted(root.rglob("*")):
-        if path.suffix.lower() not in (".yml", ".yaml") or not path.is_file():
+    for path, rel in iter_files(root, exclude):
+        if path.suffix.lower() not in (".yml", ".yaml") or "/.github/workflows/" not in f"/{rel}":
             continue
-        rel = normalize_path(path.relative_to(root).as_posix())
-        if "/.github/workflows/" not in f"/{rel}" or path.stat().st_size > _MAX_BYTES:
-            continue
-        if matches_any(rel, exclude):
+        if path.stat().st_size > _MAX_BYTES:
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -177,3 +174,15 @@ def load_workflows(root: Path, exclude: list[str]) -> tuple[list[Workflow], list
         else:
             found.append(wf)
     return found, skipped
+
+
+def job_secrets(wf: Workflow, job: Job) -> dict[str, int]:
+    """Repository secrets a job can read -> the line that references each (GITHUB_TOKEN excluded)."""
+    names: dict[str, int] = {}
+    for step in job.steps:
+        for m in SECRET_RE.finditer(repr((step.with_, step.env, step.run))):
+            names.setdefault(m.group(1), step.line)
+    for m in SECRET_RE.finditer(repr((job.env, wf.env, job.raw.get("with"), job.raw.get("secrets")))):
+        names.setdefault(m.group(1), job.line)
+    names.pop("GITHUB_TOKEN", None)
+    return names
