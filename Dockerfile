@@ -32,16 +32,18 @@ RUN set -eux; \
 FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70 AS python-tools
 ARG SEMGREP_VERSION=1.179.0
 ARG CHECKOV_VERSION=3.3.26
+ARG ZIZMOR_VERSION=1.30.1
 # Separate virtualenvs: semgrep and checkov pin conflicting dependencies.
 RUN python -m venv /opt/semgrep && /opt/semgrep/bin/pip install --no-cache-dir "semgrep==${SEMGREP_VERSION}" \
-    && python -m venv /opt/checkov && /opt/checkov/bin/pip install --no-cache-dir "checkov==${CHECKOV_VERSION}"
+    && python -m venv /opt/checkov && /opt/checkov/bin/pip install --no-cache-dir "checkov==${CHECKOV_VERSION}" \
+    && python -m venv /opt/zizmor && /opt/zizmor/bin/pip install --no-cache-dir "zizmor==${ZIZMOR_VERSION}"
 COPY pyproject.toml README.md LICENSE /build/
 COPY src /build/src
 RUN python -m venv /opt/breachgraph && /opt/breachgraph/bin/pip install --no-cache-dir "/build[ai]"
 
 FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70
 LABEL org.opencontainers.image.title="breachgraph" \
-      org.opencontainers.image.description="Security gate: Semgrep, Gitleaks, Trivy, Checkov, ZAP with dedupe, KEV/EPSS risk scoring and policy" \
+      org.opencontainers.image.description="Security gate: Semgrep, Gitleaks, Trivy, Checkov, zizmor, ZAP with dedupe, KEV/EPSS risk scoring, attack paths and policy" \
       org.opencontainers.image.licenses="Apache-2.0"
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
@@ -51,6 +53,7 @@ COPY --from=binaries /dl/trivy /dl/gitleaks /usr/local/bin/
 COPY --from=python-tools /opt /opt
 RUN ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep \
     && ln -s /opt/checkov/bin/checkov /usr/local/bin/checkov \
+    && ln -s /opt/zizmor/bin/zizmor /usr/local/bin/zizmor \
     && ln -s /opt/breachgraph/bin/breachgraph /usr/local/bin/breachgraph
 
 # Writable caches for any UID (CI runners often use --user "$(id -u):$(id -g)").

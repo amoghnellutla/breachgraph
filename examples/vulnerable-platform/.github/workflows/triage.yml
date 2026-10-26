@@ -1,0 +1,27 @@
+# INTENTIONALLY INSECURE: demo target for breachgraph.
+# A comment bot. Anyone with a GitHub account can comment on an issue, and the comment body is
+# pasted into a shell script: script injection in a job that holds AWS credentials.
+name: Issue triage bot
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log the command
+        run: |
+          echo "Triage command: ${{ github.event.comment.body }}"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::111122223333:role/ci-deploy
+          aws-region: us-east-1
+      - name: Attach the latest report
+        run: aws s3 cp s3://shop-customer-data-prod/reports/latest.csv report.csv

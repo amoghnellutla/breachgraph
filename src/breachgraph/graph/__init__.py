@@ -9,6 +9,7 @@ from breachgraph.config import Config
 from breachgraph.graph.correlate import attach, code_units
 from breachgraph.graph.model import Graph, Node, NodeKind
 from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_paths
+from breachgraph.graph.sources.actions import ActionsSource
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.images import ImageSource
 from breachgraph.graph.sources.kubernetes import KubernetesSource
@@ -60,6 +61,7 @@ def build_attack_graph(
     images.collect(ctx, graph)
     KubernetesSource().collect(ctx, graph)
     TerraformSource().collect(ctx, graph)
+    ActionsSource().collect(ctx, graph)  # after cloud sources: links jobs to their identities
     routes = RouteSource().collect(ctx)
 
     name = repo_name or PurePosixPath(target.resolve().as_posix()).name

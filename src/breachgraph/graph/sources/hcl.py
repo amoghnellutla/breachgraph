@@ -93,6 +93,12 @@ def _hcl_object_to_json(expr: str) -> str:
                 j += 1
             out.append(expr[i : j + 1])
             i = j + 1
+            k = i
+            while k < n and expr[k] == " ":
+                k += 1
+            if k < n and expr[k] == "=" and not expr.startswith("==", k):
+                out.append(":")  # a quoted key: "token.actions.githubusercontent.com:sub" = "..."
+                i = k + 1
         elif c.isalpha() or c == "_":
             j = i
             while j < n and (expr[j].isalnum() or expr[j] in "_.-[]*"):

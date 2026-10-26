@@ -63,7 +63,11 @@ class CheckovScanner(Scanner):
             severity=Severity.parse(
                 c.get("severity"), default=Severity.HIGH if is_secret else Severity.MEDIUM
             ),
-            category=Category.SECRETS if is_secret else Category.IAC,
+            category=Category.SECRETS
+            if is_secret
+            else Category.CICD
+            if check_id.startswith("CKV_GHA") or framework == "github_actions"
+            else Category.IAC,
             confidence=Confidence.HIGH,
             location=Location(
                 path=c.get("repo_file_path") or c.get("file_path") or "",

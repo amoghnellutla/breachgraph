@@ -546,6 +546,15 @@ class AzureTerraform:
             if r.rtype != "azurerm_federated_identity_credential":
                 continue
             uai = self._first(r.body.get("parent_id"), "azurerm_user_assigned_identity")
+            if uai and uai.node_id and "token.actions.githubusercontent.com" in str(r.body.get("issuer", "")):
+                # GitHub Actions OIDC: Azure matches the subject exactly (no wildcards).
+                node = graph.nodes[uai.node_id]
+                known = node.attrs.get("github_oidc_subs")
+                node.attrs["github_oidc_subs"] = [
+                    *(known if isinstance(known, list) else []),
+                    str(r.body.get("subject", "")),
+                ]
+                continue
             m = _SUBJECT_RE.search(str(r.body.get("subject", "")))
             if not (uai and uai.node_id and m):
                 continue

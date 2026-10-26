@@ -70,7 +70,9 @@ class SemgrepScanner(Scanner):
                     title=first_sentence(message),
                     description=message,
                     severity=severity,
-                    category=Category.SAST,
+                    category=Category.CICD
+                    if str(r["check_id"]).startswith("yaml.github-actions.")
+                    else Category.SAST,
                     confidence=confidence,
                     location=Location(
                         path=path,

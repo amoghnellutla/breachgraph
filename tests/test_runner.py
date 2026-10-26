@@ -116,7 +116,14 @@ def test_missing_binary_is_skipped(ctx: ScanContext, monkeypatch: pytest.MonkeyP
 
 def test_select_scanners() -> None:
     cfg = Config()
-    assert select_scanners(cfg, ScanOptions()) == ["semgrep", "gitleaks", "trivy", "checkov"]
+    assert select_scanners(cfg, ScanOptions()) == [
+        "semgrep",
+        "gitleaks",
+        "trivy",
+        "checkov",
+        "zizmor",
+        "cicd",
+    ]
     assert select_scanners(cfg, ScanOptions(only=["trivy"])) == ["trivy"]
     assert "semgrep" not in select_scanners(cfg, ScanOptions(skip=["semgrep"]))
     assert "trivy" not in select_scanners(cfg, ScanOptions(imports=[("trivy", Path("x"))]))

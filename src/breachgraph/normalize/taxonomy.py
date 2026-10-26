@@ -63,6 +63,7 @@ CATEGORY_DEFAULT_OWASP = {
     Category.CONTAINER: "A06:2021",
     Category.SECRETS: "A07:2021",
     Category.IAC: "A05:2021",
+    Category.CICD: "A08:2021",  # software and data integrity failures
 }
 
 _CWE_RE = re.compile(r"CWE[-_ ]?(\d+)", re.IGNORECASE)

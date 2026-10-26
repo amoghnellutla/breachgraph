@@ -13,7 +13,11 @@ from the internet to customer data.
 - `k8s/api.yaml` — the API behind a public **Ingress**, in a pod with **`hostNetwork: true`** and
   an **IRSA** service account mapped to an IAM role.
 - `infra/main.tf` — the `customer-data` S3 bucket (tagged PII), an EKS **node role** that can read
-  it, and a **pod role** with `AmazonS3FullAccess`.
+  it, a **pod role** with `AmazonS3FullAccess`, and a **CI deploy role** that GitHub Actions assumes
+  over OIDC, trusted only for the `main` branch.
+- `.github/workflows/triage.yml` — an issue-comment bot that pastes the comment into a shell script.
+- `.github/workflows/preview.yml` — a `pull_request_target` preview build that checks out and runs
+  the pull request's code with a publish token.
 
 ## The paths breachgraph finds
 
@@ -22,7 +26,13 @@ from the internet to customer data.
 2. **SSRF** on `/fetch` → because of `hostNetwork`, the request reaches the node's metadata
    endpoint → the **node role**'s credentials → the customer-data bucket (the node role can read it).
 
-Two independent vectors to the same crown jewel. Fixing one does not fix the other, so both are
+3. **Script injection** in the issue-comment bot → code execution in the CI job → the **CI deploy
+   role** over OIDC → the customer-data bucket. The role's trust looks safe (only `main`), but
+   `issue_comment` workflows run on `main`, so any GitHub user who comments gets the role.
+4. **Pwn request** in the preview workflow → a fork's code runs with a `GITHUB_TOKEN` that can push
+   to the repository and with `PYPI_TOKEN`.
+
+Paths 1 and 2 are independent vectors to the same crown jewel. Fixing one does not fix the other, so both are
 reported, each with its own cheapest fix.
 
 ```bash

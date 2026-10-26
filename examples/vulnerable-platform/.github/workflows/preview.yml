@@ -1,0 +1,23 @@
+# INTENTIONALLY INSECURE: demo target for breachgraph.
+# "Pwn request": pull_request_target runs with secrets and a write token, then checks out and
+# builds the pull request's own code, so a fork PR runs its code with both.
+name: PR preview
+on:
+  pull_request_target:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: pip install -r services/api/requirements.txt
+      - name: Publish preview package
+        run: ./scripts/publish-preview.sh
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}

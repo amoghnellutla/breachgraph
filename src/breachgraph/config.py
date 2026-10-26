@@ -95,6 +95,8 @@ class Scanners(_Strict):
     gitleaks: GitleaksConfig = Field(default_factory=GitleaksConfig)
     trivy: TrivyConfig = Field(default_factory=TrivyConfig)
     checkov: CheckovConfig = Field(default_factory=CheckovConfig)
+    zizmor: ScannerConfig = Field(default_factory=ScannerConfig)
+    cicd: ScannerConfig = Field(default_factory=ScannerConfig)  # built in: no binary needed
     zap: ZapConfig = Field(default_factory=ZapConfig)
 
 

@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **CI/CD and supply chain.** Built-in checks for the attacks that actually hit CI: script
+  injection of outsider-controlled text (`issue.title`, `comment.body`, branch names) into `run:`
+  and `github-script`; pwn requests (`pull_request_target`/`workflow_run` jobs that check out and
+  run pull request code, critical when the job holds secrets or a write token); and dependency
+  confusion via pip `--extra-index-url` / uv `unsafe-best-match`. Maintainer-only `if:` gates lower
+  severity. zizmor runs too (bundled in the image) for broader Actions hygiene; its findings merge
+  with the built-in ones.
+- **CI jobs in the attack graph.** Jobs that outsiders can start are entry points; their OIDC
+  cloud identities (checked against AWS trust `sub` conditions and Azure federated subjects),
+  secrets and write-capable `GITHUB_TOKEN` are linked behind code execution. A role that trusts
+  GitHub OIDC without naming a repository is flagged as reachable from the internet. The demo now
+  includes an `issue_comment` injection that reaches the customer-data bucket through a deploy
+  role scoped "safely" to `main`.
+
 - **Azure and GCP in the attack graph** (Terraform). Azure: role assignments evaluated as
   Actions/NotActions/DataActions over their scope, custom roles, Key Vault RBAC and access
   policies, privilege escalation via `roleAssignments/write`, managed identities on VMs, App

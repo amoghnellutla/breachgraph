@@ -27,6 +27,20 @@ _EQUIVALENT_RULES: list[set[str]] = [
     {"trivy:DS2", "checkov:CKV_DOCKER_3", "checkov:CKV_DOCKER_8"},  # container runs as root
     {"trivy:DS26", "checkov:CKV_DOCKER_2"},  # no HEALTHCHECK
     {"trivy:DS1", "checkov:CKV_DOCKER_7"},  # ':latest' base image
+    {  # GitHub Actions script injection
+        "cicd:CICD/SCRIPT-INJECTION",
+        "zizmor:TEMPLATE-INJECTION",
+        "semgrep:YAML.GITHUB-ACTIONS.SECURITY.RUN-SHELL-INJECTION.RUN-SHELL-INJECTION",
+        "checkov:CKV_GHA_2",
+    },
+    {  # pull_request_target checking out PR code
+        "cicd:CICD/UNTRUSTED-CHECKOUT",
+        "semgrep:YAML.GITHUB-ACTIONS.SECURITY.PULL-REQUEST-TARGET-CODE-CHECKOUT.PULL-REQUEST-TARGET-CODE-CHECKOUT",
+    },
+    {  # action not pinned to a commit SHA
+        "zizmor:UNPINNED-USES",
+        "semgrep:YAML.GITHUB-ACTIONS.SECURITY.GITHUB-ACTIONS-MUTABLE-ACTION-TAG.GITHUB-ACTIONS-MUTABLE-ACTION-TAG",
+    },
 ]
 
 _STOPWORDS = {
@@ -140,13 +154,13 @@ def _strength(a: Finding, b: Finding, keys_a: set[str], keys_b: set[str]) -> int
         return 0
     if is_secret(a) and is_secret(b):
         return 3 if _overlap(a, b) else 0
-    if a.category is not b.category:
-        return 0
     groups_a = {_EQUIV_INDEX[k] for k in keys_a if k in _EQUIV_INDEX}
     if groups_a & {_EQUIV_INDEX[k] for k in keys_b if k in _EQUIV_INDEX}:
         # Known-equivalent checks. Some tools (Trivy on Dockerfiles) report no lines.
         no_lines = a.location.start_line is None or b.location.start_line is None
         return 3 if no_lines or _overlap(a, b) else 0
+    if a.category is not b.category:
+        return 0
     if not _overlap(a, b):
         return 0
     if set(a.cwe) & set(b.cwe):

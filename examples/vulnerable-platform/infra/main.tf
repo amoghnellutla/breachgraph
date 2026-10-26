@@ -65,3 +65,34 @@ resource "aws_iam_role_policy_attachment" "api_pod_admin" {
   role       = aws_iam_role.api_pod.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
+
+# CI deploy role, assumed by GitHub Actions over OIDC. The trust is scoped to the default branch,
+# which looks safe, but issue_comment workflows run on the default branch too, so a comment that
+# exploits script injection in triage.yml gets these credentials.
+resource "aws_iam_role" "ci_deploy" {
+  name = "ci-deploy"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com" }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
+        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:acme-shop/platform:ref:refs/heads/main" }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ci_deploy_reports" {
+  role = aws_iam_role.ci_deploy.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:GetObject", "s3:PutObject"]
+      Resource = ["${aws_s3_bucket.customer_data.arn}/*"]
+    }]
+  })
+}

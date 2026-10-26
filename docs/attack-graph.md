@@ -96,6 +96,16 @@ The metadata endpoint is modeled per cloud. On Azure and GCP it requires a reque
 confidence. App Service and Container Apps serve tokens only with a secret header from the
 environment, so SSRF alone reaches nothing there; code execution does.
 
+**GitHub Actions** (`sources/actions.py`): a job that anyone with a GitHub account can start
+(`pull_request_target`, `issue_comment`, `issues`, `discussion*`, `workflow_run`) is an entry point,
+since it runs with the repository's secrets and token. Its credentials are linked behind a code
+execution gate: cloud identities assumed over OIDC (an AWS role only when its trust policy's `sub`
+condition admits the token this job gets, e.g. `ref:refs/heads/main` for an `issue_comment`
+workflow; an Azure identity only when a federated credential's subject matches), the secrets the
+job references, and a `GITHUB_TOKEN` that can push code or publish packages. A role that trusts
+GitHub's OIDC provider without naming a repository is reachable from the internet directly. See
+[CI/CD and supply chain](cicd.md).
+
 **Routes** (`sources/routes.py`): HTTP routes and handler line ranges via tree-sitter for Python
 (Flask, FastAPI, Django), JS/TS (Express, NestJS, Next.js), Java (Spring) and Go (net/http, Gin,
 Echo, Chi). Findings inside a handler's line range attach to that route.

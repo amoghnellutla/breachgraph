@@ -37,6 +37,7 @@ from breachgraph.graph.sources.tfload import list_blocks as _list_blocks
 from breachgraph.graph.sources.tfload import list_of as _list
 
 ACCOUNT_ADMIN_ID = "aws:account-admin"
+GITHUB_OIDC = "token.actions.githubusercontent.com"
 
 # What "reading the data" means per data store type: (action patterns, value 0-10, label).
 DATA_ACTIONS: dict[str, tuple[tuple[str, ...], int, str]] = {
@@ -123,6 +124,8 @@ class Stmt:
     conditional: bool
     not_action: bool = False
     evidence: Evidence | None = None
+    conditions: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (operator, key, values)
+    principals: str = ""  # raw principal text, for trust policies
 
 
 @dataclass
@@ -169,6 +172,11 @@ class TerraformSource:
                     conditional=bool(s.get("condition")),
                     not_action=bool(s.get("not_actions")),
                     evidence=r.ev,
+                    conditions=[
+                        (str(c.get("test", "")), str(c.get("variable", "")), _list(c.get("values")))
+                        for c in _list_blocks(s.get("condition"))
+                    ],
+                    principals=str(s.get("principals", "")),
                 )
             )
         return out
@@ -192,6 +200,13 @@ class TerraformSource:
                     conditional=bool(s.get("Condition")),
                     not_action="NotAction" in s,
                     evidence=ev,
+                    conditions=[
+                        (str(op), str(key), _list(vals))
+                        for op, body in (s.get("Condition") or {}).items()
+                        if isinstance(body, dict)
+                        for key, vals in body.items()
+                    ],
+                    principals=str(s.get("Principal", "")),
                 )
             )
         return out
@@ -376,6 +391,8 @@ class TerraformSource:
                             note="IRSA trust policy",
                         )
                     )
+                if GITHUB_OIDC in s.principals:
+                    self._github_trust(graph, node, s, r)
                 if re.search(r'AWS\W+(=|:)\s*\W*"\*"', raw_trust) and not s.conditional:
                     graph.add_node(internet())
                     graph.add_edge(
@@ -396,6 +413,27 @@ class TerraformSource:
             for arn in _list(r.body.get("managed_policy_arns")):
                 stmts += _managed(arn, r.ev)
             st.role_stmts[node.id] = stmts
+
+    def _github_trust(self, graph: Graph, node: Node, s: Stmt, r: Res) -> None:
+        """A role GitHub Actions can assume through OIDC. Record which workflows may (the `sub`
+        patterns); a trust with no repository in `sub` lets any GitHub repository assume it."""
+        subs = [v for _op, key, vals in s.conditions if key.endswith(":sub") for v in vals]
+        known = node.attrs.get("github_oidc_subs")
+        node.attrs["github_oidc_subs"] = [*(known if isinstance(known, list) else []), *(subs or ["*"])]
+        open_to_all = not subs or any(re.match(r"^(\*|repo:\*)", v) for v in subs)
+        if open_to_all:
+            graph.add_node(internet())
+            graph.add_edge(
+                Edge(
+                    src=INTERNET_ID,
+                    dst=node.id,
+                    kind=EdgeKind.USES_IDENTITY,
+                    evidence=[r.ev],
+                    note="trusts GitHub Actions OIDC without restricting the repository "
+                    f"({'no sub condition' if not subs else 'sub ' + subs[0]}): a workflow in any "
+                    "GitHub repository can assume it",
+                )
+            )
 
     def _permissions(self, st: _State, graph: Graph) -> None:
         policies: dict[str, list[Stmt]] = {}

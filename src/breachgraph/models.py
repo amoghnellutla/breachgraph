@@ -67,6 +67,7 @@ class Category(StrEnum):
     IAC = "iac"
     CONTAINER = "container"
     DAST = "dast"
+    CICD = "cicd"  # CI/CD pipelines and supply chain
 
 
 class Confidence(StrEnum):

@@ -29,6 +29,10 @@ scanners:
   checkov:
     enabled: true
     frameworks: []               # default: auto-detect (terraform, kubernetes, dockerfile, ...)
+  zizmor:
+    enabled: true                # GitHub Actions audits; online audits run when GH_TOKEN is set
+  cicd:
+    enabled: true                # built-in CI/CD and supply-chain checks (no binary needed)
   zap:
     enabled: false               # DAST is opt-in: it needs a running application
     target_url: null             # or pass --dast-url
