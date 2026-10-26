@@ -16,7 +16,7 @@ well-known security flaws that the bundled scanners should catch:
 | `k8s/deployment.yaml` | Privileged container, host network, no resource limits | Trivy + Checkov |
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan examples/vulnerable-app
+docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan examples/vulnerable-app
 ```
 
 The secrets are random strings shaped to match the detection rules. They are not real

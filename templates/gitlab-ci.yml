@@ -1,7 +1,7 @@
 # breachgraph for GitLab CI. Include it from your .gitlab-ci.yml:
 #
 #   include:
-#     - remote: https://raw.githubusercontent.com/OWNER/breachgraph/v0/templates/gitlab-ci.yml
+#     - remote: https://raw.githubusercontent.com/amoghnellutla/breachgraph/v0/templates/gitlab-ci.yml
 #
 # Gating findings show up as failed tests in the merge request (JUnit), and the full HTML
 # report is kept as a job artifact.
@@ -9,7 +9,7 @@
 breachgraph:
   stage: test
   image:
-    name: ghcr.io/OWNER/breachgraph:v0
+    name: ghcr.io/amoghnellutla/breachgraph:v0
     entrypoint: [""]
   variables:
     BREACHGRAPH_ARGS: ""

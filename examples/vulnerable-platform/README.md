@@ -27,7 +27,7 @@ reported, each with its own cheapest fix.
 
 ```bash
 # scanners find the SSRF/command-injection; the graph turns them into paths
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan examples/vulnerable-platform
+docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan examples/vulnerable-platform
 ```
 
 With **no** code findings, breachgraph reports **no path** to the bucket — being internet-facing

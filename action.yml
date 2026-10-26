@@ -98,7 +98,7 @@ runs:
         SG_COMMENT: ${{ inputs.comment }}
         SG_ISSUES: ${{ inputs.issues }}
         SG_OUT: ${{ inputs.output-dir }}
-        SG_IMAGE: ${{ inputs.image || format('ghcr.io/OWNER/breachgraph:{0}', inputs.version) }}
+        SG_IMAGE: ${{ inputs.image || format('ghcr.io/amoghnellutla/breachgraph:{0}', inputs.version) }}
         SG_EXTRA: ${{ inputs.extra-args }}
         SG_CACHE: ${{ runner.temp }}/breachgraph-cache
         SG_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

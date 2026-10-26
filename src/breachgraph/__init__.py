@@ -7,4 +7,4 @@ try:
 except PackageNotFoundError:  # running from a source checkout
     __version__ = "0.0.0+dev"
 
-PROJECT_URL = "https://github.com/OWNER/breachgraph"
+PROJECT_URL = "https://github.com/amoghnellutla/breachgraph"

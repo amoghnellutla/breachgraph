@@ -11,8 +11,8 @@ over-broad IAM role line up so an outsider can reach your crown-jewel data. It r
 whether they actually lie on such a path, so you fix the ten things that can hurt you, not the
 three hundred that can't.
 
-[![ci](https://github.com/OWNER/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/breachgraph/actions/workflows/ci.yml)
-[![self-scan](https://github.com/OWNER/breachgraph/actions/workflows/self-scan.yml/badge.svg)](https://github.com/OWNER/breachgraph/actions/workflows/self-scan.yml)
+[![ci](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml)
+[![self-scan](https://github.com/amoghnellutla/breachgraph/actions/workflows/self-scan.yml/badge.svg)](https://github.com/amoghnellutla/breachgraph/actions/workflows/self-scan.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: OWNER/breachgraph@v0
+      - uses: amoghnellutla/breachgraph@v0
 ```
 
 More recipes (baselines, DAST, container images, issue tracking) are in [docs/github-action.md](docs/github-action.md).
@@ -81,7 +81,7 @@ More recipes (baselines, DAST, container images, issue tracking) are in [docs/gi
 ### Docker (any CI, or your laptop)
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan .
+docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
 open breachgraph-report/breachgraph.html
 ```
 
@@ -100,7 +100,7 @@ The Docker image bundles all of them at pinned versions.
 
 ```yaml
 include:
-  - remote: https://raw.githubusercontent.com/OWNER/breachgraph/v0/templates/gitlab-ci.yml
+  - remote: https://raw.githubusercontent.com/amoghnellutla/breachgraph/v0/templates/gitlab-ci.yml
 ```
 
 ## Try it on the demo app
@@ -109,7 +109,7 @@ include:
 with Terraform, Kubernetes and Dockerfile misconfigurations, fake secrets and Log4Shell:
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan examples/vulnerable-app
+docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan examples/vulnerable-app
 ```
 
 ```

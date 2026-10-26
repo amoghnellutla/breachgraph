@@ -5,7 +5,7 @@ Thanks for helping make breachgraph better!
 ## Development setup
 
 ```bash
-git clone https://github.com/OWNER/breachgraph && cd breachgraph
+git clone https://github.com/amoghnellutla/breachgraph && cd breachgraph
 python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 python scripts/check.py          # format, lint, mypy and tests, like CI (--fix applies ruff fixes)

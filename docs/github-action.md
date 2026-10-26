@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: OWNER/breachgraph@v0
+      - uses: amoghnellutla/breachgraph@v0
 ```
 
 On each PR you get:
@@ -55,14 +55,14 @@ Outputs: `passed`, `findings`, `gating`, `sarif`.
 **Adopt on a legacy repo.** Accept today's findings, then fail only on new ones:
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/OWNER/breachgraph scan --write-baseline .breachgraph-baseline.json
+docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan --write-baseline .breachgraph-baseline.json
 git add .breachgraph-baseline.json && git commit -m "breachgraph baseline"
 ```
 
 **Report-only mode** while you tune the policy:
 
 ```yaml
-      - uses: OWNER/breachgraph@v0
+      - uses: amoghnellutla/breachgraph@v0
         with:
           extra-args: --no-fail
 ```
@@ -71,7 +71,7 @@ git add .breachgraph-baseline.json && git commit -m "breachgraph baseline"
 
 ```yaml
       - run: docker compose up -d && ./wait-for-it.sh localhost:8080
-      - uses: OWNER/breachgraph@v0
+      - uses: amoghnellutla/breachgraph@v0
         with:
           dast-url: http://localhost:8080
 ```
@@ -80,7 +80,7 @@ git add .breachgraph-baseline.json && git commit -m "breachgraph baseline"
 
 ```yaml
       - run: docker build -t myapp:${{ github.sha }} .
-      - uses: OWNER/breachgraph@v0
+      - uses: amoghnellutla/breachgraph@v0
         with:
           images: myapp:${{ github.sha }}
 ```
@@ -91,7 +91,7 @@ git add .breachgraph-baseline.json && git commit -m "breachgraph baseline"
     permissions:
       issues: write
     steps:
-      - uses: OWNER/breachgraph@v0
+      - uses: amoghnellutla/breachgraph@v0
         with:
           issues: P1
 ```
