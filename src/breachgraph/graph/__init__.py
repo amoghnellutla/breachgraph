@@ -8,14 +8,14 @@ from pathlib import Path, PurePosixPath
 
 from breachgraph.config import Config
 from breachgraph.graph.correlate import attach, code_units
-from breachgraph.graph.model import INTERNET_ID, Edge, EdgeKind, Graph, Node, NodeKind, internet
+from breachgraph.graph.model import CONTROL, INTERNET_ID, Edge, EdgeKind, Graph, Node, NodeKind, internet
 from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_paths
 from breachgraph.graph.sources.actions import ActionsSource
 from breachgraph.graph.sources.app import application_assets
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.hosting import HostingSource
 from breachgraph.graph.sources.images import ImageSource
-from breachgraph.graph.sources.kubernetes import KubernetesSource
+from breachgraph.graph.sources.kubernetes import KubernetesSource, admits
 from breachgraph.graph.sources.routes import RouteSource
 from breachgraph.graph.sources.terraform import TerraformSource
 from breachgraph.models import Finding
@@ -76,14 +76,25 @@ def assumed_entries(graph: Graph, entry_points: Sequence[str]) -> None:
                 )
             )
             for w in workloads:
-                graph.add_edge(
-                    Edge(
-                        src="entry:cluster",
-                        dst=w.id,
-                        kind=EdgeKind.EXPOSES,
-                        note="reachable over the cluster network (no NetworkPolicy is modeled)",
+                ingress = w.attrs.get("ingress")
+                if not isinstance(ingress, dict) or ingress.get("any"):
+                    graph.add_edge(
+                        Edge(
+                            src="entry:cluster",
+                            dst=w.id,
+                            kind=EdgeKind.EXPOSES,
+                            note="reachable from any pod: no NetworkPolicy restricts its ingress",
+                        )
                     )
-                )
+                    continue
+                # Isolated: only the pods its policies admit can connect, so the attacker needs
+                # control of one of those first.
+                note = f"NetworkPolicy {', '.join(ingress.get('policies') or [])} admits this pod"
+                for src in workloads:
+                    if src.id != w.id and admits(ingress, src.attrs, str(w.attrs.get("namespace"))):
+                        graph.add_edge(
+                            Edge(src=src.id, dst=w.id, kind=EdgeKind.EXPOSES, requires=CONTROL, note=note)
+                        )
 
 
 def mark_crown_jewels(graph: Graph, config: Config) -> None:

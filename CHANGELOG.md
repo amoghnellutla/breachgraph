@@ -27,6 +27,9 @@ All notable changes to this project are documented here. The format follows
 - Hosting platforms as entry points: Vercel, Netlify, Render, Fly.io, Procfile web processes and
   App Engine. The platform's config says what is public, so application repositories get a real,
   evidenced way in instead of the assumed internet-facing application.
+- NetworkPolicy for the `cluster` entry point. A pod no ingress policy selects stays reachable
+  from the foothold; an isolated pod is reachable only from the pods its rules admit, after
+  taking control of one; default-deny cuts it off.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 

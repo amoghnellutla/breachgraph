@@ -85,6 +85,28 @@ def _pod_spec(kind: str, doc: dict[str, Any]) -> dict[str, Any]:
     return ((spec.get("template") or {}).get("spec")) or {}
 
 
+def _selects(selector: dict[str, Any], labels: dict[str, Any]) -> bool:
+    """A label selector against labels. matchExpressions count as matching (upper bound)."""
+    match = selector.get("matchLabels") or {}
+    return all(labels.get(k) == v for k, v in match.items())
+
+
+def admits(ingress: dict[str, Any], src: dict[str, Any], dst_ns: str) -> bool:
+    """Whether a pod (a workload node's attrs) may connect under an ingress summary from _ingress."""
+    if ingress.get("any"):
+        return True
+    for peer in ingress.get("peers") or []:
+        ns_sel, pod_sel = peer.get("namespace"), peer.get("pods")
+        ns_ok = (
+            src.get("namespace") == dst_ns
+            if ns_sel is None
+            else _selects(ns_sel, src.get("namespace_labels") or {})
+        )
+        if ns_ok and (pod_sel is None or _selects(pod_sel, src.get("pod_labels") or {})):
+            return True
+    return False
+
+
 def _pod_labels(kind: str, doc: dict[str, Any]) -> dict[str, str]:
     if kind == "Pod":
         return (doc.get("metadata") or {}).get("labels") or {}
@@ -104,6 +126,8 @@ class KubernetesSource:
         self.workloads: list[tuple[str, dict[str, Any], dict[str, str], Evidence]] = []
         self.roles: dict[str, tuple[dict[str, Any], Evidence]] = {}  # "Role:ns/name" | "ClusterRole:name"
         self.bindings: list[tuple[dict[str, Any], Evidence]] = []
+        self.policies: list[tuple[dict[str, Any], Evidence]] = []
+        self.namespace_labels: dict[str, dict[str, str]] = {}
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
         for path in ctx.files(".yaml", ".yml"):
@@ -152,6 +176,44 @@ class KubernetesSource:
             self.roles[f"ClusterRole:{name}"] = (doc, ev)
         elif kind in ("RoleBinding", "ClusterRoleBinding"):
             self.bindings.append((doc, ev))
+        elif kind == "NetworkPolicy":
+            self.policies.append((doc, ev))
+        elif kind == "Namespace":
+            self.namespace_labels[name] = {str(k): str(v) for k, v in (meta.get("labels") or {}).items()}
+
+    def _ingress(self, ns: str, labels: dict[str, Any]) -> dict[str, Any] | None:
+        """Who may connect to a pod under the NetworkPolicies that select it. None: no policy
+        isolates it, so any pod can. Otherwise {"any": bool, "peers": [...], "policies": [...]}
+        where each peer is {"namespace": selector or None for the pod's own, "pods": selector or
+        None for all}. Selectors with matchExpressions are read as matching (an upper bound)."""
+        isolating: list[str] = []
+        peers: list[dict[str, Any]] = []
+        any_pod = False
+        for doc, _ev in self.policies:
+            meta, spec = doc.get("metadata") or {}, doc.get("spec") or {}
+            if str(meta.get("namespace", "default")) != ns or not _selects(
+                spec.get("podSelector") or {}, labels
+            ):
+                continue
+            types = spec.get("policyTypes") or ["Ingress"]
+            if "Ingress" not in types:
+                continue
+            isolating.append(str(meta.get("name", "unnamed")))
+            for rule in spec.get("ingress") or []:
+                sources = (rule or {}).get("from")
+                if not sources:  # a rule with no "from" admits every source
+                    any_pod = True
+                    continue
+                for peer in sources:
+                    if not isinstance(peer, dict) or "ipBlock" in peer:
+                        continue
+                    ns_sel, pod_sel = peer.get("namespaceSelector"), peer.get("podSelector")
+                    if ns_sel == {} and not pod_sel:
+                        any_pod = True
+                    peers.append({"namespace": ns_sel, "pods": pod_sel})
+        if not isolating:
+            return None
+        return {"any": any_pod, "peers": peers, "policies": isolating}
 
     # ------------------------------------------------------------------ graph
 
@@ -162,6 +224,14 @@ class KubernetesSource:
             ns = str(meta.get("namespace", "default"))
             node_id = self._workload(graph, kind, ns, doc, ev)
             by_ns_labels.append((ns, labels, node_id))
+            node = graph.nodes[node_id]
+            node.attrs["pod_labels"] = {str(k): str(v) for k, v in labels.items()}
+            node.attrs["namespace_labels"] = {
+                **self.namespace_labels.get(ns, {}),
+                "kubernetes.io/metadata.name": ns,
+            }
+            if (ingress := self._ingress(ns, labels)) is not None:
+                node.attrs["ingress"] = ingress
 
         def select(ns: str, selector: dict[str, str]) -> list[str]:
             if not selector:

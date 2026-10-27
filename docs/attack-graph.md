@@ -154,9 +154,12 @@ rather than facts found in the repository:
 - `credentials`: every long-lived access key that Terraform manages is treated as leaked. Its secret
   sits in the state file, and in any output that prints it. Paths start at a node named
   "Leaked access key of IAM user ... (assumed)".
-- `cluster`: an attacker already runs code in some pod and can reach every workload over the
-  cluster network. Paths start at "Inside the cluster (assumed breach)". NetworkPolicy is not
-  modeled yet, so this is an upper bound.
+- `cluster`: an attacker already runs code in some pod. Paths start at "Inside the cluster
+  (assumed breach)". NetworkPolicy decides what that foothold reaches: a pod that no ingress
+  policy selects accepts any pod; a pod a policy isolates accepts only the peers its rules allow
+  (pod and namespace selectors, including `kubernetes.io/metadata.name`), so reaching it takes
+  control of one of those pods first; a default-deny policy cuts it off. Selectors with
+  `matchExpressions` are read as matching, which keeps the result an upper bound.
 
 Paths from an assumed entry point carry that name as their first step, so a report never presents
 an assumption as an exposure.
