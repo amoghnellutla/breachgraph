@@ -83,7 +83,7 @@ runs:
   using: composite
   steps:
     - name: Cache vulnerability DB and enrichment feeds
-      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/breachgraph-cache
         key: breachgraph-cache-${{ runner.os }}-${{ github.run_id }}
@@ -91,7 +91,7 @@ runs:
 
     - name: Restore the default branch's report
       if: ${{ inputs.compare == 'true' && github.event_name == 'pull_request' }}
-      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/breachgraph-base
         key: breachgraph-report-${{ github.event.pull_request.base.sha }}
@@ -176,14 +176,14 @@ runs:
 
     - name: Keep this report for pull requests to compare against
       if: ${{ always() && inputs.compare == 'true' && steps.scan.outputs.base_saved == 'true' }}
-      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/breachgraph-base
         key: breachgraph-report-${{ github.sha }}
 
     - name: Upload SARIF to code scanning
       if: ${{ always() && inputs.upload-sarif == 'true' && hashFiles(format('{0}/breachgraph.sarif', inputs.output-dir)) != '' }}
-      uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
       continue-on-error: true  # fork PRs and private repos without GHAS cannot upload
       with:
         sarif_file: ${{ inputs.output-dir }}/breachgraph.sarif
