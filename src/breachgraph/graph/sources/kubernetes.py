@@ -436,7 +436,9 @@ class KubernetesSource:
                     src=node.id,
                     dst=host_id,
                     kind=EdgeKind.RUNS_ON,
-                    requires=[WeaknessClass.CONTAINER_ESCAPE],
+                    # Escaping needs code running in the container first; the disabled isolation
+                    # (privileged, host mounts, ...) is what makes this edge exist at all.
+                    requires=CONTROL,
                     evidence=[ev],
                     note="container isolation is disabled: " + "; ".join(reasons),
                 )

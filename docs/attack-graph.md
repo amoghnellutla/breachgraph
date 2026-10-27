@@ -110,6 +110,31 @@ GitHub's OIDC provider without naming a repository is reachable from the interne
 (Flask, FastAPI, Django), JS/TS (Express, NestJS, Next.js), Java (Spring) and Go (net/http, Gin,
 Echo, Chi). Findings inside a handler's line range attach to that route.
 
+## Credentials and other ways in
+
+The default starting point is the internet. Two kinds of credentials are followed from it:
+
+- **Login credentials committed to the repository.** An Azure VM with a literal `admin_password` and
+  password login enabled, or an EC2 instance whose key pair's private key is in the repository,
+  can be logged into by anyone who can read the repository (everyone, if it is public). With the
+  VM's SSH or RDP port open to the internet, that login reaches the VM's identity.
+- **IAM users.** Users, groups, inline and attached policies are evaluated like roles, and a user
+  reaches a role only when its policy allows `sts:AssumeRole` on that role and the role's trust
+  policy admits the user or its account.
+
+Two more starting points are opt-in with `attack_graph.entry_points`, because they are assumptions
+rather than facts found in the repository:
+
+- `credentials`: every long-lived access key that Terraform manages is treated as leaked. Its secret
+  sits in the state file, and in any output that prints it. Paths start at a node named
+  "Leaked access key of IAM user ... (assumed)".
+- `cluster`: an attacker already runs code in some pod and can reach every workload over the
+  cluster network. Paths start at "Inside the cluster (assumed breach)". NetworkPolicy is not
+  modeled yet, so this is an upper bound.
+
+Paths from an assumed entry point carry that name as their first step, so a report never presents
+an assumption as an exposure.
+
 ## Configuration
 
 ```yaml

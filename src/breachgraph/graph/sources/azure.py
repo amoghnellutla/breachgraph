@@ -314,6 +314,7 @@ class AzureTerraform:
                 )
             )
             if platform == "azure-vm":
+                self._committed_password(r, node)
                 node.attrs["metadata_header"] = "the required Metadata: true header"
                 node.weaknesses.append(
                     Weakness(
@@ -339,6 +340,17 @@ class AzureTerraform:
                     targets.append(uai.node_id)
             self.compute_identities[r.node_id] = targets
             for t in targets:
+                if node.attrs.get("login_credential"):
+                    graph.add_edge(
+                        Edge(
+                            src=r.node_id,
+                            dst=t,
+                            kind=EdgeKind.USES_IDENTITY,
+                            requires=[WeaknessClass.CREDENTIAL_EXPOSURE],
+                            evidence=[r.ev],
+                            note="log in with the committed password, then use the managed identity",
+                        )
+                    )
                 graph.add_edge(
                     Edge(
                         src=r.node_id,
@@ -349,6 +361,24 @@ class AzureTerraform:
                         note="using the managed identity requires running code in the workload",
                     )
                 )
+
+    def _committed_password(self, r: Res, node: Node) -> None:
+        """A VM whose admin password is a literal in Terraform and accepts password logins."""
+        profile = first_block(r.body.get("os_profile"))
+        password = literal(r.body.get("admin_password") or profile.get("admin_password"))
+        linux = first_block(r.body.get("os_profile_linux_config"))
+        disabled = r.body.get("disable_password_authentication", linux.get("disable_password_authentication"))
+        windows = "windows" in r.rtype or bool(r.body.get("os_profile_windows_config"))
+        if not password or (not windows and str(disabled).lower() != "false"):
+            return
+        node.weaknesses.append(
+            Weakness(
+                cls=WeaknessClass.CREDENTIAL_EXPOSURE,
+                evidence=r.ev,
+                title="admin password is hardcoded in Terraform and password login is enabled",
+            )
+        )
+        node.attrs["login_credential"] = True
 
     def _images(self, r: Res) -> list[str]:
         if r.rtype == "azurerm_container_app":

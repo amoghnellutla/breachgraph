@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
 from breachgraph.config import Config
 from breachgraph.graph.correlate import attach, code_units
-from breachgraph.graph.model import Graph, Node, NodeKind
+from breachgraph.graph.model import INTERNET_ID, Edge, EdgeKind, Graph, Node, NodeKind, internet
 from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_paths
 from breachgraph.graph.sources.actions import ActionsSource
 from breachgraph.graph.sources.common import SourceContext
@@ -31,6 +32,55 @@ class AttackGraphResult:
     @property
     def has_paths(self) -> bool:
         return bool(self.paths)
+
+
+def assumed_entries(graph: Graph, entry_points: Sequence[str]) -> None:
+    """Opt-in starting points besides the internet, each a named node so a path never pretends
+    to start somewhere it doesn't."""
+    if "credentials" in entry_points:
+        for node in list(graph.nodes.values()):
+            where = node.attrs.get("access_key")
+            if not where:
+                continue
+            eid = f"entry:key:{node.id}"
+            graph.add_node(internet())
+            graph.add_node(
+                Node(id=eid, kind=NodeKind.ENTRYPOINT, name=f"Leaked access key of {node.name} (assumed)")
+            )
+            graph.add_edge(
+                Edge(
+                    src=INTERNET_ID,
+                    dst=eid,
+                    kind=EdgeKind.EXPOSES,
+                    note=f"entry_points: credentials. The key is managed in Terraform ({where}), so its "
+                    "secret is in the state file and any output that prints it",
+                )
+            )
+            graph.add_edge(Edge(src=eid, dst=node.id, kind=EdgeKind.USES_IDENTITY, note="use the access key"))
+    if "cluster" in entry_points:
+        workloads = [n for n in graph.of_kind(NodeKind.WORKLOAD) if n.attrs.get("platform") == "kubernetes"]
+        if workloads:
+            graph.add_node(internet())
+            graph.add_node(
+                Node(id="entry:cluster", kind=NodeKind.ENTRYPOINT, name="Inside the cluster (assumed breach)")
+            )
+            graph.add_edge(
+                Edge(
+                    src=INTERNET_ID,
+                    dst="entry:cluster",
+                    kind=EdgeKind.EXPOSES,
+                    note="entry_points: cluster. An attacker already runs code in some pod",
+                )
+            )
+            for w in workloads:
+                graph.add_edge(
+                    Edge(
+                        src="entry:cluster",
+                        dst=w.id,
+                        kind=EdgeKind.EXPOSES,
+                        note="reachable over the cluster network (no NetworkPolicy is modeled)",
+                    )
+                )
 
 
 def mark_crown_jewels(graph: Graph, config: Config) -> None:
@@ -64,6 +114,7 @@ def build_attack_graph(
     ActionsSource().collect(ctx, graph)  # after cloud sources: links jobs to their identities
     routes = RouteSource().collect(ctx)
 
+    assumed_entries(graph, config.attack_graph.entry_points)
     name = repo_name or PurePosixPath(target.resolve().as_posix()).name
     units = code_units(graph, list(images.dockerfile_dirs), name, target)
     attach(graph, findings, routes, units)

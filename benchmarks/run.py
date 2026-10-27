@@ -50,7 +50,8 @@ def checkout(target: dict[str, Any]) -> Path:
 
 
 def scan(target: dict[str, Any], src: Path, image: str) -> tuple[dict[str, Any], float]:
-    out = src / ".breachgraph-bench"
+    out = WORK / f"{target['name']}-out"
+    out.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     proc = subprocess.run(
         [
@@ -59,11 +60,13 @@ def scan(target: dict[str, Any], src: Path, image: str) -> tuple[dict[str, Any],
             "--rm",
             "-v",
             f"{src}:/src",
+            "-v",
+            f"{out}:/out",  # outside the scanned tree, so a rerun never scans its own report
             image,
             "scan",
             ".",
             "-o",
-            ".breachgraph-bench",
+            "/out",
             "-f",
             "json",
         ],

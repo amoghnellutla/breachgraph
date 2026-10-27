@@ -136,6 +136,7 @@ class _State:
     docs: dict[str, list[Stmt]] = field(default_factory=dict)  # "data.aws_iam_policy_document.x"
     role_stmts: dict[str, list[Stmt]] = field(default_factory=dict)  # role node id -> statements
     unresolved: list[str] = field(default_factory=list)
+    trust: dict[str, str] = field(default_factory=dict)  # role node id -> trust policy text
     root: Path | None = None  # repository root, to read policies kept in files
 
 
@@ -158,7 +159,9 @@ class TerraformSource:
                     st.docs[key] = self._doc_statements(r)
             self._datastores(st, graph)
             self._roles(st, graph)
+            self._users(st, graph)
             self._permissions(st, graph)
+            self._assume_roles(st, graph)
             self._compute(st, graph)
             self._exposure(st, graph)
             skipped += st.unresolved
@@ -392,7 +395,10 @@ class TerraformSource:
                 )
             )
             trust = self._policy(st, r.body.get("assume_role_policy"), r.ev)
-            raw_trust = str(r.body.get("assume_role_policy"))
+            raw_trust = str(r.body.get("assume_role_policy")) + "".join(
+                str(st.res[ref].body) for ref in refs(r.body.get("assume_role_policy")) if ref in st.res
+            )
+            st.trust[node.id] = raw_trust
             for s in trust:
                 if s.effect != "Allow":
                     continue
@@ -460,6 +466,163 @@ class TerraformSource:
                 )
             )
 
+    def _committed_key(self, st: _State, graph: Graph, r: Res, node: Node) -> None:
+        """An instance whose key pair's private key is committed: anyone who can read the
+        repository can log in (when SSH is reachable)."""
+        pair = self._node_for_ref(st, r.body.get("key_name"), "aws_key_pair")
+        if pair is None or st.root is None:
+            return
+        m = re.search(r'file\(\s*"([^"]+)"', str(pair.body.get("public_key", "")))
+        if not m:
+            return
+        tf_dir = posixpath.dirname(pair.ev.path)
+        pub = m.group(1).replace("${path.module}", tf_dir or ".")
+        for cand in (posixpath.join(tf_dir, pub), pub):
+            stem = cand.removesuffix(".pub")
+            for priv in (stem, stem + ".pem"):
+                if (st.root / priv).is_file():
+                    node.weaknesses.append(
+                        Weakness(
+                            cls=WeaknessClass.CREDENTIAL_EXPOSURE,
+                            evidence=Evidence(path=priv, line=1, detail="private key", source="terraform"),
+                            title=f"private key for key pair {pair.name} is committed ({priv})",
+                        )
+                    )
+                    node.attrs["login_credential"] = True
+                    return
+
+    def _users(self, st: _State, graph: Graph) -> None:
+        """IAM users: identities with their own policies. A user with an access key holds a
+        long-lived credential (marked, so an assumed-leak entry point can start from it)."""
+        for key, r in st.res.items():
+            if r.rtype != "aws_iam_user" or key.startswith("data."):
+                continue
+            name = literal(r.body.get("name")) or r.name
+            r.node_id = f"aws:iam_user:{name}"
+            graph.add_node(
+                Node(
+                    id=r.node_id,
+                    kind=NodeKind.IDENTITY,
+                    name=f"IAM user {name}",
+                    attrs={"platform": "aws", "tf": key, "arn_name": name},
+                    evidence=[r.ev],
+                )
+            )
+            st.role_stmts.setdefault(r.node_id, [])
+        for r in st.res.values():
+            if r.rtype == "aws_iam_access_key":
+                user = self._principal(st, r.body.get("user"), "aws_iam_user", graph)
+                if user:
+                    graph.nodes[user].attrs["access_key"] = r.ev.label()
+
+    def _principal(self, st: _State, value: Any, rtype: str, graph: Graph) -> str | None:
+        """Node id of the user/role/group a policy attachment names (reference or literal name)."""
+        res = self._node_for_ref(st, value, rtype)
+        if res is not None and res.node_id:
+            return res.node_id
+        name = literal(value)
+        prefix = {"aws_iam_user": "aws:iam_user:", "aws_iam_role": "aws:iam_role:"}.get(rtype)
+        if name and prefix and f"{prefix}{name}" in graph.nodes:
+            return f"{prefix}{name}"
+        return None
+
+    def _attached(self, st: _State, r: Res, policies: dict[str, list[Stmt]], attr: str) -> list[Stmt]:
+        if attr == "policy":
+            return self._policy(st, r.body.get("policy"), r.ev)
+        arn = r.body.get("policy_arn")
+        pol = next((policies[x] for x in refs(arn) if x in policies), None)
+        return pol if pol is not None else _managed(str(arn), r.ev)
+
+    def _user_permissions(self, st: _State, graph: Graph, policies: dict[str, list[Stmt]]) -> None:
+        group_stmts: dict[str, list[Stmt]] = {}
+        members: dict[str, set[str]] = {}
+
+        def group_key(value: Any) -> list[str]:
+            return [ref for ref in refs(value) if ref.startswith("aws_iam_group.")] or [
+                f"aws_iam_group.{x}" for x in _list(value) if "${" not in x
+            ]
+
+        for r in st.res.values():
+            if r.rtype in ("aws_iam_user_policy", "aws_iam_user_policy_attachment"):
+                user = self._principal(st, r.body.get("user"), "aws_iam_user", graph)
+                attr = "policy" if r.rtype == "aws_iam_user_policy" else "policy_arn"
+                if user:
+                    st.role_stmts.setdefault(user, []).extend(self._attached(st, r, policies, attr))
+            elif r.rtype in ("aws_iam_group_policy", "aws_iam_group_policy_attachment"):
+                attr = "policy" if r.rtype == "aws_iam_group_policy" else "policy_arn"
+                for g in group_key(r.body.get("group")):
+                    group_stmts.setdefault(g, []).extend(self._attached(st, r, policies, attr))
+            elif r.rtype == "aws_iam_group_membership":
+                for g in group_key(r.body.get("group")):
+                    for u in _list(r.body.get("users")):
+                        user = self._principal(st, u, "aws_iam_user", graph)
+                        if user:
+                            members.setdefault(g, set()).add(user)
+            elif r.rtype == "aws_iam_user_group_membership":
+                user = self._principal(st, r.body.get("user"), "aws_iam_user", graph)
+                for g in group_key(r.body.get("groups")):
+                    if user:
+                        members.setdefault(g, set()).add(user)
+            elif r.rtype == "aws_iam_policy_attachment":
+                stmts = self._attached(st, r, policies, "policy_arn")
+                for u in _list(r.body.get("users")):
+                    user = self._principal(st, u, "aws_iam_user", graph)
+                    if user:
+                        st.role_stmts.setdefault(user, []).extend(stmts)
+                for g in group_key(r.body.get("groups")):
+                    group_stmts.setdefault(g, []).extend(stmts)
+        for g, users in members.items():
+            for user in users:
+                st.role_stmts.setdefault(user, []).extend(group_stmts.get(g, []))
+
+    def _assume_roles(self, st: _State, graph: Graph) -> None:
+        """Principal -> role when the principal may call sts:AssumeRole on the role AND the role's
+        trust policy names that principal (or its whole account)."""
+        for role_id, trust in st.trust.items():
+            role_name = role_id.split(":", 2)[2]
+            role_tf = str(graph.nodes[role_id].attrs.get("tf", "")) if role_id in graph.nodes else ""
+
+            def res_ok(resources: list[str], role_name: str = role_name, role_tf: str = role_tf) -> bool:
+                return any(
+                    x == "*"
+                    or (role_tf and role_tf in x)  # Resource = aws_iam_role.manager.arn
+                    or re.search(rf":role/(.*/)?{re.escape(role_name)}$", x)
+                    or (
+                        x.startswith("arn:")
+                        and fnmatch.fnmatchcase(
+                            f"arn:aws:iam::0:role/{role_name}", re.sub(r"::\d+:", "::0:", x)
+                        )
+                    )
+                    for x in resources
+                )
+
+            for pid, stmts in st.role_stmts.items():
+                if pid == role_id or not pid.startswith(("aws:iam_user:", "aws:iam_role:")):
+                    continue
+                ok, cond, grant = self._allowed(stmts, "sts:AssumeRole", res_ok)
+                if not ok:
+                    continue
+                pname = pid.split(":", 2)[2]
+                kind = "user" if pid.startswith("aws:iam_user:") else "role"
+                tf_name = str(graph.nodes[pid].attrs.get("tf", ""))
+                trusted = (
+                    f":{kind}/{pname}" in trust
+                    or (tf_name and tf_name in trust)
+                    or re.search(r":root\b|\$\{data\.aws_caller_identity\.[\w-]+\.account_id\}", trust)
+                )
+                if not trusted:
+                    continue
+                graph.add_edge(
+                    Edge(
+                        src=pid,
+                        dst=role_id,
+                        kind=EdgeKind.USES_IDENTITY,
+                        evidence=[grant.evidence] if grant and grant.evidence else [],
+                        confidence=Confidence.MEDIUM if cond else Confidence.HIGH,
+                        note="sts:AssumeRole allowed and the role's trust policy admits this principal",
+                    )
+                )
+
     def _permissions(self, st: _State, graph: Graph) -> None:
         policies: dict[str, list[Stmt]] = {}
         for key, r in st.res.items():
@@ -488,6 +651,7 @@ class TerraformSource:
                     pol if pol is not None else _managed(str(arn), r.ev)
                 )
 
+        self._user_permissions(st, graph, policies)
         for role_id, stmts in st.role_stmts.items():
             self._grant_edges(st, graph, role_id, stmts)
 
@@ -626,6 +790,7 @@ class TerraformSource:
                         + ("" if imdsv2 else " and IMDSv1 is allowed (http_tokens != required)"),
                     )
                 )
+                self._committed_key(st, graph, r, node)
                 for ref in refs(r.body.get("iam_instance_profile")):
                     role = profiles.get(ref)
                     if role and role.node_id:
@@ -639,6 +804,17 @@ class TerraformSource:
                                 note="using the instance role requires running code on the instance",
                             )
                         )
+                        if node.attrs.get("login_credential"):
+                            graph.add_edge(
+                                Edge(
+                                    src=node.id,
+                                    dst=role.node_id,
+                                    kind=EdgeKind.USES_IDENTITY,
+                                    requires=[WeaknessClass.CREDENTIAL_EXPOSURE],
+                                    evidence=[r.ev],
+                                    note="log in with the committed key, then use the instance role",
+                                )
+                            )
             elif r.rtype == "aws_eks_node_group":
                 role = self._node_for_ref(st, r.body.get("node_role_arn"), "aws_iam_role")
                 if role and role.node_id:

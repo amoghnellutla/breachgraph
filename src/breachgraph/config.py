@@ -173,6 +173,13 @@ class ReachabilityConfig(_Strict):
     gate_on_unused: bool = False  # if False, an unused-dependency CVE alone won't fail the gate
 
 
+EntryPoint = Literal["internet", "credentials", "cluster"]
+
+
+def _default_entries() -> list[EntryPoint]:
+    return ["internet"]
+
+
 class AttackGraph(_Strict):
     enabled: bool = True
     crown_value: int = Field(default=7, ge=1, le=10)  # a node at/above this value is a crown jewel
@@ -181,6 +188,10 @@ class AttackGraph(_Strict):
     max_paths: int = 40
     fail_on_new_path: bool = True  # a PR that introduces an internet->crown-jewel path fails
     min_confidence: Literal["high", "medium", "low"] = "medium"  # paths below this don't gate
+    # Where attackers start. "internet" always applies. "credentials": long-lived cloud keys that
+    # Terraform manages are assumed leaked. "cluster": an attacker already inside the cluster
+    # network (a compromised neighbor pod) can reach every workload.
+    entry_points: list[EntryPoint] = Field(default_factory=_default_entries)
 
 
 class VexConfig(_Strict):

@@ -110,7 +110,9 @@ attack_graph:
       kind: datastore       # optional: datastore|secret|identity|...
       value: 9
   fail_on_new_path: true    # a new internet->crown-jewel path fails the gate
-  min_confidence: medium    # high|medium|low — paths below this don't gate
+  min_confidence: medium    # high, medium or low; paths below this don't gate
+  entry_points: [internet]  # add "credentials" (Terraform-managed access keys assumed leaked)
+                            # or "cluster" (an attacker already inside the Kubernetes network)
   max_depth: 12
   max_paths: 40
 

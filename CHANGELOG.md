@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- IAM users, groups and their policies in the attack graph, and AssumeRole chains: a principal
+  reaches a role when its policy allows `sts:AssumeRole` and the role's trust admits it.
+- Committed login credentials as a way in: Azure VMs with a literal admin password and password
+  login enabled, and EC2 instances whose key pair's private key is in the repository.
+- `attack_graph.entry_points`: opt in to `credentials` (Terraform-managed access keys assumed
+  leaked) and `cluster` (an attacker already inside the Kubernetes network).
 - A coverage line in every report: how many routes, workloads, cloud resources, Kubernetes
   objects, CI jobs and crown jewels the attack graph modeled, and why a result is incomplete (a
   scanner that feeds weaknesses did not run, files that could not be parsed, no deployment
@@ -16,6 +22,13 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - Reports and PR comments use plain text instead of emoji icons.
+
+### Fixed
+
+- A privileged pod reachable from the internet reached its node with no code vulnerability: the
+  escape edge now needs code execution in the pod as well as the disabled isolation.
+- The benchmark harness wrote each report inside the scanned tree, so a rerun scanned its own
+  previous report.
 - The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
   and secrets. On the benchmark projects P2 blocked 1,497 findings, 131 of them on a healthy
   production-style repository. Set `fail_on.priority: P2` for the stricter gate.
