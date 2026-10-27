@@ -271,6 +271,7 @@ def scan_cmd(
     try:
         result = scan(target, config, opts, work_dir, on_done=on_done)
         result.metadata["project"] = project_name(target, name)
+        _missing_scanners_hint(result)
         _keep_artifacts(result, output_dir)
         if keep_raw:
             shutil.copytree(work_dir, output_dir / "raw", dirs_exist_ok=True)
@@ -312,6 +313,22 @@ def _parse_priority(value: str) -> Priority:
     except ValueError:
         console.print(f"[red]--fail-on must be P1, P2, P3, P4 or none, got[/] {value!r}")
         raise typer.Exit(2) from None
+
+
+def _missing_scanners_hint(result: ScanResult) -> None:
+    """One line on how to get scanners that aren't installed, the first thing a pip user hits."""
+    missing = [
+        t.name for t in result.tools if t.status is ToolStatus.SKIPPED and "not found" in (t.message or "")
+    ]
+    if not missing:
+        return
+    console.print(
+        f"[yellow]{len(missing)} scanner(s) not installed ({', '.join(missing)}).[/] "
+        "The Docker image has all of them: "
+        'docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .',
+        markup=True,
+        highlight=False,
+    )
 
 
 def _check_writable(output_dir: Path) -> None:

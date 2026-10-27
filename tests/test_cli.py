@@ -228,3 +228,10 @@ def test_fix_scans_first_when_there_is_no_report(tmp_path: Path) -> None:
     assert res.exit_code == 0, res.output
     assert "No report yet, so scanning first" in res.output
     assert (repo / "breachgraph-report" / "breachgraph.json").is_file()
+
+
+def test_missing_scanners_get_one_hint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PATH", str(tmp_path))  # no scanner binaries
+    res = runner.invoke(app, ["scan", str(PLATFORM_DIR), "-o", str(tmp_path / "o"), "--offline", "--no-fail"])
+    assert res.exit_code == 0
+    assert "scanner(s) not installed" in res.output and "ghcr.io/amoghnellutla/breachgraph" in res.output

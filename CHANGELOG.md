@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 - In an incremental scan, a scanner that didn't need to run is shown as `reused` (with the number
   of findings it carried over) in the PR comment, console and HTML report, and no longer adds a
   warning.
+- When scanners aren't installed, the scan says so once and gives the Docker command that has them.
 
 ## [0.5.0] - 2026-10-27
 
