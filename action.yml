@@ -10,7 +10,9 @@ branding:
 
 inputs:
   path:
-    description: Directory to scan, relative to the workspace.
+    description: >-
+      Directory to scan, relative to the workspace. Several, separated by spaces (". infra"), are
+      scanned as one, so attack paths across an app repository and an infra repository are found.
     default: "."
   config:
     description: "Path to .breachgraph.yml (default: <path>/.breachgraph.yml if present)."
@@ -32,6 +34,11 @@ inputs:
       Comma-separated reports from earlier steps to merge, as TOOL=PATH relative to the workspace
       (for example zap=report_json.json,sarif=codeql.sarif).
     default: ""
+  incremental:
+    description: >-
+      On pull requests, rescan only the files that changed since the default branch's last report
+      and reuse its findings for the rest. The attack graph is always rebuilt in full.
+    default: "true"
   slack-webhook:
     description: Slack incoming webhook URL (pass a secret). Alerts when a change opens an attack path.
     default: ""
@@ -115,6 +122,7 @@ runs:
         SG_ONLY: ${{ inputs.only }}
         SG_SKIP: ${{ inputs.skip }}
         SG_IMPORTS: ${{ inputs.imports }}
+        SG_INCREMENTAL: ${{ inputs.incremental }}
         BREACHGRAPH_SLACK_WEBHOOK: ${{ inputs.slack-webhook }}
         BREACHGRAPH_TEAMS_WEBHOOK: ${{ inputs.teams-webhook }}
         SG_IMAGES: ${{ inputs.images }}
@@ -129,7 +137,8 @@ runs:
       run: |
         set -uo pipefail
         mkdir -p "$SG_CACHE"
-        args=(scan "$SG_PATH" --output-dir "$SG_OUT" --format json,sarif,html,md,junit,openvex)
+        read -ra scan_paths <<< "$SG_PATH"  # several: repositories checked out side by side
+        args=(scan "${scan_paths[@]}" --output-dir "$SG_OUT" --format json,sarif,html,md,junit,openvex)
         [[ -n "$SG_CONFIG" ]]   && args+=(--config "$SG_CONFIG")
         [[ -n "$SG_BASELINE" ]] && args+=(--baseline "$SG_BASELINE")
         [[ -n "$SG_FAIL_ON" ]]  && args+=(--fail-on "$SG_FAIL_ON")
@@ -148,6 +157,7 @@ runs:
         if [[ -f "$SG_BASE_REPORT" ]]; then
           cp "$SG_BASE_REPORT" "$GITHUB_WORKSPACE/.breachgraph-base.json"
           args+=(--compare .breachgraph-base.json)
+          [[ "$SG_INCREMENTAL" == "true" ]] && args+=(--incremental)
         fi
         # shellcheck disable=SC2206
         extra=($SG_EXTRA)

@@ -74,7 +74,7 @@ Locally, the same comparison is `breachgraph scan . --compare base/breachgraph.j
 **Adopt on a legacy repo.** Accept today's findings, then fail only on new ones:
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan --write-baseline .breachgraph-baseline.json
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan --write-baseline .breachgraph-baseline.json
 git add .breachgraph-baseline.json && git commit -m "breachgraph baseline"
 ```
 
@@ -102,6 +102,24 @@ action first and import its JSON report:
 ```
 
 The same input merges CodeQL, Bandit, gosec or any other SARIF report: `imports: sarif=codeql.sarif`.
+
+**Code and infrastructure in separate repositories.** Check the infrastructure repository out
+next to the code and pass both paths; they are scanned as one, so a path from a route in the app
+to a bucket defined in the infra repository is found:
+
+```yaml
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: your-org/infra
+          path: infra
+          token: ${{ secrets.INFRA_READ_TOKEN }}   # a read-only token for the private repo
+      - uses: amoghnellutla/breachgraph@v0
+        with:
+          path: ". infra"
+```
+
+Locally the same is `breachgraph scan ../app ../infra`.
 
 **Scan the image you just built:**
 

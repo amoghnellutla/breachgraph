@@ -20,7 +20,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from breachgraph import __version__
+from breachgraph import __version__, workspace
 from breachgraph.compare import path_changes
 from breachgraph.config import CONFIG_FILENAMES, ConfigError, find_config, load_config
 from breachgraph.integrations import notify
@@ -71,7 +71,13 @@ def main(
 
 @app.command("scan")
 def scan_cmd(
-    path: Annotated[Path, typer.Argument(help="Directory to scan.")] = Path(),
+    paths: Annotated[
+        list[Path] | None,
+        typer.Argument(
+            help="Directory to scan. Give several (app/ infra/) to scan separate repositories as one: "
+            "attack paths that cross them are found."
+        ),
+    ] = None,
     config_file: Annotated[
         Path | None,
         typer.Option("--config", "-c", help="Config file (default: .breachgraph.yml in PATH)."),
@@ -96,6 +102,14 @@ def scan_cmd(
             "treated as pre-existing, and the report says which paths this change opens or closes.",
         ),
     ] = None,
+    incremental: Annotated[
+        bool,
+        typer.Option(
+            "--incremental",
+            help="With --compare: rescan only files that changed since that report and reuse its findings "
+            "for the rest. Falls back to a full scan when the base can't be trusted for this.",
+        ),
+    ] = False,
     output_dir: Annotated[Path, typer.Option("--output-dir", "-o", help="Where reports are written.")] = Path(
         "breachgraph-report"
     ),
@@ -131,6 +145,13 @@ def scan_cmd(
     ] = None,
     github_comment: Annotated[
         bool, typer.Option("--github-comment", help="Create/update a PR comment with the summary.")
+    ] = False,
+    gitlab_comment: Annotated[
+        bool,
+        typer.Option(
+            "--gitlab-comment",
+            help="Create/update a merge request note (GitLab CI; BREACHGRAPH_GITLAB_TOKEN, api scope).",
+        ),
     ] = False,
     github_issues: Annotated[
         str | None,
@@ -170,12 +191,24 @@ def scan_cmd(
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.WARNING, format="%(levelname)s %(message)s"
     )
-    target = path.resolve()
+    roots = [p.resolve() for p in (paths or [Path()])]
+    missing_roots = [str(r) for r in roots if not r.is_dir()]
+    if missing_roots:
+        console.print(f"[red]error:[/] not a directory: {', '.join(missing_roots)}")
+        raise typer.Exit(2)
+    target = roots[0]
     try:
         config = load_config(config_file or find_config(target))
     except ConfigError as exc:
         console.print(f"[red]config error:[/] {exc}")
         raise typer.Exit(2) from exc
+    workspace_dir: Path | None = None
+    if len(roots) > 1:
+        workspace_dir = Path(tempfile.mkdtemp(prefix="breachgraph-workspace-"))
+        layout = workspace.build(roots, config.exclude_paths, workspace_dir)
+        console.print("Scanning as one: " + ", ".join(f"{k}/ = {v}" for k, v in layout.items()))
+        name = name or " + ".join(layout)
+        target = workspace_dir
 
     if fail_on:
         config.fail_on.priority = None if fail_on.lower() == "none" else _parse_priority(fail_on)
@@ -219,6 +252,7 @@ def scan_cmd(
         compare=compare_to,
         offline=offline,
         max_workers=workers,
+        incremental=incremental and compare_to is not None,
     )
 
     def on_done(run: ToolRun) -> None:
@@ -243,6 +277,8 @@ def scan_cmd(
         raise typer.Exit(2) from exc
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+        if workspace_dir is not None:
+            shutil.rmtree(workspace_dir, ignore_errors=True)
 
     if write_baseline_to:
         n = write_baseline(result, write_baseline_to)
@@ -255,6 +291,8 @@ def scan_cmd(
         console.print(f"  [dim]{fmt:>6}[/] {p}")
 
     _github(result, github_comment, github_issues, close_fixed)
+    if gitlab_comment:
+        _gitlab(result)
     for line in notify.send(result, config.notify.on):
         console.print(f"  [dim]notify[/] {line}")
 
@@ -323,6 +361,23 @@ def _github(result: ScanResult, comment: bool, issues: str | None, close_fixed: 
         console.print(f"[yellow]GitHub reporting failed (scan result unaffected):[/] {exc}")
     finally:
         client.close()
+
+
+def _gitlab(result: ScanResult) -> None:
+    from breachgraph.integrations.gitlab import GitLabContext, upsert_mr_note
+
+    ctx = GitLabContext.from_env()
+    if ctx is None:
+        console.print(
+            "[yellow]GitLab note skipped:[/] needs a merge request pipeline and BREACHGRAPH_GITLAB_TOKEN "
+            "(a project access token with api scope)"
+        )
+        return
+    try:
+        md = markdown.render(result, ctx.link_base, ctx.job_url)
+        console.print(f"  [dim]gitlab[/] {upsert_mr_note(ctx, md)}")
+    except Exception as exc:  # never let reporting mask the gate result
+        console.print(f"[yellow]GitLab reporting failed (scan result unaffected):[/] {exc}")
 
 
 def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:

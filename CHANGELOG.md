@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Incremental pull-request scans (`--incremental` with `--compare`, on by default in the action
+  and the GitLab template). Every report records a digest of each scanned file; a pull request
+  rescans only what changed (Semgrep on changed files, Checkov on changed infrastructure files,
+  Trivy, Gitleaks and zizmor only when a file they read changed) and reuses the default branch's
+  findings for the rest. The attack graph is always rebuilt in full. Any doubt (no digests, a
+  different version or different scanner settings) means a full scan.
+- Several repositories scanned as one: `breachgraph scan app/ infra/`, and `path: ". infra"` in
+  the action. Attack paths that cross an application repository and an infrastructure repository
+  are found.
+- GitLab merge-request notes (`--gitlab-comment`): one note per merge request, updated on every
+  pipeline, with the attack-path diagram. The GitLab template compares each merge request with the
+  default branch's last report and scans incrementally. Needs `BREACHGRAPH_GITLAB_TOKEN`.
+- docs/comparison.md: breachgraph against running the scanners yourself and against commercial
+  platforms, including when to pick something else.
+
 ### Fixed
 
 - `breachgraph graph` with no `--findings` said "No attack path" in green. It now prints the

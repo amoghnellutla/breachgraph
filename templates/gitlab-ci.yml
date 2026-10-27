@@ -3,8 +3,11 @@
 #   include:
 #     - remote: https://raw.githubusercontent.com/amoghnellutla/breachgraph/v0/templates/gitlab-ci.yml
 #
-# Gating findings show up as failed tests in the merge request (JUnit), and the full HTML
-# report is kept as a job artifact.
+# On merge requests the job compares with the default branch's last report (downloaded as a job
+# artifact), rescans only the files that changed, and posts one note on the merge request that
+# it updates on every pipeline. For the note, add a project access token with the `api` scope as
+# a masked CI/CD variable named BREACHGRAPH_GITLAB_TOKEN; without it the job still runs, gates,
+# and keeps the HTML report as an artifact. Gating findings also show up as failed tests (JUnit).
 
 breachgraph:
   stage: test
@@ -19,7 +22,30 @@ breachgraph:
     key: breachgraph
     paths: [.breachgraph-cache/]
   script:
-    - breachgraph scan . --output-dir breachgraph-report --format json,sarif,html,md,junit $BREACHGRAPH_ARGS
+    - |
+      set -u
+      args="--output-dir breachgraph-report --format json,sarif,html,md,junit"
+      if [ -n "${CI_MERGE_REQUEST_IID:-}" ]; then
+        # The default branch's last report: the base to compare with, and to scan incrementally.
+        base_url="$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_DEFAULT_BRANCH/raw/breachgraph-report/breachgraph.json?job=$CI_JOB_NAME"
+        if python3 - "$base_url" <<'PY'
+      import os, sys, urllib.request
+      req = urllib.request.Request(sys.argv[1], headers={"JOB-TOKEN": os.environ["CI_JOB_TOKEN"]})
+      try:
+          with urllib.request.urlopen(req, timeout=30) as r, open("/tmp/breachgraph-base.json", "wb") as f:
+              f.write(r.read())
+      except Exception as exc:
+          sys.exit(f"no base report: {exc}")
+      PY
+        then
+          args="$args --compare /tmp/breachgraph-base.json --incremental"
+        else
+          echo "No report from $CI_DEFAULT_BRANCH yet: full scan (the next pipeline there creates one)."
+        fi
+        [ -n "${BREACHGRAPH_GITLAB_TOKEN:-}${GITLAB_TOKEN:-}" ] && args="$args --gitlab-comment"
+      fi
+      # shellcheck disable=SC2086  # both hold several flags on purpose
+      breachgraph scan . $args $BREACHGRAPH_ARGS
   artifacts:
     when: always
     paths: [breachgraph-report/]

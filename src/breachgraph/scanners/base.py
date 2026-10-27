@@ -27,6 +27,7 @@ class ScanContext:
     work_dir: Path  # scratch dir for raw tool output
     config: Config
     artifacts: dict[str, str] = field(default_factory=dict)
+    files: list[str] | None = None  # incremental scan: only these repo-relative files
 
 
 @dataclass

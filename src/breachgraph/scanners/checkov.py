@@ -17,7 +17,8 @@ class CheckovScanner(Scanner):
     def steps(self, ctx: ScanContext, exe: str) -> list[Step]:
         settings = cast(CheckovConfig, self.settings(ctx.config))
         out = ctx.work_dir / "checkov.json"
-        cmd = [exe, "-d", ".", "-o", "json", "--compact", "--quiet", "--soft-fail"]
+        targets = ["-d", "."] if ctx.files is None else [a for f in ctx.files for a in ("-f", f)]
+        cmd = [exe, *targets, "-o", "json", "--compact", "--quiet", "--soft-fail"]
         if settings.frameworks:
             cmd += ["--framework", *settings.frameworks]
         else:

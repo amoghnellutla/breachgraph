@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from breachgraph import __version__
+from breachgraph import __version__, incremental
 from breachgraph.compare import base_fingerprints, base_path_ids, compare, load_report, policy_snapshot
 from breachgraph.config import Config
 from breachgraph.enrich import enrich
@@ -41,6 +41,7 @@ class ScanOptions:
     compare: Path | None = None  # base report: an implicit baseline of findings and attack paths
     offline: bool = False
     max_workers: int = 4
+    incremental: bool = False  # with compare: rescan only what changed since the base report
 
 
 class PipelineError(Exception):
@@ -69,10 +70,11 @@ def run_scanners(
     names: list[str],
     max_workers: int,
     on_done: Callable[[ToolRun], None] | None = None,
+    contexts: dict[str, ScanContext] | None = None,
 ) -> list[ScannerOutcome]:
     outcomes: list[ScannerOutcome] = []
     with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
-        futures = {pool.submit(SCANNERS[n].run, ctx): n for n in names}
+        futures = {pool.submit(SCANNERS[n].run, (contexts or {}).get(n, ctx)): n for n in names}
         for fut in as_completed(futures):
             try:
                 outcome = fut.result()
@@ -204,7 +206,32 @@ def scan(
     work_dir.chmod(0o777)  # the ZAP container runs as a non-root user and writes here
     ctx = ScanContext(target=target, work_dir=work_dir, config=config)
 
-    outcomes = run_scanners(ctx, select_scanners(config, opts), opts.max_workers, on_done)
+    names = select_scanners(config, opts)
+    tree = incremental.tree_digest(target, config.exclude_paths)
+    base = _base_for_incremental(opts)
+    plan = incremental.plan(base, tree, config, __version__, names) if opts.incremental else None
+    run = [n for n in names if plan is None or plan.modes[n] != "carry"]
+    contexts = {
+        n: ScanContext(target=target, work_dir=work_dir, config=config, artifacts=ctx.artifacts, files=fs)
+        for n, fs in (plan.files if plan else {}).items()
+    }
+    outcomes = run_scanners(ctx, run, opts.max_workers, on_done, contexts)
+    reused = (
+        incremental.carried(base, plan) if plan is not None and base is not None and not plan.reason else []
+    )
+    for n in names:
+        if n in run:
+            continue
+        count = sum(1 for f in reused if f.tool == n)
+        tool_run = ToolRun(
+            name=n,
+            status=ToolStatus.OK,
+            findings=count,
+            message=f"no relevant change: {count} finding(s) reused",
+        )
+        outcomes.append(ScannerOutcome(tool_run, []))
+        if on_done:
+            on_done(tool_run)
     for tool, path in opts.imports:
         if tool not in IMPORTERS:
             raise PipelineError(f"cannot import '{tool}': supported are {', '.join(IMPORTERS)}")
@@ -216,5 +243,24 @@ def scan(
         if on_done:
             on_done(outcome.run)
 
-    findings = [f for o in outcomes for f in o.findings]
-    return process(findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started)
+    findings = [f for o in outcomes for f in o.findings] + reused
+    result = process(findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started)
+    result.metadata["tree"] = tree
+    result.metadata["scanner_fingerprint"] = incremental.scanner_fingerprint(config)
+    if plan is not None:
+        result.metadata["incremental"] = {
+            "full_scan_reason": plan.reason,
+            "changed_files": len(plan.changed),
+            "deleted_files": len(plan.deleted),
+            "modes": plan.modes,
+        }
+    return result
+
+
+def _base_for_incremental(opts: ScanOptions) -> ScanResult | None:
+    if not (opts.incremental and opts.compare and opts.compare.is_file()):
+        return None
+    try:
+        return load_report(opts.compare)
+    except ValueError:
+        return None  # process() reports the unreadable base as a warning

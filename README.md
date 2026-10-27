@@ -81,13 +81,19 @@ breachgraph init
 Anywhere else, the Docker image has every scanner at a pinned version:
 
 ```bash
-docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
 ```
 
 The report lands in `breachgraph-report/` (HTML, JSON, SARIF, Markdown). `pip install breachgraph`
 works too; it runs whichever scanners are installed and `breachgraph doctor` lists them. There is a
-GitLab CI template in [templates/](templates/gitlab-ci.yml) and more GitHub recipes in
-[docs/github-action.md](docs/github-action.md).
+GitLab CI template that comments on merge requests ([docs/gitlab.md](docs/gitlab.md)) and more
+GitHub recipes in [docs/github-action.md](docs/github-action.md).
+
+Code and infrastructure in different repositories? Scan them together, so a path from your app's
+routes to a bucket in your infra repository is found: `breachgraph scan app/ infra/`.
+
+Wondering how this compares with running Trivy or Checkov yourself, or with a commercial
+platform? See [docs/comparison.md](docs/comparison.md), including when to pick something else.
 
 ## What a pull request sees
 

@@ -1,5 +1,5 @@
 # breachgraph: all scanners, pinned and checksum-verified, in one image.
-#   docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan /src
+#   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
 #
 # Bump versions with the matching SHA-256 from each project's release checksums file.
 # The base image is pinned by digest; Dependabot proposes updates.

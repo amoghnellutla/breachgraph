@@ -33,7 +33,7 @@ class SemgrepScanner(Scanner):
             cmd += ["--config", rules]
         for name in simple_dir_excludes(ctx.config.exclude_paths):
             cmd += ["--exclude", name]
-        cmd += [*settings.extra_args, "."]
+        cmd += [*settings.extra_args, *(ctx.files if ctx.files is not None else ["."])]
         return [Step(cmd, out)]
 
     def parse(self, raw: Any, ctx: ScanContext) -> list[Finding]:
