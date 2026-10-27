@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `breachgraph graph` with no `--findings` said "No attack path" in green. It now prints the
+  coverage line, says the result is infrastructure only, and gives the `breachgraph scan` command;
+  a scan with incomplete coverage says "No attack path found, but the result is incomplete".
+- `breachgraph fix` with no report runs the scan itself instead of stopping with an error.
+
 ## [0.4.0] - 2026-10-27
 
 ### Added

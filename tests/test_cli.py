@@ -11,6 +11,7 @@ from breachgraph.cli import app
 from tests.conftest import FIXTURES
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
+PLATFORM_DIR = Path(__file__).parent.parent / "examples" / "vulnerable-platform"
 runner = CliRunner()
 
 
@@ -210,3 +211,20 @@ def test_unwritable_output_fails_fast(tmp_path: Path) -> None:
     res = runner.invoke(app, ["scan", str(DEMO), "-o", str(blocker / "out"), "--offline"])
     assert res.exit_code == 2 and "cannot write reports" in res.output
     assert "scanning" not in res.output  # failed before any scanner ran
+
+
+def test_graph_without_findings_is_not_reassuring() -> None:
+    res = runner.invoke(app, ["graph", str(PLATFORM_DIR)])
+    assert "No attack path found, but the result is incomplete" in res.output
+    assert "Infrastructure only" in res.output and "breachgraph scan" in res.output
+    assert "[green]No attack path" not in res.output
+
+
+def test_fix_scans_first_when_there_is_no_report(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    shutil.copytree(PLATFORM_DIR, repo)
+    shutil.rmtree(repo / "breachgraph-report", ignore_errors=True)
+    res = runner.invoke(app, ["fix", str(repo), "--offline"])
+    assert res.exit_code == 0, res.output
+    assert "No report yet, so scanning first" in res.output
+    assert (repo / "breachgraph-report" / "breachgraph.json").is_file()

@@ -330,8 +330,14 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
     if ag is None or not ag.enabled:
         return
     if not ag.paths:
-        if ag.stats.get("crown_jewels"):
+        complete = ag.coverage is None or ag.coverage.complete
+        if ag.stats.get("crown_jewels") and complete:
             console.print("[green]No attack path[/] from the internet to a crown-jewel asset.")
+        elif ag.stats.get("crown_jewels"):
+            console.print(
+                "[yellow]No attack path found, but the result is incomplete[/] (see below): "
+                "a missing input can hide a path."
+            )
         if ag.coverage:
             console.print(f"[dim]{escape(ag.coverage.line())}[/]")
         return
@@ -442,7 +448,7 @@ def graph_cmd(
     them only infrastructure-only paths (public buckets, open databases) are found.
     """
     from breachgraph.graph import build_attack_graph
-    from breachgraph.graph.summary import summarize
+    from breachgraph.graph.summary import coverage, summarize
 
     target = path.resolve()
     if not target.is_dir():
@@ -455,9 +461,11 @@ def graph_cmd(
         raise typer.Exit(2) from exc
 
     findings = []
+    tools: list[ToolRun] = []
     if findings_json:
         try:
             prior = ScanResult.model_validate_json(findings_json.read_text(encoding="utf-8"))
+            tools = prior.tools
             findings = prior.findings
         except (OSError, ValidationError) as exc:
             console.print(f"[red]cannot read {findings_json}:[/] {exc}")
@@ -465,10 +473,15 @@ def graph_cmd(
 
     ag = build_attack_graph(target, findings, config)
     summary = summarize(ag, findings, config.attack_graph, baseline_used=False)
+    summary.coverage = coverage(summary, ag, tools)
     result = ScanResult(breachgraph_version=__version__, target=str(target), attack_graph=summary)
     _print_attack_paths(result)
-    if not ag.paths:
-        console.print(f"[dim]{ag.stats}[/]")
+    if not findings_json:
+        console.print(
+            "[yellow]Infrastructure only:[/] no scanner findings were given, so code, dependency and "
+            "secret weaknesses are not in the graph. For the full picture run "
+            f"[bold]breachgraph scan {path}[/] (or pass --findings breachgraph-report/breachgraph.json)."
+        )
     if output:
         output.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
         console.print(f"[dim]graph written to {output}[/]")
@@ -486,6 +499,9 @@ def fix_cmd(
     pr: Annotated[
         bool, typer.Option("--pr", help="Commit each fix to its own branch and open a pull request.")
     ] = False,
+    offline: Annotated[
+        bool, typer.Option("--offline", help="If a scan is needed, skip KEV/EPSS lookups.")
+    ] = False,
 ) -> None:
     """Fix the findings that break the most attack paths: dependency upgrades and the GitHub Actions
     script-injection fix. Shows a diff unless --apply or --pr is given."""
@@ -494,12 +510,16 @@ def fix_cmd(
     from breachgraph import fix as fixer
 
     target = path.resolve()
-    report = report or target / "breachgraph-report" / "breachgraph.json"
-    try:
-        result = ScanResult.model_validate_json(report.read_text(encoding="utf-8"))
-    except (OSError, ValidationError) as exc:
-        console.print(f"[red]error:[/] cannot read {report}; run `breachgraph scan` first ({exc})")
-        raise typer.Exit(2) from exc
+    if report is None and not (target / "breachgraph-report" / "breachgraph.json").is_file():
+        console.print(f"No report yet, so scanning first (same as [bold]breachgraph scan {path}[/]).")
+        result = _scan_for_fix(target, offline)
+    else:
+        report = report or target / "breachgraph-report" / "breachgraph.json"
+        try:
+            result = ScanResult.model_validate_json(report.read_text(encoding="utf-8"))
+        except (OSError, ValidationError) as exc:
+            console.print(f"[red]error:[/] cannot read {report} ({exc}). Run: breachgraph scan {path}")
+            raise typer.Exit(2) from exc
     fixes = fixer.plan(result, target, top)
     if not fixes:
         console.print("No attack paths, so nothing to fix first.")
@@ -531,6 +551,27 @@ def fix_cmd(
             raise typer.Exit(2) from exc
     elif not apply and any(f.files for f in fixes):
         console.print("[dim]Dry run. --apply writes these changes; --pr opens one pull request per fix.[/]")
+
+
+def _scan_for_fix(target: Path, offline: bool) -> ScanResult:
+    """A default scan whose JSON report lands where `breachgraph scan` would put it."""
+    try:
+        config = load_config(find_config(target))
+    except ConfigError as exc:
+        console.print(f"[red]config error:[/] {exc}")
+        raise typer.Exit(2) from exc
+    output_dir = target / "breachgraph-report"
+    _check_writable(output_dir)
+    work_dir = Path(tempfile.mkdtemp(prefix="breachgraph-"))
+    try:
+        result = scan(target, config, ScanOptions(offline=offline), work_dir)
+    except PipelineError as exc:
+        console.print(f"[red]error:[/] {exc}")
+        raise typer.Exit(2) from exc
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+    write_reports(result, output_dir, ["json"])
+    return result
 
 
 @app.command("doctor")
