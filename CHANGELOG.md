@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The image keeps Trivy's databases under its one cache directory
+  (`/tmp/breachgraph-cache/trivy`), so a single mount keeps everything between local runs. The
+  README's Docker command now mounts it: a repeat scan of the demo's dependencies takes 7 seconds
+  instead of 23.
+
 ## [0.5.0] - 2026-10-27
 
 ### Added

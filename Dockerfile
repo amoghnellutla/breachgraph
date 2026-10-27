@@ -67,10 +67,11 @@ RUN ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep \
     && ln -s /opt/zizmor/bin/zizmor /usr/local/bin/zizmor \
     && ln -s /opt/breachgraph/bin/breachgraph /usr/local/bin/breachgraph
 
-# Writable caches for any UID (CI runners often use --user "$(id -u):$(id -g)").
+# Writable caches for any UID (CI runners often use --user "$(id -u):$(id -g)"). What is worth
+# keeping between runs (Trivy's databases, KEV/EPSS, OSV) is under one directory to mount.
 ENV HOME=/tmp/home \
     BREACHGRAPH_CACHE_DIR=/tmp/breachgraph-cache \
-    TRIVY_CACHE_DIR=/tmp/trivy-cache \
+    TRIVY_CACHE_DIR=/tmp/breachgraph-cache/trivy \
     SEMGREP_SEND_METRICS=off \
     PYTHONUNBUFFERED=1
 RUN mkdir -p /tmp/home && chmod 1777 /tmp/home

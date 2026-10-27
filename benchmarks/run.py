@@ -63,6 +63,8 @@ def scan(target: dict[str, Any], src: Path, image: str) -> tuple[dict[str, Any],
             f"{src}:/src",
             "-v",
             f"{out}:/out",  # outside the scanned tree, so a rerun never scans its own report
+            "-v",
+            f"{WORK / 'cache'}:/tmp/breachgraph-cache",  # vulnerability databases, as a CI cache would
             image,
             "scan",
             ".",
@@ -192,6 +194,7 @@ def main() -> int:
     ).stdout.strip()
     targets = yaml.safe_load((ROOT / "benchmarks" / "targets.yml").read_text(encoding="utf-8"))
     RESULTS.mkdir(parents=True, exist_ok=True)
+    (WORK / "cache").mkdir(parents=True, exist_ok=True)
     failed = 0
     for target in targets:
         if opts.only and target["name"] not in opts.only:

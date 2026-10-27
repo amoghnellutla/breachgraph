@@ -81,10 +81,13 @@ pip install breachgraph
 breachgraph init
 ```
 
-Anywhere else, the Docker image has every scanner at a pinned version:
+Anywhere else, the Docker image has every scanner at a pinned version. The second mount keeps the
+vulnerability databases between runs, so only the first scan downloads them:
 
 ```bash
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
+mkdir -p ~/.cache/breachgraph
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" \
+  -v ~/.cache/breachgraph:/tmp/breachgraph-cache ghcr.io/amoghnellutla/breachgraph scan .
 ```
 
 The report lands in `breachgraph-report/` (HTML, JSON, SARIF, Markdown). `pip install breachgraph`
