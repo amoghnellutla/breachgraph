@@ -39,7 +39,7 @@ On each PR you get:
 | `baseline` | | Baseline file (auto-detected at `<path>/.breachgraph-baseline.json`) |
 | `fail-on` | | `P1`–`P4` or `none`; overrides config |
 | `only` / `skip` | | Comma-separated scanner names |
-| `dast-url` | | Run a ZAP baseline scan against a running app |
+| `imports` | | Reports from earlier steps to merge, as `TOOL=PATH` (e.g. `zap=report_json.json,sarif=codeql.sarif`) |
 | `images` | | Comma-separated container images for Trivy |
 | `comment` | `true` | Sticky PR comment |
 | `compare` | `true` | Compare each PR with the default branch's last report (kept in the Actions cache): findings and attack paths that already exist there don't fail the PR, and the comment leads with the attack paths the PR **opens** (drawn as a diagram) or **closes**. Runs on the default branch save the report; nothing to commit |
@@ -84,14 +84,22 @@ git add .breachgraph-baseline.json && git commit -m "breachgraph baseline"
           extra-args: --no-fail
 ```
 
-**DAST against a preview environment:**
+**Merge a ZAP scan of a preview environment.** breachgraph doesn't run ZAP itself; run ZAP's own
+action first and import its JSON report:
 
 ```yaml
       - run: docker compose up -d && ./wait-for-it.sh localhost:8080
+      - uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: http://localhost:8080
+          allow_issue_writing: false
+          fail_action: false
       - uses: amoghnellutla/breachgraph@v0
         with:
-          dast-url: http://localhost:8080
+          imports: zap=report_json.json
 ```
+
+The same input merges CodeQL, Bandit, gosec or any other SARIF report: `imports: sarif=codeql.sarif`.
 
 **Scan the image you just built:**
 

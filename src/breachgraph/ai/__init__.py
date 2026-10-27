@@ -103,10 +103,10 @@ def available() -> tuple[bool, str]:
     return True, ""
 
 
-def _price(model: str) -> tuple[tuple[float, float], bool]:
+def _price(model: str, prices: dict[str, tuple[float, float]]) -> tuple[tuple[float, float], bool]:
     """((input, output) USD per 1M tokens, known). Unknown models get the ceiling price."""
-    known = model in _PRICING
-    return (_PRICING[model] if known else _CEILING), known
+    known = model in prices
+    return (prices[model] if known else max(_CEILING, *prices.values())), known
 
 
 class _Budget:
@@ -114,8 +114,9 @@ class _Budget:
 
     Thread-safe, so concurrent requests can never jointly overshoot ``max_usd``."""
 
-    def __init__(self, max_usd: float) -> None:
+    def __init__(self, max_usd: float, prices: dict[str, tuple[float, float]] | None = None) -> None:
         self.max_usd = max_usd
+        self.prices = {**_PRICING, **(prices or {})}
         self.spent = 0.0
         self.reserved = 0.0
         self.input_tokens = 0
@@ -124,7 +125,7 @@ class _Budget:
         self._lock = threading.Lock()
 
     def reserve(self, model: str, prompt_chars: int) -> float | None:
-        (p_in, p_out), _ = _price(model)
+        (p_in, p_out), _ = _price(model, self.prices)
         worst = (prompt_chars / _CHARS_PER_TOKEN * p_in + MAX_OUTPUT_TOKENS * p_out) / 1_000_000
         with self._lock:
             if self.spent + self.reserved + worst > self.max_usd:
@@ -137,7 +138,7 @@ class _Budget:
         with self._lock:
             self.reserved -= reserved
             for model, input_tokens, output_tokens in charges:
-                (p_in, p_out), known = _price(model)
+                (p_in, p_out), known = _price(model, self.prices)
                 self.spent += (input_tokens * p_in + output_tokens * p_out) / 1_000_000
                 self.input_tokens += input_tokens
                 self.output_tokens += output_tokens
@@ -250,7 +251,7 @@ def triage(
         return run
     jobs = [(f, build_prompt(build_evidence(f, target, result.attack_graph))) for f in findings]
 
-    budget = _Budget(cfg.max_usd)
+    budget = _Budget(cfg.max_usd, cfg.prices)
     stop = threading.Event()  # set on errors that would repeat for every request
     fatal: list[str] = []
     sdk = api.sdk
@@ -311,10 +312,10 @@ def _summarize(outcomes: list[str], fatal: list[str], cfg: AIConfig, upper_bound
             f"AI budget (${cfg.max_usd:.2f}) reached: {n} finding(s) not triaged. "
             "Raise ai.max_usd (--ai-budget) or lower ai.max_findings."
         )
-    if upper_bound or cfg.model not in _PRICING:
+    if upper_bound or cfg.model not in {**_PRICING, **cfg.prices}:
         warnings.append(
             "no list price known for a model used: the AI cost shown and the budget use the highest "
-            "Claude price, so they are upper bounds"
+            "Claude price, so they are upper bounds (set ai.prices to give one)"
         )
     problems = Counter(o for o in outcomes if o not in ("ok", "budget", "skipped"))
     for problem, n in problems.most_common():

@@ -24,8 +24,17 @@ All notable changes to this project are documented here. The format follows
   source defines a database. SQL injection and code execution in the application reach it.
 - An application that serves HTTP routes and has no deployment configuration is modeled as one
   workload assumed to be internet-facing, at medium confidence, and the coverage line says so.
+- `ai.prices`: set or override a model's price per million tokens, so a price change or a new
+  model doesn't need a release.
 - Compose services that publish ports, or sit behind an nginx, Traefik, Caddy, HAProxy or Envoy
   service that does, are exposed to the internet at medium confidence.
+
+### Removed
+
+- breachgraph no longer runs OWASP ZAP. `--dast-url`, `scanners.zap` and the action's `dast-url`
+  input are gone. Scanning a running application is a separate job from gating a change: run
+  ZAP's own action and merge its report with `--import zap=report_json.json`, or with the action's
+  new `imports` input, which takes any supported report including SARIF.
 
 ### Changed
 

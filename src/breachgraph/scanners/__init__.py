@@ -5,7 +5,7 @@ from breachgraph.scanners.gitleaks import GitleaksScanner
 from breachgraph.scanners.sarif_import import SarifImporter
 from breachgraph.scanners.semgrep import SemgrepScanner
 from breachgraph.scanners.trivy import TrivyScanner
-from breachgraph.scanners.zap import ZapScanner
+from breachgraph.scanners.zap import ZapImporter
 from breachgraph.scanners.zizmor import ZizmorScanner
 
 SCANNERS: dict[str, Scanner] = {
@@ -17,12 +17,12 @@ SCANNERS: dict[str, Scanner] = {
         CheckovScanner(),
         ZizmorScanner(),
         CicdScanner(),
-        ZapScanner(),
     )
 }
 # The built-in checks have no report of their own to import.
 IMPORTERS: dict[str, Scanner] = {
     **{k: v for k, v in SCANNERS.items() if k != "cicd"},
+    "zap": ZapImporter(),
     "sarif": SarifImporter(),
 }
 

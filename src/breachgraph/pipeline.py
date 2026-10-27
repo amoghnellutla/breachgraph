@@ -58,8 +58,8 @@ def select_scanners(config: Config, opts: ScanOptions) -> list[str]:
             continue
         if opts.only and name not in opts.only:
             continue
-        # --only forces a scanner on even if the config disables it (except ZAP without a URL).
-        if scanner.enabled(config) or (name in opts.only and name != "zap"):
+        # --only forces a scanner on even if the config disables it.
+        if scanner.enabled(config) or name in opts.only:
             names.append(name)
     return names
 

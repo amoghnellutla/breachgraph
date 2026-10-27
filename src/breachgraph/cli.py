@@ -121,9 +121,6 @@ def scan_cmd(
     ] = None,
     no_fail: Annotated[bool, typer.Option("--no-fail", help="Always exit 0 (report-only mode).")] = False,
     offline: Annotated[bool, typer.Option("--offline", help="Skip KEV/EPSS lookups.")] = False,
-    dast_url: Annotated[
-        str | None, typer.Option("--dast-url", help="Run a ZAP baseline scan against this URL.")
-    ] = None,
     images: Annotated[
         list[str] | None, typer.Option("--image", help="Container image(s) to scan with Trivy.")
     ] = None,
@@ -177,9 +174,6 @@ def scan_cmd(
 
     if fail_on:
         config.fail_on.priority = None if fail_on.lower() == "none" else _parse_priority(fail_on)
-    if dast_url:
-        config.scanners.zap.enabled = True
-        config.scanners.zap.target_url = dast_url
     if images:
         config.scanners.trivy.images = [*config.scanners.trivy.images, *images]
     if ai:
@@ -490,9 +484,6 @@ scanners:
     scanners: [vuln, misconfig]
     sbom: true                 # writes a CycloneDX SBOM next to the reports
   checkov: {{}}
-  zap:
-    enabled: false             # DAST: set target_url (or pass --dast-url) to a running app
-    target_url: null
 
 fail_on:
   priority: P1                 # fail on new P1 findings; P2 is stricter

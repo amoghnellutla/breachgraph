@@ -35,8 +35,6 @@ def scan(tmp_path: Path, *extra: str):  # type: ignore[no-untyped-def]
             str(tmp_path / "out"),
             "--offline",
             "--skip",
-            "zap",
-            "--skip",
             "zizmor",
             "--skip",
             "cicd",

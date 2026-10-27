@@ -82,14 +82,6 @@ class CheckovConfig(ScannerConfig):
     frameworks: list[str] = Field(default_factory=list)  # empty = checkov's auto-detection
 
 
-class ZapConfig(ScannerConfig):
-    enabled: bool = False  # DAST needs a running target, so it is opt-in
-    target_url: str | None = None
-    mode: Literal["baseline", "full", "api"] = "baseline"
-    api_definition: str | None = None  # OpenAPI file/URL for mode=api
-    docker_image: str = "ghcr.io/zaproxy/zaproxy:stable"
-
-
 class Scanners(_Strict):
     semgrep: SemgrepConfig = Field(default_factory=SemgrepConfig)
     gitleaks: GitleaksConfig = Field(default_factory=GitleaksConfig)
@@ -97,7 +89,6 @@ class Scanners(_Strict):
     checkov: CheckovConfig = Field(default_factory=CheckovConfig)
     zizmor: ScannerConfig = Field(default_factory=ScannerConfig)
     cicd: ScannerConfig = Field(default_factory=ScannerConfig)  # built in: no binary needed
-    zap: ZapConfig = Field(default_factory=ZapConfig)
 
 
 class FailOn(_Strict):
@@ -165,6 +156,9 @@ class AIConfig(_Strict):
     max_findings: int = Field(default=10, ge=1, le=100)  # triage at most this many top findings
     max_usd: float = Field(default=1.0, gt=0)  # never start a request that could exceed this spend
     effort: Literal["low", "medium", "high", "xhigh", "max"] = "low"  # reasoning depth vs cost
+    # USD per 1M tokens as [input, output], merged over the built-in list prices. Use it when
+    # Anthropic changes a price, for a model breachgraph doesn't know yet, or for a negotiated rate.
+    prices: dict[str, tuple[float, float]] = Field(default_factory=dict)
 
 
 class ReachabilityConfig(_Strict):

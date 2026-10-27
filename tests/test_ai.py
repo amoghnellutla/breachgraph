@@ -520,3 +520,16 @@ def test_selection_spreads_across_locations() -> None:
     triage(scan_result(*same_block, other), AIConfig(max_findings=2), PLATFORM, client=api.client())
     assert other.ai is not None  # a lower-risk finding elsewhere beats a 2nd rule on the same block
     assert sum(f.ai is not None for f in same_block) == 1
+
+
+def test_configured_price_overrides_and_adds_models() -> None:
+    b = _Budget(1.0, {"claude-opus-5-5": (1.0, 2.0), "claude-future-9": (3.0, 6.0)})
+    reserved = b.reserve("claude-future-9", 0)
+    assert reserved == pytest.approx(8000 * 6 / 1_000_000)
+    b.settle(reserved or 0, [("claude-opus-5-5", 1000, 1000), ("claude-future-9", 1000, 0)])
+    assert b.spent == pytest.approx((1000 * 1 + 1000 * 2 + 1000 * 3) / 1_000_000)
+    assert not b.upper_bound
+    api = FakeAPI(body=message(model="claude-future-9"))
+    cfg = AIConfig(model="claude-future-9", prices={"claude-future-9": (3.0, 6.0)})
+    run = triage(scan_result(ssrf()), cfg, PLATFORM, client=api.client())
+    assert not run.cost_is_upper_bound and not any("upper bounds" in w for w in run.warnings)

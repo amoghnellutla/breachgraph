@@ -10,7 +10,7 @@ import pytest
 from breachgraph.config import Config
 from breachgraph.models import ToolStatus
 from breachgraph.pipeline import PipelineError, ScanOptions, scan, select_scanners
-from breachgraph.scanners import SCANNERS, ScanContext
+from breachgraph.scanners import IMPORTERS, SCANNERS, ScanContext
 from tests.conftest import FIXTURES
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
@@ -61,13 +61,8 @@ def test_checkov_skips_secrets_when_gitleaks_on(ctx: ScanContext) -> None:
     assert "--skip-framework" not in flat(ctx, "checkov")
 
 
-def test_zap_runs_only_with_target(ctx: ScanContext) -> None:
-    assert SCANNERS["zap"].steps(ctx, "docker") == []
-    assert not SCANNERS["zap"].enabled(ctx.config)
-    ctx.config.scanners.zap.enabled = True
-    ctx.config.scanners.zap.target_url = "http://localhost:8080"
-    cmd = flat(ctx, "zap")
-    assert "zap-baseline.py" in cmd and "http://localhost:8080" in cmd
+def test_zap_is_import_only(ctx: ScanContext) -> None:
+    assert "zap" not in SCANNERS and IMPORTERS["zap"].steps(ctx, "") == []
 
 
 def fake_run(fixture: str | None, code: int = 0, stderr: str = ""):  # type: ignore[no-untyped-def]

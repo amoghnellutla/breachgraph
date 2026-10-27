@@ -33,12 +33,6 @@ scanners:
     enabled: true                # GitHub Actions audits; online audits run when GH_TOKEN is set
   cicd:
     enabled: true                # built-in CI/CD and supply-chain checks (no binary needed)
-  zap:
-    enabled: false               # DAST is opt-in: it needs a running application
-    target_url: null             # or pass --dast-url
-    mode: baseline               # baseline | full | api
-    api_definition: null         # OpenAPI URL for mode=api
-    docker_image: ghcr.io/zaproxy/zaproxy:stable
 
 vex:                             # OpenVEX output (--format openvex), see docs/vex.md
   author: breachgraph            # who issues the statements (a team email or IRI is best)
@@ -99,6 +93,7 @@ ai:                           # optional AI triage — bring your own Anthropic 
   max_findings: 10            # triage at most this many top findings (attack-path steps first)
   max_usd: 1.0                # never start a request whose worst case could push spend past this
   effort: low                 # low | medium | high | xhigh | max: reasoning depth vs cost
+  prices: {}                  # override list prices, USD per 1M tokens: {model-id: [input, output]}
 
 attack_graph:
   enabled: true

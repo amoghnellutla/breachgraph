@@ -7,16 +7,17 @@ flowchart LR
         G[Gitleaks<br/>secrets]
         T[Trivy<br/>SCA · IaC · images · SBOM]
         C[Checkov<br/>IaC]
-        Z[ZAP<br/>DAST]
+        Z[zizmor and built-in checks<br/>CI/CD]
     end
-    I[--import<br/>any SARIF / tool JSON] --> P
+    I[--import<br/>ZAP, any SARIF, tool JSON] --> P
     S & G & T & C & Z --> P[Parse → Finding]
     P --> N[Normalize<br/>paths · CWE · OWASP · fingerprint]
     N --> X[Exclude paths]
     X --> D[Dedupe<br/>same tool + cross-tool]
     D --> E[Enrich<br/>CISA KEV · FIRST EPSS]
     E --> R[Score<br/>0-10 → P1-P4]
-    R --> B[Baseline · suppressions]
+    R --> A[Attack graph<br/>code · cloud · Kubernetes · CI]
+    A --> B[Baseline · suppressions]
     B --> Q{Gate}
     Q --> O1[SARIF → code scanning]
     Q --> O2[PR comment · job summary]

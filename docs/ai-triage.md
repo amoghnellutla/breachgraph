@@ -73,7 +73,9 @@ The cap is enforced **before** each request: breachgraph reserves the request's 
 input plus the maximum answer length) and skips the finding if that could exceed `max_usd`, then
 records the real cost from the API's token counts. Findings skipped for budget are listed in the
 warnings. Costs use Anthropic's list prices. For a model breachgraph has no price for, it uses the
-highest Claude price and labels the cost an upper bound. At the defaults, a finding typically costs
+highest Claude price and labels the cost an upper bound. Prices change, so they can be set in
+config: `ai.prices: {claude-opus-5-5: [4, 20]}` (USD per million input and output tokens) overrides
+or adds a model's price. At the defaults, a finding typically costs
 a few cents on Opus and a fraction of a cent on Haiku.
 
 ## Failure handling
