@@ -6,8 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A coverage line in every report: how many routes, workloads, cloud resources, Kubernetes
+  objects, CI jobs and crown jewels the attack graph modeled, and why a result is incomplete (a
+  scanner that feeds weaknesses did not run, files that could not be parsed, no deployment
+  configuration, no crown jewel). "No attack paths" is no longer silent about thin inputs.
+
 ### Changed
 
+- Reports and PR comments use plain text instead of emoji icons.
 - The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
   and secrets. On the benchmark projects P2 blocked 1,497 findings, 131 of them on a healthy
   production-style repository. Set `fail_on.priority: P2` for the stricter gate.

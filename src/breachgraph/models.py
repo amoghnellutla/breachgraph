@@ -298,6 +298,32 @@ class GraphExport(BaseModel):
     truncated: bool = False
 
 
+class Coverage(BaseModel):
+    """What the attack graph modeled, and what it could not, so "no paths" is never read as "safe"
+    when the inputs were thin."""
+
+    routes: int = 0
+    workloads: int = 0
+    cloud_resources: int = 0
+    kubernetes_objects: int = 0
+    ci_jobs: int = 0
+    crown_jewels: int = 0
+    missing_scanners: list[str] = Field(default_factory=list)  # e.g. "semgrep (not installed)"
+    blind_spots: int = 0
+    gaps: list[str] = Field(default_factory=list)  # why the result is incomplete
+    complete: bool = True
+
+    def line(self) -> str:
+        modeled = (
+            f"{self.routes} HTTP routes, {self.workloads} workloads, {self.cloud_resources} cloud resources, "
+            f"{self.kubernetes_objects} Kubernetes objects, {self.ci_jobs} CI jobs, "
+            f"{self.crown_jewels} crown jewels"
+        )
+        if self.complete:
+            return f"Modeled: {modeled}. No coverage gaps detected."
+        return f"Modeled: {modeled}. Incomplete: {'; '.join(self.gaps)}."
+
+
 class AttackGraphSummary(BaseModel):
     enabled: bool = True
     paths: list[AttackPathView] = Field(default_factory=list)
@@ -305,6 +331,7 @@ class AttackGraphSummary(BaseModel):
     skipped: list[str] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
     graph: GraphExport | None = None
+    coverage: Coverage | None = None
 
     @property
     def gating_paths(self) -> list[AttackPathView]:

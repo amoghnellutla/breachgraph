@@ -196,7 +196,7 @@ def test_ai_insights_render() -> None:
         model="claude-opus-5-5",
     )
     md = markdown.render(result)
-    assert "🤖 likely false positive" in md
+    assert "AI: likely false positive" in md
     assert "AI triage: verdicts and fixes (1)" in md
     assert "**Fix:** Add an allowlist." in md and "abort(400)" in md
     page = html.render(result)

@@ -105,6 +105,8 @@ pre { background: var(--sunken); padding: var(--s3); border-radius: 8px; overflo
 
 /* ---------- change banner ---------- */
 .change h2 { font-size: 22px; }
+.coverage { margin: calc(-1 * var(--s2)) 0 var(--s4); font-size: 13px; color: var(--ink-2); }
+.coverage.incomplete { color: color-mix(in srgb, var(--serious) 70%, var(--ink)); }
 .change ul { margin: var(--s2) 0 0; padding-left: 18px; }
 
 /* ---------- explorer ---------- */
@@ -226,7 +228,7 @@ ul.warn { margin: 0; padding-left: 18px; }
     <h1>Security report: {{ target_name }}</h1>
     <div class="meta">{{ result.target }} · {{ result.started_at.strftime("%Y-%m-%d %H:%M UTC") }} · breachgraph {{ result.breachgraph_version }}</div>
     <div class="verdict {{ 'pass' if result.gate.passed else 'fail' }}" role="status">
-      {{ "✓ Gate passed" if result.gate.passed else "✕ Gate failed" }}
+      {{ "Gate passed" if result.gate.passed else "Gate failed" }}
     </div>
     {% if result.gate.reasons %}<p class="verdict-reasons">{{ result.gate.reasons | join("; ") }}</p>{% endif %}
     <p class="verdict-reasons muted">Threshold: {{ result.gate.threshold }}{% if result.baseline_used %} · compared with a baseline: only new findings and paths gate{% endif %}</p>
@@ -244,9 +246,9 @@ ul.warn { margin: 0; padding-left: 18px; }
   {% if changes %}
   {% set opened, closed = changes %}
   <section class="panel change">
-    {% if opened %}<h2>🔴 This change opens {{ opened|length }} new attack path(s)</h2>
+    {% if opened %}<h2>This change opens {{ opened|length }} new attack path(s)</h2>
     <ul>{% for p in opened %}<li>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</li>{% endfor %}</ul>{% endif %}
-    {% if closed %}<h2{% if opened %} style="margin-top: var(--s4)"{% endif %}>✅ This change closes {{ closed|length }} attack path(s)</h2>
+    {% if closed %}<h2{% if opened %} style="margin-top: var(--s4)"{% endif %}>This change closes {{ closed|length }} attack path(s)</h2>
     <ul>{% for p in closed %}<li><s>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</s></li>{% endfor %}</ul>{% endif %}
     {% if not opened and not closed %}<p style="margin:0">No change to attack paths compared with the base report.</p>{% endif %}
   </section>
@@ -259,8 +261,8 @@ ul.warn { margin: 0; padding-left: 18px; }
         <h2>Attack paths</h2>
         <p>{% if ag.paths %}Ways an attacker on the internet can reach a high-value asset by chaining these steps. Red steps need a real vulnerability: fix any one and the path breaks.{% else %}No attack path found from the internet to a crown-jewel asset{% if ag.stats.get("crown_jewels") %} ({{ ag.stats["crown_jewels"] }} crown jewel(s) checked){% endif %}.{% endif %}</p>
       </div>
-      <span class="muted" style="font-size: 13px">{{ ag.stats.get("nodes", 0) }} assets · {{ ag.stats.get("routes", 0) }} routes · {{ ag.stats.get("workloads", 0) }} workloads</span>
     </header>
+    {% if ag.coverage %}<p class="coverage {{ '' if ag.coverage.complete else 'incomplete' }}">{{ ag.coverage.line() }}</p>{% endif %}
 
     {% if explorer %}
     <div class="explorer" id="explorer" hidden>
@@ -370,7 +372,7 @@ ul.warn { margin: 0; padding-left: 18px; }
             <span class="pill">{{ f.severity.value }}</span>
             {% if f.package and f.package.reachability and f.package.reachability.value == "unused" %}<span class="pill" title="nothing that runs uses this package">unused dep</span>{% elif f.package and f.package.reachability and f.package.reachability.value == "entrypoint" %}<span class="pill kev">reachable</span>{% endif %}
             {% for c in f.cwe[:2] %}<span class="pill">{{ c }}</span>{% endfor %}
-            {% if f.ai %}<span class="pill" title="AI triage (advisory)">🤖 {{ f.ai.verdict.label }}</span>{% endif %}
+            {% if f.ai %}<span class="pill" title="AI triage (advisory)">AI: {{ f.ai.verdict.label }}</span>{% endif %}
           </td>
           <td class="loc"><code>{{ f.location.path }}{% if f.location.start_line %}:{{ f.location.start_line }}{% endif %}</code></td>
           <td>{{ f.category.value }}</td>
@@ -393,7 +395,7 @@ ul.warn { margin: 0; padding-left: 18px; }
           {% if f.references %}<p>{% for r in f.references[:5] if r.startswith(("https://", "http://")) %}<a href="{{ r }}" rel="noopener noreferrer" target="_blank">{{ r }}</a><br>{% endfor %}</p>{% endif %}
           {% if f.ai %}
           <div class="ai">
-            <strong>🤖 AI triage: {{ f.ai.verdict.label }}</strong> <span class="muted">({{ f.ai.confidence.value }} confidence)</span>
+            <strong>AI triage: {{ f.ai.verdict.label }}</strong> <span class="muted">({{ f.ai.confidence.value }} confidence)</span>
             {% if f.ai.summary %}<p style="margin:4px 0"><em>{{ f.ai.summary }}</em></p>{% endif %}
             <p style="margin:4px 0">{{ f.ai.reasoning }}</p>
             {% if f.ai.remediation %}<p style="margin:4px 0"><strong>Suggested fix:</strong> {{ f.ai.remediation }}</p>{% endif %}

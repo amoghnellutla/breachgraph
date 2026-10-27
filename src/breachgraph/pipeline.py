@@ -14,7 +14,7 @@ from breachgraph.compare import base_fingerprints, base_path_ids, compare, load_
 from breachgraph.config import Config
 from breachgraph.enrich import enrich
 from breachgraph.graph import build_attack_graph
-from breachgraph.graph.summary import summarize
+from breachgraph.graph.summary import coverage, summarize
 from breachgraph.models import Finding, ScanResult, ToolRun, ToolStatus
 from breachgraph.normalize import dedupe, finalize
 from breachgraph.policy import (
@@ -145,6 +145,7 @@ def process(
             result.attack_graph = summarize(
                 ag, items, config.attack_graph, result.baseline_used, baseline_paths
             )
+            result.attack_graph.coverage = coverage(result.attack_graph, ag, tools)
         except Exception as exc:  # the attack graph must never break a scan
             log.exception("attack graph failed")
             result.warnings.append(f"attack graph skipped: {exc}")

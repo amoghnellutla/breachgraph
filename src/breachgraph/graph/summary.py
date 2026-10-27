@@ -13,12 +13,15 @@ from breachgraph.models import (
     AttackPathView,
     AttackStep,
     ChokePointView,
+    Coverage,
     Finding,
     GraphEdgeView,
     GraphExport,
     GraphNodeView,
     GraphWeakness,
     Status,
+    ToolRun,
+    ToolStatus,
 )
 
 _CONF_RANK = {"high": 3, "medium": 2, "low": 1}
@@ -167,3 +170,41 @@ def _step(path: AttackPath, i: int, names: dict[str, str], kinds: dict[str, str]
         evidence_path=ev.path if ev else None,
         evidence_line=ev.line if ev else None,
     )
+
+
+# Scanners whose findings become attack-path weaknesses, and what is lost without each.
+WEAKNESS_SOURCES = {
+    "semgrep": "code weaknesses (injection, SSRF, ...)",
+    "trivy": "exploitable dependencies and images",
+    "gitleaks": "leaked credentials",
+}
+
+
+def coverage(summary: AttackGraphSummary, result: AttackGraphResult, tools: list[ToolRun]) -> Coverage:
+    ids = list(result.graph.nodes)
+    status = {t.name: t for t in tools}
+    missing = []
+    for name, what in WEAKNESS_SOURCES.items():
+        t = status.get(name)
+        if t is None or t.status in (ToolStatus.SKIPPED, ToolStatus.FAILED):
+            why = "not run" if t is None else ("failed" if t.status is ToolStatus.FAILED else "not installed")
+            missing.append(f"{name} {why}, so {what} are not in the graph")
+    cov = Coverage(
+        routes=result.stats.get("routes", 0),
+        workloads=result.stats.get("workloads", 0),
+        cloud_resources=sum(1 for i in ids if i.startswith(("aws:", "azure:", "gcp:"))),
+        kubernetes_objects=sum(1 for i in ids if i.startswith("k8s:")),
+        ci_jobs=sum(1 for i in ids if i.startswith("gha:job:")),
+        crown_jewels=result.stats.get("crown_jewels", 0),
+        missing_scanners=[m.split(" ", 1)[0] for m in missing],
+        blind_spots=len(summary.skipped),
+    )
+    gaps = list(missing)
+    if summary.skipped:
+        gaps.append(f"{len(summary.skipped)} file(s) or resource(s) could not be analyzed (see blind spots)")
+    if not cov.crown_jewels:
+        gaps.append("no crown-jewel asset found (no data store, secret or cloud identity in the repository)")
+    if not (cov.workloads or cov.cloud_resources or cov.kubernetes_objects or cov.ci_jobs):
+        gaps.append("no deployment configuration found, so nothing is known to be internet-facing")
+    cov.gaps, cov.complete = gaps, not gaps
+    return cov

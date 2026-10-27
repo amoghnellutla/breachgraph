@@ -314,8 +314,12 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
     if not ag.paths:
         if ag.stats.get("crown_jewels"):
             console.print("[green]No attack path[/] from the internet to a crown-jewel asset.")
+        if ag.coverage:
+            console.print(f"[dim]{escape(ag.coverage.line())}[/]")
         return
-    console.print(f"\n[bold red]🎯 {len(ag.paths)} attack path(s) to crown-jewel assets[/]")
+    console.print(f"\n[bold red]{len(ag.paths)} attack path(s) to crown-jewel assets[/]")
+    if ag.coverage:
+        console.print(f"[dim]{escape(ag.coverage.line())}[/]")
     for i, p in enumerate(ag.paths[:limit], 1):
         flag = " [bold red]BLOCKS[/]" if p.gating else ""
         hops = ["Internet"]
@@ -327,7 +331,7 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
         console.print("  [bold]Fix first:[/]")
         for c in ag.choke_points[:5]:
             loc = f" ({c.path}:{c.line})" if c.path else ""
-            console.print(f"    • {escape(c.title)}{escape(loc)} — breaks {c.paths_cut} path(s)")
+            console.print(f"    - {escape(c.title)}{escape(loc)}, breaks {c.paths_cut} path(s)")
 
 
 def _print_summary(result: ScanResult) -> None:
@@ -339,7 +343,7 @@ def _print_summary(result: ScanResult) -> None:
         loc = f.location.path + (f":{f.location.start_line}" if f.location.start_line else "")
         flag = " [bold red]KEV[/]" if f.enrichment.kev else ""
         if f.ai:
-            flag += f" [cyan]🤖 {f.ai.verdict.label}[/]"
+            flag += f" [cyan]AI: {f.ai.verdict.label}[/]"
         table.add_row(
             f"[{_PRIO_STYLE[f.priority]}]{f.priority.value}[/]",
             str(f.risk_score),

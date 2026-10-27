@@ -10,12 +10,11 @@ from breachgraph.models import AttackPathView, Finding, Priority, ScanResult, St
 
 MARKER = "<!-- breachgraph-report -->"
 _MAX_CHARS = 60_000  # GitHub comments are capped at 65,536 characters
-_PRIO_ICON = {Priority.P1: "🔴", Priority.P2: "🟠", Priority.P3: "🟡", Priority.P4: "⚪"}
-_TOOL_ICON = {
-    ToolStatus.OK: "✅",
-    ToolStatus.IMPORTED: "📥",
-    ToolStatus.SKIPPED: "⏭️",
-    ToolStatus.FAILED: "⚠️",
+_TOOL_STATUS = {
+    ToolStatus.OK: "",
+    ToolStatus.IMPORTED: "imported",
+    ToolStatus.SKIPPED: "skipped",
+    ToolStatus.FAILED: "failed",
 }
 
 
@@ -84,30 +83,17 @@ def _table(findings: list[Finding], link_base: str | None, limit: int) -> list[s
         if f.enrichment.epss is not None and f.enrichment.epss >= 0.1:
             tags.append(f"EPSS {f.enrichment.epss:.0%}")
         if f.ai:
-            tags.append("🤖 " + f.ai.verdict.label)
+            tags.append("AI: " + f.ai.verdict.label)
         title = _cell(f.title) + (" " + " ".join(tags) if tags else "")
         if f.ai and f.ai.summary:
             title += "<br>_" + _plain(f.ai.summary, 200) + "_"
         rows.append(
-            f"| {_PRIO_ICON[f.priority]} {f.priority.value} | {title} | {_where(f, link_base)} "
+            f"| {f.priority.value} | {title} | {_where(f, link_base)} "
             f"| {f.severity.value} | {', '.join(f.sources)} |"
         )
     if len(findings) > limit:
         rows.append(f"\n_…and {len(findings) - limit} more. See the full HTML/SARIF report._")
     return rows
-
-
-_WEAPON_ICON = {
-    "code_execution": "💥",
-    "ssrf": "🔁",
-    "data_injection": "💉",
-    "file_read": "📂",
-    "auth_bypass": "🔓",
-    "credential_exposure": "🔑",
-    "vulnerable_dependency": "📦",
-    "container_escape": "📦",
-    "metadata_reachable": "☁️",
-}
 
 
 _MERMAID_SAFE = re.compile(r"[^\w .,:/()+*='-]")
@@ -143,17 +129,22 @@ def _change_md(result: ScanResult) -> list[str]:
     opened, closed = changes
     out: list[str] = []
     if opened:
-        out += [f"### 🔴 This change opens {len(opened)} new attack path(s)", ""]
+        out += [f"### This change opens {len(opened)} new attack path(s)", ""]
         for p in opened[:3]:
             out += [f"**→ {_cell(p.target, 60)}** · {p.confidence} confidence", "", *_mermaid(p), ""]
         if len(opened) > 3:
             out += [f"_…and {len(opened) - 3} more below._", ""]
     if closed:
-        out += [f"### ✅ This change closes {len(closed)} attack path(s)", ""]
+        out += [f"### This change closes {len(closed)} attack path(s)", ""]
         out += [f"- ~~{_route(p)}~~" for p in closed[:5]] + [""]
     if not opened and not closed:
         out += ["> No change to attack paths compared with the base branch.", ""]
     return out
+
+
+def _coverage_md(result: ScanResult) -> list[str]:
+    cov = result.attack_graph.coverage if result.attack_graph else None
+    return [f"_{_cell(cov.line(), 600)}_", ""] if cov else []
 
 
 def _attack_paths_md(result: ScanResult) -> list[str]:
@@ -162,12 +153,16 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         return []
     if not ag.paths:
         if ag.stats.get("crown_jewels", 0):
-            return ["> 🟢 **No attack path** found from the internet to a crown-jewel asset.", ""]
-        return []
-    out = [f"### 🎯 Attack paths ({len(ag.paths)})", ""]
+            return [
+                "> **No attack path** found from the internet to a crown-jewel asset.",
+                "",
+                *_coverage_md(result),
+            ]
+        return _coverage_md(result)
+    out = [f"### Attack paths ({len(ag.paths)})", "", *_coverage_md(result)]
     out.append(
         "An attacker on the internet can reach a high-value asset by chaining these steps. "
-        "Each ⚠️ step needs a real vulnerability; fix any one to break the path."
+        "Bold steps need a real vulnerability; fix any one and the path breaks."
     )
     out.append("")
     for i, p in enumerate(ag.paths[:8], 1):
@@ -179,9 +174,8 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         chain = []
         for s in p.steps:
             if s.via:
-                icon = _WEAPON_ICON.get(s.via, "⚠️")
-                loc = f" (`{s.evidence_path}:{s.evidence_line}`)" if s.evidence_path else ""
-                chain.append(f"{icon} **{_cell(s.dst, 40)}**{loc}")
+                loc = f", `{s.evidence_path}:{s.evidence_line}`" if s.evidence_path else ""
+                chain.append(f"**{_cell(s.dst, 40)}** ({s.via.replace('_', ' ')}{loc})")
             else:
                 chain.append(_cell(s.dst, 40))
         out.append("`Internet` → " + " → ".join(chain))
@@ -190,8 +184,7 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         out.append("**Fix these first (each breaks the most paths):**")
         for c in ag.choke_points[:5]:
             loc = f" `{c.path}:{c.line}`" if c.path else ""
-            icon = _WEAPON_ICON.get(c.weakness, "⚠️")
-            out.append(f"- {icon} _{_cell(c.title, 70)}_{loc} — breaks {c.paths_cut} path(s)")
+            out.append(f"- {_cell(c.title, 70)}{loc}, breaks {c.paths_cut} path(s)")
         out.append("")
     if ag.skipped:
         out.append(f"<details><summary>Attack-graph blind spots ({len(ag.skipped)})</summary>\n")
@@ -204,7 +197,7 @@ def _ai_md(findings: list[Finding], link_base: str | None, limit: int = 10) -> l
     triaged = [(f, f.ai) for f in findings if f.ai][:limit]
     if not triaged:
         return []
-    out = [f"<details><summary>🤖 AI triage: verdicts and fixes ({len(triaged)})</summary>", ""]
+    out = [f"<details><summary>AI triage: verdicts and fixes ({len(triaged)})</summary>", ""]
     for f, ai in triaged:
         out += [
             f"**{_cell(f.title, 100)}** · {_where(f, link_base)} · "
@@ -229,8 +222,8 @@ def _ai_md(findings: list[Finding], link_base: str | None, limit: int = 10) -> l
 
 def render(result: ScanResult, link_base: str | None = None, details_url: str | None = None) -> str:
     gate = result.gate
-    head = "✅ Security gate passed" if gate.passed else "❌ Security gate failed"
-    out = [MARKER, f"## 🛡️ breachgraph: {head}", ""]
+    head = "Security gate passed" if gate.passed else "Security gate failed"
+    out = [MARKER, f"## breachgraph: {head}", ""]
     if gate.reasons:
         out.append("> " + "; ".join(gate.reasons) + f" (threshold: {gate.threshold})")
     else:
@@ -240,7 +233,7 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
     def count(status: Status, prio: Priority) -> int:
         return sum(1 for f in result.findings if f.status is status and f.priority is prio)
 
-    out += ["| | 🔴 P1 | 🟠 P2 | 🟡 P3 | ⚪ P4 |", "|---|---|---|---|---|"]
+    out += ["| | P1 | P2 | P3 | P4 |", "|---|---|---|---|---|"]
     rows = [(Status.NEW, "New" if result.baseline_used else "Open")]
     if result.baseline_used:
         rows.append((Status.BASELINE, "Baseline"))
@@ -249,10 +242,10 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
         out.append(f"| **{label}** | " + " | ".join(str(count(status, p)) for p in Priority) + " |")
     out.append("")
 
-    tools = " · ".join(
-        f"{_TOOL_ICON[t.status]} {t.name} ({t.findings})"
-        if t.status is not ToolStatus.SKIPPED
-        else f"{_TOOL_ICON[t.status]} {t.name} (skipped)"
+    tools = ", ".join(
+        f"{t.name} ({t.findings})"
+        if t.status is ToolStatus.OK
+        else f"{t.name} ({_TOOL_STATUS[t.status]}{f', {t.findings}' if t.findings else ''})"
         for t in result.tools
     )
     out += [f"**Scanners:** {tools}", ""]
