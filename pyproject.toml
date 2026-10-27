@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "breachgraph"
 version = "0.1.0"
-description = "One security gate for your CI: runs Semgrep, Gitleaks, Trivy, Checkov and ZAP, deduplicates and risk-scores findings (CISA KEV + EPSS), and enforces policy with baselines."
+description = "Attack-path-aware security gate for CI: runs Semgrep, Gitleaks, Trivy, Checkov, zizmor and ZAP, links findings to code, Kubernetes, cloud IAM (AWS, Azure, GCP) and GitHub Actions, and fails the build on real internet-to-crown-jewel paths."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "breachgraph contributors" }]
-keywords = ["security", "devsecops", "sast", "sca", "sarif", "semgrep", "trivy", "gitleaks", "checkov", "appsec"]
+keywords = ["security", "devsecops", "appsec", "attack-path", "sast", "sca", "sarif", "iac", "cloud-security", "github-actions", "supply-chain", "semgrep", "trivy", "gitleaks", "checkov", "zizmor"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
