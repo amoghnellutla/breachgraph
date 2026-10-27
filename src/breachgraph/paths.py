@@ -64,7 +64,10 @@ def iter_files(root: Path, exclude: list[str]) -> Iterator[tuple[Path, str]]:
     """(path, repo-relative POSIX path) of every file under ``root`` that ``exclude`` keeps.
 
     Excluded directories (and .git) are pruned instead of walked, which matters for .venv and
-    node_modules: walking them first is what made scans slow."""
+    node_modules: walking them first is what made scans slow. A symlink is followed only when it
+    stays inside ``root``: the repository is untrusted, and a link to ~/.aws/credentials must not
+    be read (directory links are never walked)."""
+    real_root = root.resolve()
     for dirpath, dirnames, filenames in os.walk(root):
         base = Path(dirpath)
         rel_dir = normalize_path(base.relative_to(root).as_posix()) if base != root else ""
@@ -77,5 +80,8 @@ def iter_files(root: Path, exclude: list[str]) -> Iterator[tuple[Path, str]]:
             rel = f"{rel_dir}/{name}".lstrip("/")
             path = base / name
             # is_file() is False for broken symlinks and sockets, which would fail a later stat().
-            if not matches_any(rel, exclude) and path.is_file():
-                yield path, rel
+            if matches_any(rel, exclude) or not path.is_file():
+                continue
+            if path.is_symlink() and not path.resolve().is_relative_to(real_root):
+                continue
+            yield path, rel

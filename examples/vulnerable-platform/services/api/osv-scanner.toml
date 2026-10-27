@@ -1,0 +1,51 @@
+# This directory is a deliberately vulnerable demo that breachgraph scans in its tests and docs.
+# Its dependencies are old on purpose; these entries keep OSV-based checks (OpenSSF Scorecard)
+# from reporting them as vulnerabilities of breachgraph itself.
+
+[[IgnoredVulns]]
+id = "GHSA-68rp-wp8r-4726"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 2.0.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-9hjg-9r4m-mvj7"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-9wx4-h78v-vm56"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-gc5v-m9x4-r6x2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-j8r2-6x86-q33q"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-m2qf-hxjv-5gpq"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 2.0.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-62"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 2.0.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-74"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1872"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1873"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2151"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 2.0.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2275"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.25.1)"

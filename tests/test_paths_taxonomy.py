@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import pytest
 
 from breachgraph.models import Category, Severity
 from breachgraph.normalize.taxonomy import normalize_cwes, normalize_owasp, owasp_for
-from breachgraph.paths import glob_match, normalize_path
+from breachgraph.paths import glob_match, iter_files, normalize_path
 
 
 @pytest.mark.parametrize(
@@ -72,3 +74,16 @@ def test_iter_files_prunes_excluded_dirs(tmp_path) -> None:  # type: ignore[no-u
         p.write_text("x", encoding="utf-8")
     got = [rel for _, rel in iter_files(tmp_path, ["**/.venv/", "node_modules/", "docs/*.md"])]
     assert got == ["a.py", "src/b.py"]
+
+
+def test_symlinks_out_of_the_tree_are_not_read(tmp_path: Path) -> None:
+    repo, outside = tmp_path / "repo", tmp_path / "secret.yaml"
+    repo.mkdir()
+    outside.write_text("token: hunter2\n", encoding="utf-8")
+    (repo / "real.yaml").write_text("a: 1\n", encoding="utf-8")
+    try:
+        (repo / "evil.yaml").symlink_to(outside)
+        (repo / "alias.yaml").symlink_to(repo / "real.yaml")
+    except OSError:
+        pytest.skip("symlinks need extra privileges on this platform")
+    assert sorted(rel for _, rel in iter_files(repo, [])) == ["alias.yaml", "real.yaml"]

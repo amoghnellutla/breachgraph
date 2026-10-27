@@ -30,10 +30,18 @@ All notable changes to this project are documented here. The format follows
 - OWASP Top 10 CI/CD Security Risks labels (CICD-SEC-1 to 10) on CI/CD findings from the built-in
   checks and zizmor, shown next to the OWASP Top 10 category and tagged in SARIF.
 - An OpenSSF Scorecard workflow.
+- A threat model of breachgraph itself in docs/architecture.md.
 - `ai.prices`: set or override a model's price per million tokens, so a price change or a new
   model doesn't need a release.
 - Compose services that publish ports, or sit behind an nginx, Traefik, Caddy, HAProxy or Envoy
   service that does, are exposed to the internet at medium confidence.
+
+### Security
+
+- The Docker image and CI install every Python package from hash-pinned locks
+  (`requirements/*.txt`, regenerated with `scripts/lock.py`), including the build backend.
+- The intentionally vulnerable demo apps carry `osv-scanner.toml` ignore lists, so OSV-based
+  checks don't report their pinned old dependencies as breachgraph's own.
 
 ### Removed
 
@@ -59,6 +67,8 @@ All notable changes to this project are documented here. The format follows
 - The benchmark harness wrote each report inside the scanned tree, so a rerun scanned its own
   previous report.
 - A compose service built from `.` or `../` was not mapped to its source code.
+- A symlink in the scanned repository that points outside it (to `~/.aws/credentials`, say) was
+  read by the configuration parsers. Such links are now skipped.
 
 ## [0.2.0] - 2026-10-27
 

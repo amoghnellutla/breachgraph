@@ -20,7 +20,7 @@ In scope:
   leak secrets, write outside the output directory, or inject content into PR comments, issues
   or HTML reports.
 
-Vulnerabilities in the bundled scanners (Semgrep, Gitleaks, Trivy, Checkov, zizmor, ZAP) should be
+Vulnerabilities in the bundled scanners (Semgrep, Gitleaks, Trivy, Checkov, zizmor) should be
 reported to those projects. We will bump the pinned version once a fix is released.
 
 The intentionally vulnerable code in `examples/` is out of scope.
@@ -32,11 +32,15 @@ Only the latest minor release receives security fixes.
 ## Hardening built in
 
 - Scanner binaries are pinned and verified against SHA-256 values committed in the `Dockerfile`.
+- Every Python package in the image and in CI is installed from a hash-pinned lock (`requirements/`).
+- Files are read only inside the scanned tree: symlinks that point outside it are skipped.
 - Release images are signed with cosign (keyless) and published with SBOM and provenance attestations.
 - Third-party GitHub Actions are pinned to full commit SHAs.
 - Secrets are redacted by Gitleaks and redacted again by breachgraph. Secret values are never written to reports.
 - Scanner output is treated as untrusted: HTML is auto-escaped, only `http(s)` links are rendered,
   and `@` mentions are neutralized in GitHub comments and issues.
+
+The threat model is in [docs/architecture.md](docs/architecture.md#threat-model).
 
 ## Verifying a release
 

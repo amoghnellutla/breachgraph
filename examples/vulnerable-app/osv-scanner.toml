@@ -1,0 +1,595 @@
+# This directory is a deliberately vulnerable demo that breachgraph scans in its tests and docs.
+# Its dependencies are old on purpose; these entries keep OSV-based checks (OpenSSF Scorecard)
+# from reporting them as vulnerabilities of breachgraph itself.
+
+[[IgnoredVulns]]
+id = "GHSA-27xj-rqx5-2255"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-288c-cq4h-88gq"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-29vq-49wr-vm6x"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-2g68-c3qc-8985"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-2xpw-w6gg-jr37"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-34jh-p97f-mpxf"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-38jv-5279-wg99"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-3pxv-7cmr-fjr4"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-462w-v97r-4m45"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "GHSA-4w82-r329-3q67"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-562c-5r94-xh97"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "GHSA-57j2-w4cx-62h2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-58pp-9c76-5625"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-5949-rw7g-wx7w"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-5gvw-p9qm-jgwh"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-5jmj-h7xm-6q6v"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-5p34-5m6p-p58g"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-5r5r-6hpj-8gg9"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-5wv5-4vpf-pj6m"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "GHSA-5ww9-j83m-q7qx"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-6757-jp84-gxfx"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (pyyaml 5.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-68rp-wp8r-4726"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "GHSA-6fpp-rgj9-8rwc"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-6hg6-v5c8-fphq"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-758m-v56v-grj4"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-7rjr-3q55-vv33"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-8489-44mv-ggj8"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-85cw-hj65-qqv9"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-87hc-h4r5-73f7"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-89qr-369f-5m5x"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-8c4j-34r4-xr8g"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-8q59-q68h-6hv4"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (pyyaml 5.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-8w26-6f25-cm9x"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-95cm-88f5-f2c7"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-9gph-22xh-8x98"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-9hjg-9r4m-mvj7"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-9m6f-7xcq-8vf8"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-9vvp-fxw6-jcxr"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-9wx4-h78v-vm56"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-c265-37vj-cwcc"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-c2q3-4qrh-fm48"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-cf6r-3wgc-h863"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-cmfg-87vq-g5g4"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-cpwx-vrp4-4pq7"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "GHSA-cvm9-fjm9-3572"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-cxp5-3px4-pw24"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-f3j5-rmmp-3fc5"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-f9vj-2wh5-fj8j"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-f9xh-2qgp-cq57"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-fmmc-742q-jg75"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-fqwf-pjwf-7vqv"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-g3rq-g295-4j3m"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "GHSA-g4mx-q9vg-27p4"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-g6x2-hccm-hh4m"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-gc5v-m9x4-r6x2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-gjmw-vf9h-g25v"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-gm62-xv2j-4w53"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-gwp4-hfv6-p7hw"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-gwvm-45gx-3cf8"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-gww7-p5w4-wrfv"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-h383-gmxw-35v2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-h3cw-g4mq-c5x2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-h4rc-386g-6m85"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-h5c8-rqwp-cp95"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "GHSA-h75v-3vvj-5mfj"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "GHSA-h822-r4r5-v8jg"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-hgf8-39gv-g3f2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-hgj6-7826-r7m5"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-j544-7q9p-6xp8"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-j823-4qch-3rgm"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-j8r2-6x86-q33q"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-jfh8-c2jp-5v3q"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-jjjh-jjxp-wpff"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-m2qf-hxjv-5gpq"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "GHSA-m6x4-97wx-4q27"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-mc6h-4qgp-37qh"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-mh33-7rrq-662w"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-mph4-vhrx-mv67"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-mx7p-6679-8g3q"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-p43x-xfjf-5jhr"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-p6xc-xr62-6r2g"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-pq67-6m6q-mj2v"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-px8h-6qxv-m22q"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "GHSA-q2x7-8rv6-6q7h"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "GHSA-q93h-jc49-78gg"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-qccp-gfcp-xxvc"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-qjw2-hr98-qgfh"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-qmqc-x3r4-6v39"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-r3gr-cxrf-hg25"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-r64q-w8jr-g9qp"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-r695-7vr9-jgc2"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-rf6r-2c4q-2vwg"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-rgv9-q543-rqg4"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-rpr3-cw39-3pxh"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-v3xw-c963-f5hc"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-v585-23hc-c647"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-v845-jxx5-vc9f"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-vc5p-v9hr-52mj"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (org.apache.logging.log4j:log4j-core 2.14.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-vfqx-33qm-g869"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-vvgp-rfg2-7rr6"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-vxq7-64xx-v4gw"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-wh8g-3j2c-rqj5"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-wjgm-6hv5-3cvf"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-wqvq-5m8c-6g24"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-wv8q-qhhj-9h54"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (com.fasterxml.jackson.core:jackson-databind 2.9.8)"
+
+[[IgnoredVulns]]
+id = "GHSA-x84v-xcm2-53pg"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "GHSA-xg9f-g7g7-2323"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2018-28"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2018-66"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2019-132"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2019-133"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2019-179"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2019-217"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2020-148"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2020-96"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (pyyaml 5.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2021-142"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (pyyaml 5.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2021-66"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2022-203"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-192"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-207"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-212"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-221"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-57"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-58"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-62"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-74"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1065"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-141"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1471"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1473"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1474"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1475"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (jinja2 2.10)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1872"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1873"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1994"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1995"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1996"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1998"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1999"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2043"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2044"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2045"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2046"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2151"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (flask 0.12.2)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2275"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (requests 2.19.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2320"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-4177"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (urllib3 1.24.1)"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-4312"
+reason = "Intentionally vulnerable demo for breachgraph's own tests and docs; never deployed. (werkzeug 0.15.3)"
