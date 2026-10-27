@@ -1,0 +1,16 @@
+summary: >
+  Kubernetes Goat is a lab cluster reached with `kubectl port-forward`: its manifests have no Ingress
+  or LoadBalancer, and one NodePort service. breachgraph finds the ingredients of its best-known
+  chain (Semgrep flags the command injection in the health-check service, CWE-94, in the route that
+  handles POST /, and the pod is privileged with the Docker socket mounted, which reaches the node),
+  but reports no attack path from the internet, because nothing in the manifests exposes those
+  services to it. That is the correct answer for this repository.
+paths: []
+misses:
+  - scenario: Health-check command injection -> privileged pod / docker.sock -> worker node (scenarios/health-check).
+    why: >
+      Not internet-exposed in the manifests (port-forward lab). breachgraph models attackers on the
+      internet; an "assume breach inside the cluster" entry point would surface this chain and is a
+      documented gap.
+  - scenario: Helm-based scenarios (metadata-db, helm-tiller).
+    why: Unrendered Helm templates are listed as blind spots, not analyzed.

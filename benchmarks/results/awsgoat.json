@@ -1,0 +1,132 @@
+{
+  "name": "awsgoat",
+  "repo": "https://github.com/ine-labs/AWSGoat",
+  "sha": "b24869ad455ed8d1393d00ecdc15ee638d1c1332",
+  "kind": "vulnerable",
+  "breachgraph_version": "0.1.0",
+  "wall_time_s": 87.2,
+  "tools": [
+    {
+      "name": "semgrep",
+      "status": "ok",
+      "version": "1.179.0",
+      "findings": 147,
+      "duration_s": 72.57,
+      "message": null
+    },
+    {
+      "name": "gitleaks",
+      "status": "ok",
+      "version": "8.30.1",
+      "findings": 20,
+      "duration_s": 3.94,
+      "message": null
+    },
+    {
+      "name": "trivy",
+      "status": "ok",
+      "version": "0.75.0",
+      "findings": 511,
+      "duration_s": 52.87,
+      "message": null
+    },
+    {
+      "name": "checkov",
+      "status": "ok",
+      "version": "3.3.26",
+      "findings": 219,
+      "duration_s": 14.83,
+      "message": null
+    },
+    {
+      "name": "zizmor",
+      "status": "ok",
+      "version": "1.30.1",
+      "findings": 19,
+      "duration_s": 2.91,
+      "message": null
+    },
+    {
+      "name": "cicd",
+      "status": "ok",
+      "version": "0.1.0",
+      "findings": 0,
+      "duration_s": 3.58,
+      "message": null
+    }
+  ],
+  "raw_findings": 916,
+  "findings": 789,
+  "multi_tool_findings": 60,
+  "by_priority": {
+    "P1": 37,
+    "P2": 181,
+    "P3": 415,
+    "P4": 156
+  },
+  "gating_findings": 216,
+  "graph_stats": {
+    "nodes": 38,
+    "edges": 42,
+    "routes": 17,
+    "workloads": 4,
+    "crown_jewels": 9,
+    "paths": 3
+  },
+  "blind_spots": [],
+  "attack_paths": [
+    {
+      "key": "Internet -> S3 bucket bucket_temp",
+      "target": "S3 bucket bucket_temp",
+      "confidence": "medium",
+      "gating": true,
+      "score": 13.3,
+      "weapons": [],
+      "evidence": [
+        "modules/module-1/main.tf:3387"
+      ]
+    },
+    {
+      "key": "Internet -> S3 bucket dev",
+      "target": "S3 bucket dev",
+      "confidence": "medium",
+      "gating": true,
+      "score": 13.3,
+      "weapons": [],
+      "evidence": [
+        "modules/module-1/main.tf:3307"
+      ]
+    },
+    {
+      "key": "Internet -> Lambda lambda_ba_data -> DynamoDB table blog-posts",
+      "target": "DynamoDB table blog-posts",
+      "confidence": "medium",
+      "gating": true,
+      "score": 11.05,
+      "weapons": [
+        "Detected user input used to manually construct a SQL string."
+      ],
+      "evidence": [
+        "modules/module-1/main.tf:240",
+        "modules/module-1/resources/lambda/data/lambda_function.py:503"
+      ]
+    }
+  ],
+  "choke_points": [
+    {
+      "title": "Detected user input used to manually construct a SQL string.",
+      "paths_cut": 1,
+      "at": "modules/module-1/resources/lambda/data/lambda_function.py:503"
+    },
+    {
+      "title": "Detected user input used to manually construct a SQL string.",
+      "paths_cut": 1,
+      "at": "modules/module-1/resources/lambda/data/lambda_function.py:509"
+    },
+    {
+      "title": "Detected user input used to manually construct a SQL string.",
+      "paths_cut": 1,
+      "at": "modules/module-1/resources/lambda/data/lambda_function.py:515"
+    }
+  ]
+}

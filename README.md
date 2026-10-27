@@ -37,6 +37,12 @@ breachgraph reports **no path** to your data even if the pod is public and its r
 — you can [see that guarantee as a test](tests/test_graph_paths.py). Fix the one cheapest link
 (the "choke point") and the whole path disappears.
 
+**Measured, not claimed.** On 8 public projects (TerraGoat, CloudGoat, Kubernetes Goat, AWS/Azure/GCP
+Goat, OWASP Juice Shop, and Google's Online Boutique as a control), 6,346 deduplicated findings reduced to
+**12 attack paths, 11 of them real (92% precision)**, with no false paths on the control project. Every
+path is hand-labeled, every miss is documented, and anyone can re-run it:
+[docs/benchmark.md](docs/benchmark.md).
+
 <p align="center"><img src="docs/img/attack-paths.png" alt="breachgraph attack-graph explorer: a selected path from the internet through an injectable CI job and its OIDC deploy role to the customer-data bucket" width="860"></p>
 
 ## What you get
@@ -222,7 +228,10 @@ Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner
 ## Roadmap
 
 - [x] **Reachability** for dependency CVEs: is the package imported by first-party code, and is that code reachable from an HTTP route (Python/JS/TS/Java/Go)
+- [x] **Public benchmark** on 8 real projects with hand-labeled paths and documented misses ([docs/benchmark.md](docs/benchmark.md))
 - [ ] Function-level reachability: is the vulnerable function itself called
+- [ ] Entry points beyond the internet: leaked credentials (IAM user keys, SSH keys) and an "assume breach inside the cluster" mode
+- [ ] Know when an SSRF controls request headers (decides whether metadata servers that need a header are reachable)
 - [x] **Bring-your-own-key AI triage**: optional; with your own Anthropic key, a verdict and fix per top finding, grounded in the enclosing code, route and attack path. Advisory, defensive-only, with a spend cap. See [docs/ai-triage.md](docs/ai-triage.md)
 - [x] Azure and GCP in the attack graph
 - [x] **CI/CD and supply chain**: GitHub Actions script injection and pwn requests, zizmor audits, dependency confusion, and CI jobs as attack-graph entry points (OIDC roles, secrets, write tokens). See [docs/cicd.md](docs/cicd.md)

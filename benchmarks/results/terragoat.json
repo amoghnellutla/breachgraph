@@ -1,0 +1,104 @@
+{
+  "name": "terragoat",
+  "repo": "https://github.com/bridgecrewio/terragoat",
+  "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
+  "kind": "vulnerable",
+  "breachgraph_version": "0.1.0",
+  "wall_time_s": 43.3,
+  "tools": [
+    {
+      "name": "semgrep",
+      "status": "ok",
+      "version": "1.179.0",
+      "findings": 34,
+      "duration_s": 23.35,
+      "message": null
+    },
+    {
+      "name": "gitleaks",
+      "status": "ok",
+      "version": "8.30.1",
+      "findings": 7,
+      "duration_s": 1.71,
+      "message": null
+    },
+    {
+      "name": "trivy",
+      "status": "ok",
+      "version": "0.75.0",
+      "findings": 684,
+      "duration_s": 36.79,
+      "message": "package registry unavailable (rate limited); retried with --offline-scan, transitive Java dependencies were not resolved"
+    },
+    {
+      "name": "checkov",
+      "status": "ok",
+      "version": "3.3.26",
+      "findings": 469,
+      "duration_s": 18.09,
+      "message": null
+    },
+    {
+      "name": "zizmor",
+      "status": "ok",
+      "version": "1.30.1",
+      "findings": 13,
+      "duration_s": 0.78,
+      "message": null
+    },
+    {
+      "name": "cicd",
+      "status": "ok",
+      "version": "0.1.0",
+      "findings": 0,
+      "duration_s": 0.48,
+      "message": null
+    }
+  ],
+  "raw_findings": 1207,
+  "findings": 1091,
+  "multi_tool_findings": 78,
+  "by_priority": {
+    "P1": 52,
+    "P2": 300,
+    "P3": 670,
+    "P4": 69
+  },
+  "gating_findings": 352,
+  "graph_stats": {
+    "nodes": 46,
+    "edges": 20,
+    "routes": 0,
+    "workloads": 8,
+    "crown_jewels": 30,
+    "paths": 2
+  },
+  "blind_spots": [
+    "terraform/gcp/gke.tf:24: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform"
+  ],
+  "attack_paths": [
+    {
+      "key": "Internet -> BigQuery dataset dataset",
+      "target": "BigQuery dataset dataset",
+      "confidence": "high",
+      "gating": true,
+      "score": 20.0,
+      "weapons": [],
+      "evidence": [
+        "terraform/gcp/big_data.tf:21"
+      ]
+    },
+    {
+      "key": "Internet -> GCS bucket terragoat_website",
+      "target": "GCS bucket terragoat_website",
+      "confidence": "high",
+      "gating": true,
+      "score": 17.5,
+      "weapons": [],
+      "evidence": [
+        "terraform/gcp/gcs.tf:17"
+      ]
+    }
+  ],
+  "choke_points": []
+}

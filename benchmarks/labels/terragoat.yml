@@ -1,0 +1,23 @@
+summary: >
+  TerraGoat is misconfigured Terraform for AWS, Azure, GCP (and Alibaba/Oracle) with no application
+  code, so the paths that can exist are direct exposures of data. Both reported paths are real.
+  The other intended misconfigurations are findings, not complete attack paths: they need
+  credentials or an application weakness that TerraGoat does not contain.
+paths:
+  - key: "Internet -> BigQuery dataset dataset"
+    verdict: true
+    why: >
+      The dataset grants READER to the special group allAuthenticatedUsers (terraform/gcp/big_data.tf:23),
+      so any Google account can read it.
+  - key: "Internet -> GCS bucket terragoat_website"
+    verdict: true
+    why: >
+      allUsers holds roles/storage.objectViewer on the bucket (terraform/gcp/gcs.tf:17); anyone on the
+      internet can read every object.
+misses:
+  - scenario: Publicly accessible RDS instance (terraform/aws/db-app.tf:22).
+    why: >
+      Reported as an internet-facing database endpoint. It is not a path without database credentials,
+      and the password comes from a variable, by design ("no free ride").
+  - scenario: EC2 instance with SSH and HTTP open to 0.0.0.0/0 (terraform/aws/ec2.tf).
+    why: Reported as exposure; the instance runs no code in the repository that has a weakness.

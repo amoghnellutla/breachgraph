@@ -1,0 +1,7 @@
+summary: >
+  OWASP Juice Shop is a deliberately vulnerable web application with no cloud, Kubernetes or
+  deployment configuration in the repository. breachgraph reports its code and dependency findings
+  (245 HTTP routes analyzed), and no attack paths: there is no crown-jewel asset in the repository
+  for a path to reach. This is the expected result for an application-only repository.
+paths: []
+misses: []

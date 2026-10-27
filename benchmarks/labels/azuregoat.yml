@@ -1,0 +1,18 @@
+summary: >
+  AzureGoat deploys Function Apps, a VM and an Automation account. breachgraph models its privilege
+  escalation chain: the VM's identity is Contributor on the resource group, which can run a runbook
+  job on the Automation account and act as its user-assigned identity (Owner). It reports the
+  anonymous storage containers as the only complete path, because the step that starts the
+  documented chain (logging in to the VM with an SSH key leaked in storage) is not linked to the VM.
+paths:
+  - key: "Internet -> Storage account storage_account"
+    verdict: true
+    why: >
+      Containers with container_access_type blob and container (main.tf:89, 228, 236) on an account that
+      allows public nested items: anyone can read the blobs.
+misses:
+  - scenario: Leaked SSH key -> internet-facing VM (NSG open on 22) -> VM identity (Contributor) -> Automation runbook -> Owner.
+    why: >
+      Every edge after the VM login is in the graph. The start is not: breachgraph does not link a
+      private key found in a storage container to the VM that trusts it, so the VM is never
+      controlled from the internet.

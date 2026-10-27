@@ -1,0 +1,69 @@
+# Benchmark targets. Each is cloned at the pinned commit when the benchmark runs; nothing is
+# vendored, so every project keeps its own license. Bump a SHA deliberately and re-label its paths.
+#
+# kind: vulnerable = intentionally vulnerable training project (paths are expected)
+#       control    = a well-maintained real project (measures noise on normal code)
+
+- name: terragoat
+  repo: https://github.com/bridgecrewio/terragoat
+  sha: 729f8da62c6a85ce4af5ad3d123de97776d954c4
+  kind: vulnerable
+  license: Apache-2.0
+  covers: Terraform misconfigurations across AWS, Azure and GCP
+  scenarios: https://github.com/bridgecrewio/terragoat#readme
+
+- name: kubernetes-goat
+  repo: https://github.com/madhuakula/kubernetes-goat
+  sha: 723a0db478f050d173d23b4ce5044b65bce0bdd0
+  kind: vulnerable
+  license: MIT
+  covers: Kubernetes workloads, RBAC, container escape, secrets, vulnerable apps
+  scenarios: https://madhuakula.com/kubernetes-goat/docs/scenarios
+
+- name: cloudgoat
+  repo: https://github.com/RhinoSecurityLabs/cloudgoat
+  sha: 63c65bd26edc6919499adfa20b176c450e35c33c
+  kind: vulnerable
+  license: BSD-3-Clause
+  covers: AWS IAM privilege escalation and exposure scenarios in Terraform
+  scenarios: https://github.com/RhinoSecurityLabs/cloudgoat#scenarios-available
+
+- name: awsgoat
+  repo: https://github.com/ine-labs/AWSGoat
+  sha: b24869ad455ed8d1393d00ecdc15ee638d1c1332
+  kind: vulnerable
+  license: MIT
+  covers: AWS web apps (Lambda, ECS, EC2) with application and IAM flaws
+  scenarios: https://github.com/ine-labs/AWSGoat#modules
+
+- name: azuregoat
+  repo: https://github.com/ine-labs/AzureGoat
+  sha: b97045952e6df00de735a7f27fd7c4994dcfe8c0
+  kind: vulnerable
+  license: MIT
+  covers: Azure App Service, Functions, storage and managed identity flaws
+  scenarios: https://github.com/ine-labs/AzureGoat#module-details
+
+- name: gcpgoat
+  repo: https://github.com/ine-labs/GCPGoat
+  sha: 44605c4bff4b2da7611dfce78696bb53db6d8c54
+  kind: vulnerable
+  license: MIT
+  covers: GCP Cloud Functions, GKE, storage and service-account flaws
+  scenarios: https://github.com/ine-labs/GCPGoat#module-details
+
+- name: juice-shop
+  repo: https://github.com/juice-shop/juice-shop
+  sha: 717f5efa886b0417eeecb52378b03cf10567b7e2
+  kind: vulnerable
+  license: MIT
+  covers: Node.js web application vulnerabilities, dependencies and CI workflows
+  scenarios: https://pwning.owasp-juice.shop/
+
+- name: online-boutique
+  repo: https://github.com/GoogleCloudPlatform/microservices-demo
+  sha: 38e7348eb289eb5b87c0c6e8cb19ced0449dc389
+  kind: control
+  license: Apache-2.0
+  covers: production-style microservices (5 languages), Kubernetes, Terraform, GitHub Actions
+  scenarios: ""

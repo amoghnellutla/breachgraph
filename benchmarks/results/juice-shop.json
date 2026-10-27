@@ -1,0 +1,79 @@
+{
+  "name": "juice-shop",
+  "repo": "https://github.com/juice-shop/juice-shop",
+  "sha": "717f5efa886b0417eeecb52378b03cf10567b7e2",
+  "kind": "vulnerable",
+  "breachgraph_version": "0.1.0",
+  "wall_time_s": 1468.5,
+  "tools": [
+    {
+      "name": "semgrep",
+      "status": "ok",
+      "version": "1.179.0",
+      "findings": 71,
+      "duration_s": 253.16,
+      "message": null
+    },
+    {
+      "name": "gitleaks",
+      "status": "ok",
+      "version": "8.30.1",
+      "findings": 72,
+      "duration_s": 4.22,
+      "message": null
+    },
+    {
+      "name": "trivy",
+      "status": "ok",
+      "version": "0.75.0",
+      "findings": 89,
+      "duration_s": 104.91,
+      "message": null
+    },
+    {
+      "name": "checkov",
+      "status": "ok",
+      "version": "3.3.26",
+      "findings": 120,
+      "duration_s": 23.27,
+      "message": null
+    },
+    {
+      "name": "zizmor",
+      "status": "ok",
+      "version": "1.30.1",
+      "findings": 101,
+      "duration_s": 8.8,
+      "message": null
+    },
+    {
+      "name": "cicd",
+      "status": "ok",
+      "version": "0.1.0",
+      "findings": 0,
+      "duration_s": 11.38,
+      "message": null
+    }
+  ],
+  "raw_findings": 453,
+  "findings": 417,
+  "multi_tool_findings": 34,
+  "by_priority": {
+    "P1": 34,
+    "P2": 41,
+    "P3": 255,
+    "P4": 87
+  },
+  "gating_findings": 137,
+  "graph_stats": {
+    "nodes": 257,
+    "edges": 12,
+    "routes": 245,
+    "workloads": 6,
+    "crown_jewels": 3,
+    "paths": 0
+  },
+  "blind_spots": [],
+  "attack_paths": [],
+  "choke_points": []
+}

@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Public benchmark** (`benchmarks/`, docs/benchmark.md): breachgraph on TerraGoat, CloudGoat,
+  Kubernetes Goat, AWS/Azure/GCP Goat, OWASP Juice Shop and Google's Online Boutique, each pinned
+  to a commit. Every reported attack path is hand-labeled and every documented scenario it misses
+  is listed; a test keeps the page in sync with the results and labels, and a manual workflow
+  re-runs it.
 - **Interactive attack-graph explorer** in the HTML report: the graph the paths run through,
   click any node for its evidence, weaknesses and what each step needs, and tick "assume fixed"
   on a finding to watch the paths it breaks disappear. Works offline, keyboard accessible, light

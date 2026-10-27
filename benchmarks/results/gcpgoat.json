@@ -1,0 +1,145 @@
+{
+  "name": "gcpgoat",
+  "repo": "https://github.com/ine-labs/GCPGoat",
+  "sha": "44605c4bff4b2da7611dfce78696bb53db6d8c54",
+  "kind": "vulnerable",
+  "breachgraph_version": "0.1.0",
+  "wall_time_s": 81.0,
+  "tools": [
+    {
+      "name": "semgrep",
+      "status": "ok",
+      "version": "1.179.0",
+      "findings": 17,
+      "duration_s": 51.81,
+      "message": null
+    },
+    {
+      "name": "gitleaks",
+      "status": "ok",
+      "version": "8.30.1",
+      "findings": 18,
+      "duration_s": 3.87,
+      "message": null
+    },
+    {
+      "name": "trivy",
+      "status": "ok",
+      "version": "0.75.0",
+      "findings": 434,
+      "duration_s": 65.59,
+      "message": null
+    },
+    {
+      "name": "checkov",
+      "status": "ok",
+      "version": "3.3.26",
+      "findings": 43,
+      "duration_s": 11.47,
+      "message": null
+    },
+    {
+      "name": "zizmor",
+      "status": "skipped",
+      "version": null,
+      "findings": 0,
+      "duration_s": 0.0,
+      "message": "no GitHub Actions workflows or actions"
+    },
+    {
+      "name": "cicd",
+      "status": "ok",
+      "version": "0.1.0",
+      "findings": 0,
+      "duration_s": 3.57,
+      "message": null
+    }
+  ],
+  "raw_findings": 512,
+  "findings": 416,
+  "multi_tool_findings": 29,
+  "by_priority": {
+    "P1": 28,
+    "P2": 72,
+    "P3": 228,
+    "P4": 88
+  },
+  "gating_findings": 98,
+  "graph_stats": {
+    "nodes": 30,
+    "edges": 28,
+    "routes": 17,
+    "workloads": 4,
+    "crown_jewels": 6,
+    "paths": 5
+  },
+  "blind_spots": [],
+  "attack_paths": [
+    {
+      "key": "Internet -> GCS bucket blog",
+      "target": "GCS bucket blog",
+      "confidence": "high",
+      "gating": true,
+      "score": 17.5,
+      "weapons": [],
+      "evidence": [
+        "main.tf:631"
+      ]
+    },
+    {
+      "key": "Internet -> GCS bucket function_bucket",
+      "target": "GCS bucket function_bucket",
+      "confidence": "high",
+      "gating": true,
+      "score": 17.5,
+      "weapons": [],
+      "evidence": [
+        "main.tf:500"
+      ]
+    },
+    {
+      "key": "Internet -> GCS bucket dev_bucket",
+      "target": "GCS bucket dev_bucket",
+      "confidence": "high",
+      "gating": true,
+      "score": 17.5,
+      "weapons": [],
+      "evidence": [
+        "main.tf:69"
+      ]
+    },
+    {
+      "key": "Internet -> GCS bucket data_bucket",
+      "target": "GCS bucket data_bucket",
+      "confidence": "high",
+      "gating": true,
+      "score": 17.5,
+      "weapons": [],
+      "evidence": [
+        "main.tf:55"
+      ]
+    },
+    {
+      "key": "Internet -> Cloud Function backend-function -> App Engine default service account -> GCS bucket bucket",
+      "target": "GCS bucket bucket",
+      "confidence": "low",
+      "gating": false,
+      "score": 5.78,
+      "weapons": [
+        "Detected a dynamic value being used with urllib."
+      ],
+      "evidence": [
+        "main.tf:594",
+        "modules/module-1/resources/cloud_function/data/main.py:28",
+        "main.tf:569"
+      ]
+    }
+  ],
+  "choke_points": [
+    {
+      "title": "Detected a dynamic value being used with urllib.",
+      "paths_cut": 1,
+      "at": "modules/module-1/resources/cloud_function/data/main.py:28"
+    }
+  ]
+}

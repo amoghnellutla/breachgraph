@@ -1,0 +1,24 @@
+summary: >
+  AWSGoat runs a serverless blog (API Gateway REST -> Lambda -> DynamoDB) and an ECS / EC2 module.
+  breachgraph links the Lambda source to its function through the deployed archive, sees the API
+  Gateway method with authorization NONE, and follows the injection in the handler to the data
+  its role can read.
+paths:
+  - key: "Internet -> S3 bucket bucket_temp"
+    verdict: true
+    why: aws_s3_bucket_acl public-read with every public access block disabled (modules/module-1/main.tf:3387).
+  - key: "Internet -> S3 bucket dev"
+    verdict: true
+    why: aws_s3_bucket_acl public-read with every public access block disabled (modules/module-1/main.tf:3307).
+  - key: "Internet -> Lambda lambda_ba_data -> DynamoDB table blog-posts"
+    verdict: true
+    why: >
+      User input is concatenated into a PartiQL statement passed to DynamoDB execute_statement
+      (resources/lambda/data/lambda_function.py:503), behind an unauthenticated API Gateway method.
+      The injection reads the blog-users table; the path names blog-posts because the function's
+      role can read both and one target is reported per set of weaknesses.
+misses:
+  - scenario: Module 2, ECS task / EC2 privilege escalation.
+    why: >
+      Starts from command execution in a container image with no code in this repository and from
+      the instance metadata, which breachgraph models only behind an application weakness.

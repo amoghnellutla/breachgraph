@@ -1,0 +1,6 @@
+summary: >
+  Google's Online Boutique is a well-maintained microservices demo (five languages, Kubernetes,
+  Terraform, GitHub Actions), used here as a noise control. breachgraph reports its scanner findings
+  and no attack paths, so it raises no false alarms on normal production-style code.
+paths: []
+misses: []

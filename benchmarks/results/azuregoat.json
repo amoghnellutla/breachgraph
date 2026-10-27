@@ -1,0 +1,91 @@
+{
+  "name": "azuregoat",
+  "repo": "https://github.com/ine-labs/AzureGoat",
+  "sha": "b97045952e6df00de735a7f27fd7c4994dcfe8c0",
+  "kind": "vulnerable",
+  "breachgraph_version": "0.1.0",
+  "wall_time_s": 274.3,
+  "tools": [
+    {
+      "name": "semgrep",
+      "status": "ok",
+      "version": "1.179.0",
+      "findings": 117,
+      "duration_s": 212.63,
+      "message": null
+    },
+    {
+      "name": "gitleaks",
+      "status": "ok",
+      "version": "8.30.1",
+      "findings": 48,
+      "duration_s": 9.12,
+      "message": null
+    },
+    {
+      "name": "trivy",
+      "status": "ok",
+      "version": "0.75.0",
+      "findings": 409,
+      "duration_s": 166.51,
+      "message": null
+    },
+    {
+      "name": "checkov",
+      "status": "ok",
+      "version": "3.3.26",
+      "findings": 37,
+      "duration_s": 12.75,
+      "message": null
+    },
+    {
+      "name": "zizmor",
+      "status": "skipped",
+      "version": null,
+      "findings": 0,
+      "duration_s": 0.0,
+      "message": "no GitHub Actions workflows or actions"
+    },
+    {
+      "name": "cicd",
+      "status": "ok",
+      "version": "0.1.0",
+      "findings": 0,
+      "duration_s": 11.63,
+      "message": null
+    }
+  ],
+  "raw_findings": 611,
+  "findings": 510,
+  "multi_tool_findings": 8,
+  "by_priority": {
+    "P1": 27,
+    "P2": 74,
+    "P3": 284,
+    "P4": 125
+  },
+  "gating_findings": 99,
+  "graph_stats": {
+    "nodes": 26,
+    "edges": 12,
+    "routes": 17,
+    "workloads": 4,
+    "crown_jewels": 2,
+    "paths": 1
+  },
+  "blind_spots": [],
+  "attack_paths": [
+    {
+      "key": "Internet -> Storage account storage_account",
+      "target": "Storage account storage_account",
+      "confidence": "high",
+      "gating": true,
+      "score": 17.5,
+      "weapons": [],
+      "evidence": [
+        "main.tf:89"
+      ]
+    }
+  ],
+  "choke_points": []
+}

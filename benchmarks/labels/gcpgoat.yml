@@ -1,0 +1,29 @@
+summary: >
+  GCPGoat runs public Cloud Functions, GCE instances and several buckets. breachgraph maps the
+  function source through archive_file and the uploaded zip, models the App Engine default service
+  account the functions run as, and finds four publicly readable buckets. Its one multi-step path
+  is low confidence and, on inspection, not usable.
+paths:
+  - key: "Internet -> GCS bucket blog"
+    verdict: true
+    why: allUsers holds roles/storage.objectViewer (main.tf:631).
+  - key: "Internet -> GCS bucket function_bucket"
+    verdict: true
+    why: allUsers holds roles/storage.legacyObjectReader (main.tf:500), exposing the function source archive.
+  - key: "Internet -> GCS bucket dev_bucket"
+    verdict: true
+    why: allUsers is granted a custom role with object read permissions (main.tf:69).
+  - key: "Internet -> GCS bucket data_bucket"
+    verdict: true
+    why: allUsers is granted a custom role with object read permissions (main.tf:55).
+  - key: "Internet -> Cloud Function backend-function -> App Engine default service account -> GCS bucket bucket"
+    verdict: false
+    why: >
+      The SSRF is real (urllib.request.urlopen on a user URL, cloud_function/data/main.py:28), but the
+      code sends a fixed User-Agent header, so it cannot add the Metadata-Flavor header the metadata
+      server requires and no token can be taken. breachgraph marks the step low confidence (the header
+      requirement, and Editor-by-default for the default account), which keeps it from gating, but
+      it cannot tell whether an SSRF controls headers.
+misses:
+  - scenario: Developer VM -> admin VM privilege escalation (GCE metadata and SSH keys).
+    why: Starts from SSH access with credentials not present in the repository.
