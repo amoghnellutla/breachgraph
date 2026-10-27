@@ -1,0 +1,31 @@
+name: I ran it on my repository
+description: Tell us how it went, good or bad. This is the most useful feedback there is.
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: Nothing here needs to be private. Leave out names, paths and findings you'd rather not share.
+  - type: dropdown
+    id: stack
+    attributes:
+      label: What the repository contains
+      multiple: true
+      options: [Application code, Terraform, Kubernetes or Helm, Docker Compose, GitHub Actions, GitLab CI, Hosting config (Vercel, Render, Fly, ...)]
+  - type: dropdown
+    id: useful
+    attributes:
+      label: Were the attack paths useful?
+      options:
+        - Yes, it found something we fixed
+        - Yes, it confirmed we were fine
+        - Not really (please say why below)
+        - It found no paths
+  - type: textarea
+    id: notes
+    attributes:
+      label: What worked, what got in the way, what's missing
+  - type: input
+    id: who
+    attributes:
+      label: Can we list your project or team as a user? (optional)
+      description: Only if you say so here. A name and a link is enough.

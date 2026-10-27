@@ -1,0 +1,22 @@
+name: Bug
+description: breachgraph crashed, failed to install, or behaved differently from the docs.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran and the output (redact anything private).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: version
+    attributes:
+      label: breachgraph version and how you run it
+      placeholder: "0.4.0, Docker image in GitHub Actions"
+    validations:
+      required: true

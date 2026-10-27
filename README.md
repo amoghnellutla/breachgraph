@@ -126,6 +126,11 @@ Findings and paths that already exist on the default branch don't fail the pull 
 turn the gate on in a legacy repository on day one. If a pull request edits the gate's own settings
 (a lower threshold, a new suppression, a scanner turned off), the comment says so.
 
+Pull requests are scanned incrementally: only the files that changed go through the scanners, and
+the default branch's findings are reused for the rest. On a one-line change to Juice Shop or Online
+Boutique that takes 8 to 9 seconds, with exactly the findings and paths a full scan gives
+([measurements](docs/github-action.md#pull-request-speed)).
+
 ## How it decides what matters
 
 - **No free ride.** Reaching a workload over the network is not owning it. Every step that gains

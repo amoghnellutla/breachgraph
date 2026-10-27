@@ -1,0 +1,32 @@
+name: Wrong finding or attack path
+description: breachgraph reported something that isn't real, or missed something that is.
+labels: [accuracy]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - An attack path that isn't real
+        - A finding that isn't real
+        - A real attack path breachgraph missed
+        - Wrong priority or severity
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What breachgraph reported, and why it is wrong
+      description: Paste the path or finding from the report (redact anything private). Say which step doesn't hold and why.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: A minimal example
+      description: The smallest snippet of code, Terraform, Kubernetes or workflow that reproduces it. Public repositories can just link the file and commit.
+  - type: input
+    id: version
+    attributes:
+      label: breachgraph version
+      placeholder: breachgraph --version
