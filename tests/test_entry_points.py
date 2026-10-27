@@ -218,3 +218,22 @@ def test_cluster_entry_point_and_no_free_ride_on_escape(tmp_path: Path) -> None:
     to_node = [r for r in routes(tmp_path, cfg("cluster"), [cmdi]) if r[-1] == "k8s:host:nodes"]
     assert to_node and to_node[0][:2] == ["internet", "entry:cluster"]
     assert not [r for r in routes(tmp_path, Config(), [cmdi]) if r[-1] == "k8s:host:nodes"]  # not exposed
+
+
+def test_a_path_needing_a_derived_weakness_does_not_hide_a_direct_one(tmp_path: Path) -> None:
+    """A committed password has no scanner fingerprint; its path must not replace the anonymous
+    container path to the same storage account (or the other way round)."""
+    public = (
+        AZ_VM % "false"
+        + """
+resource "azurerm_storage_container" "public" {
+  name                  = "public"
+  storage_account_name  = azurerm_storage_account.data.name
+  container_access_type = "blob"
+}
+"""
+    )
+    write(tmp_path, "main.tf", public)
+    found = routes(tmp_path, Config())
+    assert ["internet", "azure:storage_account:goatdata"] in found
+    assert any(r[1] == "azure:virtual_machine:dev-vm" for r in found)

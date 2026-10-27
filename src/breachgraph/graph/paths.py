@@ -87,7 +87,7 @@ def find_paths(
         if current in targets and steps:
             path = _make_path(graph, steps)
             _score(path)
-            vector = frozenset(path.weaknesses) or frozenset({current})
+            vector = _vector(graph, path) or frozenset({current})
             prev = best_by_vector.get(vector)
             if prev is None or path.score > prev.score:
                 best_by_vector[vector] = path
@@ -105,6 +105,18 @@ def find_paths(
 
     found = sorted(best_by_vector.values(), key=lambda p: (-p.score, p.length))
     return found[:max_paths]
+
+
+def _vector(graph: Graph, path: AttackPath) -> frozenset[str]:
+    """The weapons a path uses: scanner findings by fingerprint, and weaknesses the graph itself
+    derived (a committed password, a privileged pod) by where they are and what they are, so a
+    path that needs one never collides with a path that needs nothing."""
+    derived = {
+        f"{s.edge.src}|{s.via}"
+        for s in path.steps
+        if s.via and not any(w.fingerprint for w in graph.nodes[s.edge.src].has({s.via}))
+    }
+    return frozenset(path.weaknesses) | derived
 
 
 def _crossing(node: Node, edge: Edge) -> tuple[WeaknessClass | None, str | None]:

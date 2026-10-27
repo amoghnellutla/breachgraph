@@ -74,6 +74,9 @@ All notable changes to this project are documented here. The format follows
 - The benchmark harness wrote each report inside the scanned tree, so a rerun scanned its own
   previous report.
 - A compose service built from `.` or `../` was not mapped to its source code.
+- A path that needed a weakness the graph derives itself (a committed password, a privileged pod)
+  could replace a path to the same target that needed nothing, such as an anonymous storage
+  container, because both looked like they used no scanner finding. Both are now reported.
 - A symlink in the scanned repository that points outside it (to `~/.aws/credentials`, say) was
   read by the configuration parsers. Such links are now skipped.
 
