@@ -180,6 +180,16 @@ class AttackGraph(_Strict):
     min_confidence: Literal["high", "medium", "low"] = "medium"  # paths below this don't gate
 
 
+class VexConfig(_Strict):
+    """OpenVEX output (`--format openvex`), built from dependency reachability."""
+
+    author: str = "breachgraph"  # who issues the statements: a team email or IRI is best
+    # Product @id (a purl that appears in your SBOM / scan). Default: the manifest's own root
+    # component when it has one (pom.xml, go.mod, package.json), else each package stands alone.
+    product: str | None = None
+    not_affected: bool = True  # False: never claim not_affected from import-level reachability
+
+
 class Config(_Strict):
     version: Literal[1] = 1
     scanners: Scanners = Field(default_factory=Scanners)
@@ -193,6 +203,7 @@ class Config(_Strict):
     reachability: ReachabilityConfig = Field(default_factory=ReachabilityConfig)
     ai: AIConfig = Field(default_factory=AIConfig)
     attack_graph: AttackGraph = Field(default_factory=AttackGraph)
+    vex: VexConfig = Field(default_factory=VexConfig)
     timeout: int = 900
 
     @model_validator(mode="after")

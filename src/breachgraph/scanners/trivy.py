@@ -133,13 +133,20 @@ class TrivyScanner(Scanner):
         for result in raw.get("Results") or []:
             target = str(result.get("Target", ""))
             cls = result.get("Class", "")
+            packages = [p for p in result.get("Packages") or [] if isinstance(p, dict)]
             lines = {
-                p.get("ID"): (p.get("Locations") or [{}])[0].get("StartLine")
-                for p in result.get("Packages") or []
+                str(p["ID"]): (p.get("Locations") or [{}])[0].get("StartLine")
+                for p in packages
                 if p.get("ID")
             }
+            graph = _DependencyGraph(packages)
             for v in result.get("Vulnerabilities") or []:
-                findings.append(self._vuln(v, target, cls, image, lines, result.get("Type")))
+                f = self._vuln(v, target, cls, image, lines, result.get("Type"))
+                if f.package is not None:
+                    f.package.dependency_graph = graph.known
+                    f.package.dependents = graph.dependents(str(v.get("PkgID") or ""))
+                    f.package.root_purl = graph.root_purl
+                findings.append(f)
             for m in result.get("Misconfigurations") or []:
                 if m.get("Status", "FAIL") == "FAIL":
                     findings.append(self._misconfig(m, target, ctx))
@@ -197,7 +204,13 @@ class TrivyScanner(Scanner):
             cwe=[str(c) for c in as_list(v.get("CweIDs"))],
             vuln_ids=[vid, *[str(x) for x in as_list(v.get("VendorIDs"))]],
             cvss=cvss,
-            package=Package(name=pkg, version=installed, fixed_version=fixed, ecosystem=ecosystem),
+            package=Package(
+                name=pkg,
+                version=installed,
+                fixed_version=fixed,
+                ecosystem=ecosystem,
+                purl=(v.get("PkgIdentifier") or {}).get("PURL"),
+            ),
             remediation=remediation,
             references=[u for u in [v.get("PrimaryURL"), *as_list(v.get("References"))[:5]] if u],
         )
@@ -240,3 +253,33 @@ class TrivyScanner(Scanner):
             package=Package(name=str(pkg)),
             references=[lic["Link"]] if lic.get("Link") else [],
         )
+
+
+class _DependencyGraph:
+    """Who depends on whom in one manifest, from Trivy's DependsOn (lockfiles, pom, go.mod...)."""
+
+    def __init__(self, packages: list[dict[str, Any]]) -> None:
+        self.names = {str(p["ID"]): str(p.get("Name") or p["ID"]) for p in packages if p.get("ID")}
+        self.roots = {str(p["ID"]) for p in packages if p.get("Relationship") == "root" and p.get("ID")}
+        root_purls = [
+            (p.get("Identifier") or {}).get("PURL") for p in packages if p.get("Relationship") == "root"
+        ]
+        self.root_purl: str | None = next((str(x) for x in root_purls if x), None)
+        self.known = any(
+            p.get("DependsOn") or p.get("Relationship") in ("direct", "indirect") for p in packages
+        )
+        self.parents: dict[str, set[str]] = {}
+        for p in packages:
+            for child in as_list(p.get("DependsOn")):
+                self.parents.setdefault(str(child), set()).add(str(p.get("ID")))
+
+    def dependents(self, pkg_id: str) -> list[str]:
+        """Names of every package that depends on ``pkg_id``, directly or not (the project excluded)."""
+        seen: set[str] = set()
+        queue = [pkg_id]
+        while queue:
+            for parent in self.parents.get(queue.pop(), set()):
+                if parent not in seen:
+                    seen.add(parent)
+                    queue.append(parent)
+        return sorted({self.names.get(i, i) for i in seen - self.roots})

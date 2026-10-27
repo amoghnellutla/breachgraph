@@ -40,6 +40,11 @@ scanners:
     api_definition: null         # OpenAPI URL for mode=api
     docker_image: ghcr.io/zaproxy/zaproxy:stable
 
+vex:                             # OpenVEX output (--format openvex), see docs/vex.md
+  author: breachgraph            # who issues the statements (a team email or IRI is best)
+  product: null                  # product purl; default: the manifest's root component
+  not_affected: true             # false: never claim not_affected from import-level reachability
+
 exclude_paths:                   # dropped entirely (gitignore-style globs)
   - node_modules/
   - "**/vendor/"
@@ -83,7 +88,9 @@ enrich:
 
 reachability:                 # does first-party code actually import the vulnerable package?
   enabled: true
-  deprioritize_unused: true   # lower the score of CVEs in packages the code never imports
+  deprioritize_unused: true   # lower the score of CVEs in packages nothing uses: not imported by
+                              # first-party code, nor by a package it uses (needs a lockfile or
+                              # pip-compile `# via` lines; otherwise reachability is `unknown`)
   gate_on_unused: false       # an unused-dependency CVE alone won't fail the gate
 
 ai:                           # optional AI triage — bring your own Anthropic API key

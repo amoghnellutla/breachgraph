@@ -51,7 +51,7 @@ breachgraph reports **no path** to your data even if the pod is public and its r
 | 📊 **Risk-based priority** | CVSS/severity adjusted by **CISA KEV** (actively exploited → always P1), **FIRST EPSS**, confidence, multi-tool agreement and reachability to crown jewels. Every score explains itself |
 | 🚦 **Gate that teams keep on** | Content-based fingerprints + **baselines**, so only *new* findings and *new* attack paths fail the build. **Suppressions require a reason and an expiry date** |
 | 💬 **Feedback where developers are** | Sticky PR comment with the attack-path diagram · inline code-scanning annotations (SARIF) · job summary · auto-managed GitHub issues |
-| 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML (interactive attack-path flows) · Markdown · JUnit · CycloneDX SBOM |
+| 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML (interactive attack-path flows) · Markdown · JUnit · CycloneDX SBOM · **OpenVEX** from reachability, consumable by Trivy/Grype ([docs/vex.md](docs/vex.md)) |
 | 🤖 **Optional AI triage** | Bring your own Anthropic key: a real / likely-false-positive / needs-review verdict and a concrete fix per top finding, judged from the enclosing function, its HTTP route, its attack path, and how a vulnerable package is actually called. Advisory only, secrets redacted, spend cap. See [docs/ai-triage.md](docs/ai-triage.md) |
 | 🔒 **Trustworthy itself** | Scanner binaries pinned and SHA-256 verified · actions pinned to commit SHAs · signed images with SBOM + provenance · secrets always redacted · untrusted scanner output escaped |
 

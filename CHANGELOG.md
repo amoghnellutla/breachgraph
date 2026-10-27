@@ -8,11 +8,22 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **OpenVEX output** (`--format openvex`, on by default in the GitHub Action): `not_affected` /
+  `affected` / `under_investigation` statements built from reachability, scoped so Trivy and
+  Grype can apply them (`trivy fs --vex breachgraph.vex.json`). See docs/vex.md.
+- Dependency graphs from Trivy (lockfiles, pom.xml, go.mod) and pip-compile / uv `# via`
+  annotations; packages carry their purl and the packages that depend on them.
 - **"This change opens / closes an attack path"** as the headline of every PR comment, with each
   new path drawn as a Mermaid diagram. `--compare base/breachgraph.json` treats the base branch's
   findings and paths as pre-existing, so only what a change adds can fail it. The GitHub Action
   does this automatically through the Actions cache (`compare: true`). Attack paths now carry a
   stable `id`, and baselines record accepted paths.
+
+### Fixed
+
+- Reachability no longer calls a package "unused" when another dependency that the code imports
+  needs it (Jinja2 under Flask). Without a dependency graph, a package the code doesn't import is
+  now `unknown`, not `unused`, so it is no longer deprioritized on a guess.
 
 ## [0.1.0] - 2026-10-27
 

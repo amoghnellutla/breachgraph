@@ -156,6 +156,7 @@ def process(
     if base is not None:
         result.comparison = compare(result, base)
     result.gate = evaluate_gate(result, config)
+    result.metadata["vex"] = config.vex.model_dump()
     if config.ai.enabled:
         _run_ai(result, config, target)
     result.finished_at = datetime.now(UTC)

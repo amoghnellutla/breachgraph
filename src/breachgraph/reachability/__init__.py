@@ -8,12 +8,14 @@ without pretending to prove exploitability of a specific function.
 
 from __future__ import annotations
 
+import re
+from functools import lru_cache
 from pathlib import Path
 
 from breachgraph.config import Config
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.routes import RouteSource
-from breachgraph.models import Category, Finding, Reachability
+from breachgraph.models import Category, Finding, Package, Reachability
 from breachgraph.reachability.imports import ImportIndex, collect_imports
 
 # PyPI distribution name -> import name, where they differ (common cases).
@@ -127,7 +129,7 @@ def annotate_reachability(target: Path, findings: list[Finding], config: Config)
             for c in cands:
                 hit_files |= _match(ext_to_files, c, lang)
             if not hit_files:
-                pkg.reachability = Reachability.UNUSED
+                _not_imported(pkg, f, target, ext_to_files, reachable_files, lang)
             elif hit_files & reachable_files:
                 pkg.reachability = Reachability.ENTRYPOINT
                 sample = sorted(hit_files & reachable_files)[:3]
@@ -135,7 +137,8 @@ def annotate_reachability(target: Path, findings: list[Finding], config: Config)
             else:
                 pkg.reachability = Reachability.DIRECT
                 pkg.reach_evidence = [f"imported by {p}" for p in sorted(hit_files)[:3]]
-        stats[pkg.reachability.value] = stats.get(pkg.reachability.value, 0) + 1
+        state = (pkg.reachability or Reachability.UNKNOWN).value
+        stats[state] = stats.get(state, 0) + 1
     return stats
 
 
@@ -155,3 +158,86 @@ def _match(ext_to_files: dict[str, set[str]], candidate: str, lang: str) -> set[
                 out |= files
         return out
     return set()
+
+
+def _not_imported(
+    pkg: Package,
+    f: Finding,
+    target: Path,
+    ext_to_files: dict[str, set[str]],
+    reachable_files: set[str],
+    lang: str,
+) -> None:
+    """First-party code doesn't import the package. It is still used when a package that *is*
+    imported depends on it (Jinja2 under Flask), so "unused" needs a dependency graph to say so."""
+    parents = list(pkg.dependents)
+    graph_known = pkg.dependency_graph
+    via = _pip_via(target / f.location.path) if lang == "python" and f.location.in_repo else None
+    if via is not None:
+        graph_known = True
+        parents = sorted(set(parents) | _ancestors(via, _norm(pkg.name)))
+    for parent in parents:
+        _plang, cands = import_candidates(parent, pkg.ecosystem)
+        hits: set[str] = set()
+        for c in cands:
+            hits |= _match(ext_to_files, c, lang)
+        if hits:
+            near = sorted(hits & reachable_files)
+            pkg.reachability = Reachability.ENTRYPOINT if near else Reachability.DIRECT
+            where = near[0] + " (reachable from a route)" if near else sorted(hits)[0]
+            pkg.reach_evidence = [f"used through {parent}, which is imported by {where}"]
+            return
+    if graph_known:
+        pkg.reachability = Reachability.UNUSED
+        pkg.reach_evidence = ["not imported by first-party code or by any package it uses"]
+    else:
+        pkg.reachability = Reachability.UNKNOWN
+        pkg.reach_evidence = [
+            "not imported by first-party code, but the manifest has no dependency graph (no lockfile), "
+            "so another dependency may still use it"
+        ]
+
+
+def _norm(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+_REQ_LINE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?\s*==")
+
+
+@lru_cache(maxsize=64)
+def _pip_via(path: Path) -> dict[str, set[str]] | None:
+    """{package: packages that require it} from pip-compile / uv `# via` annotations; None when the
+    file has none (a hand-written requirements file says nothing about who needs what)."""
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return None
+    if not any(re.search(r"#\s*via(?![\w-])", ln) for ln in lines):
+        return None
+    out: dict[str, set[str]] = {}
+    current: str | None = None
+    for line in lines:
+        m = _REQ_LINE.match(line.strip())
+        if m:
+            current = _norm(m.group(1))
+            out.setdefault(current, set())
+        comment = line.split("#", 1)[1].strip() if "#" in line else ""
+        if current is None or not comment:
+            continue
+        names = comment.removeprefix("via").strip() if comment.startswith("via") else comment
+        for name in re.split(r"[\s,]+", names):
+            if name and not name.startswith(("-", "(")) and not name.endswith((".in", ".txt", ".toml")):
+                out[current].add(_norm(name))
+    return out
+
+
+def _ancestors(via: dict[str, set[str]], name: str) -> set[str]:
+    seen: set[str] = set()
+    queue = [name]
+    while queue:
+        for parent in via.get(queue.pop(), set()):
+            if parent not in seen:
+                seen.add(parent)
+                queue.append(parent)
+    return seen

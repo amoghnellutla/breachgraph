@@ -115,7 +115,7 @@ jobs:
             echo "pip install breachgraph==${GITHUB_REF_NAME#v}"
             echo '```'
             echo
-            echo "Image digest: \`${DIGEST}\`, verify with:"
+            echo "Image digest: \`${DIGEST}\`, verify with cosign v3 or later:"
             echo
             echo '```bash'
             echo "cosign verify ghcr.io/${GITHUB_REPOSITORY}@${DIGEST} \\"

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from breachgraph.models import ScanResult
-from breachgraph.reporters import html, junit, markdown, sarif
+from breachgraph.reporters import html, junit, markdown, openvex, sarif
 
 
 def _json(result: ScanResult) -> str:
@@ -24,6 +24,7 @@ FORMATS: dict[str, tuple[str, Callable[[ScanResult], str]]] = {
     "html": ("breachgraph.html", html.render),
     "md": ("breachgraph.md", markdown.render),
     "junit": ("breachgraph-junit.xml", junit.render),
+    "openvex": ("breachgraph.vex.json", openvex.render),
 }
 
 

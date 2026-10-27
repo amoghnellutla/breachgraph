@@ -119,7 +119,7 @@ runs:
       run: |
         set -uo pipefail
         mkdir -p "$SG_CACHE"
-        args=(scan "$SG_PATH" --output-dir "$SG_OUT" --format json,sarif,html,md,junit)
+        args=(scan "$SG_PATH" --output-dir "$SG_OUT" --format json,sarif,html,md,junit,openvex)
         [[ -n "$SG_CONFIG" ]]   && args+=(--config "$SG_CONFIG")
         [[ -n "$SG_BASELINE" ]] && args+=(--baseline "$SG_BASELINE")
         [[ -n "$SG_FAIL_ON" ]]  && args+=(--fail-on "$SG_FAIL_ON")

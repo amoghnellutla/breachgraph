@@ -37,9 +37,35 @@ def test_imported_package_is_entrypoint_reachable() -> None:
     assert r == {"flask": "entrypoint", "requests": "entrypoint"}
 
 
-def test_transitive_unused_package() -> None:
+def test_not_imported_without_dependency_graph_is_unknown() -> None:
+    """A hand-written requirements.txt doesn't say who needs what: Flask needs Jinja2 even though
+    the app never imports it, so "unused" would be a false claim."""
     r = reach([dep("jinja2"), dep("PyYAML")])
-    assert r == {"jinja2": "unused", "PyYAML": "unused"}
+    assert r == {"jinja2": "unknown", "PyYAML": "unknown"}
+
+
+def test_used_through_an_imported_dependency() -> None:
+    jinja = dep("jinja2")
+    assert jinja.package is not None
+    jinja.package.dependents, jinja.package.dependency_graph = ["flask"], True
+    yaml_ = dep("PyYAML")
+    assert yaml_.package is not None
+    yaml_.package.dependency_graph = True
+    assert reach([jinja, yaml_]) == {"jinja2": "entrypoint", "PyYAML": "unused"}
+    assert "used through flask" in jinja.package.reach_evidence[0]
+
+
+def test_pip_compile_annotations_are_a_dependency_graph(tmp_path: Path) -> None:
+    (tmp_path / "app.py").write_text("from flask import Flask\napp = Flask(__name__)\n", encoding="utf-8")
+    (tmp_path / "requirements.txt").write_text(
+        "flask==2.0.1\n    # via -r requirements.in\n"
+        "jinja2==2.10\n    # via flask\n"
+        "markupsafe==2.0.1\n    # via\n    #   flask\n    #   jinja2\n"
+        "pyyaml==5.3.1\n    # via -r requirements.in\n",
+        encoding="utf-8",
+    )
+    findings = [dep(n, path="requirements.txt") for n in ("jinja2", "markupsafe", "pyyaml")]
+    assert reach(findings, tmp_path) == {"jinja2": "direct", "markupsafe": "direct", "pyyaml": "unused"}
 
 
 def test_pypi_import_alias() -> None:
@@ -124,6 +150,8 @@ def test_pipeline_deprioritizes_unused_dep() -> None:
     used, unused = dep("flask"), dep("jinja2")
     for f in (used, unused):
         f.cvss = 9.8
+    assert unused.package is not None
+    unused.package.dependency_graph = True  # e.g. from a lockfile: nothing that is imported needs it
     res = process(
         [used, unused],
         [ToolRun(name="trivy", status=ToolStatus.IMPORTED, findings=2)],

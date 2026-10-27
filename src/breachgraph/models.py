@@ -129,6 +129,11 @@ class Package(BaseModel):
     version: str | None = None
     fixed_version: str | None = None
     ecosystem: str | None = None
+    purl: str | None = None  # package URL, e.g. pkg:pypi/requests@2.25.1
+    # Packages that (transitively) depend on this one, from the manifest's dependency graph.
+    dependents: list[str] = Field(default_factory=list)
+    dependency_graph: bool = False  # True when the manifest/lockfile said who depends on what
+    root_purl: str | None = None  # the project that declares this dependency, when the manifest names it
     reachability: Reachability | None = None
     reach_evidence: list[str] = Field(default_factory=list)  # "file imports <name>"
 
