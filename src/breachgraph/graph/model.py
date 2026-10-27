@@ -10,6 +10,7 @@ a finding matters in proportion to what it exposes.
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Iterator
 from enum import StrEnum
@@ -67,6 +68,18 @@ CONTROL = [WeaknessClass.CODE_EXECUTION, WeaknessClass.VULNERABLE_DEPENDENCY]
 READ_FILES = [*CONTROL, WeaknessClass.FILE_READ]
 
 
+# Code that a service does not run: tests, fixtures, examples and docs.
+_NOT_RUN = re.compile(
+    r"(?:^|/)(?:tests?|__tests__|spec|e2e|fixtures?|examples?|samples?|docs?)/|\.(?:test|spec)\.[a-z]+$"
+)
+# Code that may ship but is weaker evidence than the application's own source.
+_INCIDENTAL = re.compile(r"(?:^|/)(?:static|vendor|third_party)/")
+
+
+def not_run(path: str) -> bool:
+    return bool(_NOT_RUN.search(path))
+
+
 class Evidence(BaseModel):
     path: str
     line: int | None = None
@@ -94,7 +107,11 @@ class Node(BaseModel):
     value: int = 0  # 0-10 business value; crown jewels are >= 7
 
     def has(self, classes: set[WeaknessClass]) -> list[Weakness]:
-        return [w for w in self.weaknesses if w.cls in classes]
+        """Matching weaknesses, the application's own code first."""
+        hits = [w for w in self.weaknesses if w.cls in classes]
+        return sorted(
+            hits, key=lambda w: not_run(w.evidence.path) or bool(_INCIDENTAL.search(w.evidence.path))
+        )
 
 
 class Edge(BaseModel):

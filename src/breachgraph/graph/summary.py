@@ -204,7 +204,13 @@ def coverage(summary: AttackGraphSummary, result: AttackGraphResult, tools: list
         gaps.append(f"{len(summary.skipped)} file(s) or resource(s) could not be analyzed (see blind spots)")
     if not cov.crown_jewels:
         gaps.append("no crown-jewel asset found (no data store, secret or cloud identity in the repository)")
-    if not (cov.workloads or cov.cloud_resources or cov.kubernetes_objects or cov.ci_jobs):
+    implicit = any(
+        n.attrs.get("implicit") and n.kind.value == "workload" for n in result.graph.nodes.values()
+    )
+    if implicit:
+        cov.workloads -= 1
+        gaps.append("no deployment configuration found, so the application is assumed to be internet-facing")
+    elif not (cov.workloads or cov.cloud_resources or cov.kubernetes_objects or cov.ci_jobs):
         gaps.append("no deployment configuration found, so nothing is known to be internet-facing")
     cov.gaps, cov.complete = gaps, not gaps
     return cov

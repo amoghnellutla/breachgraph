@@ -18,10 +18,24 @@ All notable changes to this project are documented here. The format follows
   objects, CI jobs and crown jewels the attack graph modeled, and why a result is incomplete (a
   scanner that feeds weaknesses did not run, files that could not be parsed, no deployment
   configuration, no crown jewel). "No attack paths" is no longer silent about thin inputs.
+- The application database as a crown jewel for repositories without infrastructure code. It is
+  found from the drivers and ORMs the code imports (SQLAlchemy, Sequelize, Prisma, GORM, JDBC and
+  others) or a connection setting such as `DATABASE_URL`, and only when no Terraform or Kubernetes
+  source defines a database. SQL injection and code execution in the application reach it.
+- An application that serves HTTP routes and has no deployment configuration is modeled as one
+  workload assumed to be internet-facing, at medium confidence, and the coverage line says so.
+- Compose services that publish ports, or sit behind an nginx, Traefik, Caddy, HAProxy or Envoy
+  service that does, are exposed to the internet at medium confidence.
 
 ### Changed
 
+- The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
+  and secrets. On the benchmark projects P2 blocked 1,497 findings, 131 of them on a healthy
+  production-style repository. Set `fail_on.priority: P2` for the stricter gate.
 - Reports and PR comments use plain text instead of emoji icons.
+- Findings in CI configuration, tests, fixtures, examples and docs no longer count as weaknesses
+  of the service that ships the code. They remain findings; they just don't open attack paths.
+  When a service has several matching weaknesses, the path cites its own source first.
 
 ### Fixed
 
@@ -29,9 +43,7 @@ All notable changes to this project are documented here. The format follows
   escape edge now needs code execution in the pod as well as the disabled isolation.
 - The benchmark harness wrote each report inside the scanned tree, so a rerun scanned its own
   previous report.
-- The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
-  and secrets. On the benchmark projects P2 blocked 1,497 findings, 131 of them on a healthy
-  production-style repository. Set `fail_on.priority: P2` for the stricter gate.
+- A compose service built from `.` or `../` was not mapped to its source code.
 
 ## [0.2.0] - 2026-10-27
 

@@ -5,12 +5,23 @@ Used to map source directories to the images (and therefore the workloads) that 
 
 from __future__ import annotations
 
+import posixpath
 import re
 from pathlib import PurePosixPath
 
 import yaml
 
-from breachgraph.graph.model import Evidence, Graph, Node, NodeKind
+from breachgraph.graph.model import (
+    INTERNET_ID,
+    Confidence,
+    Edge,
+    EdgeKind,
+    Evidence,
+    Graph,
+    Node,
+    NodeKind,
+    internet,
+)
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.paths import iter_files
 
@@ -65,17 +76,46 @@ class ImageSource:
                             "platform": "compose",
                             "images": [str(image)] if image else [],
                             "build_context": ctx_dir,
+                            "code_paths": [ctx_dir],
                         },
                         evidence=[Evidence(path=rel, detail=f"service {svc}", source="images")],
                     )
                 )
                 if exposed:
                     node.attrs["published_ports"] = exposed
+                    _expose(graph, node.id, f"publishes port {exposed[0]}", rel, svc)
+        # A reverse proxy that publishes ports forwards the internet to the services it fronts.
+        for svc, spec in (doc.get("services") or {}).items() if isinstance(doc, dict) else []:
+            if not isinstance(spec, dict) or spec.get("build") or not _PROXY.search(str(spec.get("image"))):
+                continue
+            exposed = _ports_public(spec.get("ports"))
+            deps = spec.get("depends_on") or []
+            for dep in [*deps, *(spec.get("links") or [])]:
+                target = f"compose:service:{str(dep).split(':')[0]}"
+                if exposed and target in graph.nodes:
+                    _expose(graph, target, f"behind proxy {svc} (port {exposed[0]})", rel, svc)
+
+
+_PROXY = re.compile(r"(?:^|/)(nginx|traefik|caddy|haproxy|envoy|httpd)(?::|$)")
+
+
+def _expose(graph: Graph, node_id: str, why: str, rel: str, svc: str) -> None:
+    graph.add_node(internet())
+    graph.add_edge(
+        Edge(
+            src=INTERNET_ID,
+            dst=node_id,
+            kind=EdgeKind.EXPOSES,
+            confidence=Confidence.MEDIUM,
+            evidence=[Evidence(path=rel, detail=f"service {svc}", source="images")],
+            note=f"compose {why}; assumed reachable from the internet",
+        )
+    )
 
 
 def _join(base: str, rel: str) -> str:
-    p = PurePosixPath(base) / rel if base else PurePosixPath(rel)
-    return str(p).replace("./", "").strip("/")
+    joined = posixpath.normpath(posixpath.join(base, rel)).strip("/")
+    return "" if joined in (".", "..") or joined.startswith("../") else joined
 
 
 def _ports_public(ports: object) -> list[str]:

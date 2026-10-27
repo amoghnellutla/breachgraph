@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -15,6 +16,7 @@ from breachgraph.graph.model import (
     NodeKind,
     Weakness,
     WeaknessClass,
+    not_run,
 )
 from breachgraph.graph.sources.routes import Route
 from breachgraph.models import Category, Finding, Reachability
@@ -88,6 +90,15 @@ class CodeUnit:
 
 def _contains(root: str, path: str) -> bool:
     return root == "" or path == root or path.startswith(root.rstrip("/") + "/")
+
+
+_CI_CONFIG = re.compile(
+    r"^(?:\.github/|\.gitlab-ci\.ya?ml$|\.circleci/|azure-pipelines\.ya?ml$|Jenkinsfile$)"
+)
+
+
+def _is_ci_config(path: str) -> bool:
+    return bool(_CI_CONFIG.match(path))
 
 
 def code_units(
@@ -187,9 +198,15 @@ def attach(graph: Graph, findings: list[Finding], routes: list[Route], units: li
         if hit:
             continue
         # 3. everything else in a deployable unit belongs to its workloads
+        # (CI configuration, tests and examples are not part of what a service runs.)
+        ci = _is_ci_config(loc.path)
+        if not_run(loc.path):
+            continue
         for unit in units:
             if loc.in_repo and _contains(unit.root, loc.path):
                 for wid in unit.workloads:
+                    if ci and graph.nodes[wid].attrs.get("platform") != "github-actions":
+                        continue
                     graph.nodes[wid].weaknesses.append(_weakness(f, cls))
 
     _unlock(graph, route_nodes)
@@ -282,6 +299,20 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                             note="arbitrary file read exposes mounted secret files",
                         )
                     )
+            # SQL/NoSQL injection -> the database this service connects to directly.
+            for e in privilege:
+                if e.kind is EdgeKind.CONNECTS_TO and graph.nodes[e.dst].attrs.get("queryable"):
+                    graph.add_edge(
+                        Edge(
+                            src=route.id,
+                            dst=e.dst,
+                            kind=EdgeKind.CONNECTS_TO,
+                            requires=[WeaknessClass.INJECTION_DATA],
+                            evidence=route.evidence,
+                            confidence=Confidence.MEDIUM,
+                            note="query injection against the database this service uses",
+                        )
+                    )
             # SQL/NoSQL injection -> the database this service's identity can reach.
             for e in privilege:
                 if e.kind is not EdgeKind.USES_IDENTITY:
@@ -305,6 +336,18 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
         if not hits:
             continue
         for e in adj.get(w.id, []):
+            if e.kind is EdgeKind.CONNECTS_TO and graph.nodes[e.dst].attrs.get("queryable"):
+                graph.add_edge(
+                    Edge(
+                        src=w.id,
+                        dst=e.dst,
+                        kind=EdgeKind.CONNECTS_TO,
+                        requires=[WeaknessClass.INJECTION_DATA],
+                        evidence=[hits[0].evidence],
+                        confidence=Confidence.MEDIUM,
+                        note="query injection against the database this service uses",
+                    )
+                )
             if e.kind is not EdgeKind.USES_IDENTITY:
                 continue
             for e2 in adj.get(e.dst, []):

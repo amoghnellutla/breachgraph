@@ -108,7 +108,25 @@ GitHub's OIDC provider without naming a repository is reachable from the interne
 
 **Routes** (`sources/routes.py`): HTTP routes and handler line ranges via tree-sitter for Python
 (Flask, FastAPI, Django), JS/TS (Express, NestJS, Next.js), Java (Spring) and Go (net/http, Gin,
-Echo, Chi). Findings inside a handler's line range attach to that route.
+Echo, Chi). Findings inside a handler's line range attach to that route. Other findings in a
+service's source attach to the service. Findings in CI configuration, tests, fixtures, examples
+and docs do not, since the service doesn't run that code.
+
+**Compose** (`sources/images.py`): each service with a `build:` context is a workload that runs the
+code in that context. A service that publishes a port on a public interface, or sits behind an
+nginx, Traefik, Caddy, HAProxy or Envoy service that does (`depends_on` or `links`), is exposed at
+medium confidence: a compose file may only be used for local development.
+
+**Applications without infrastructure code** (`sources/app.py`): most application repositories
+have no Terraform or Kubernetes, yet the database the code talks to is the crown jewel. It is
+added as "Application database" when the code imports a database driver or ORM (SQLAlchemy,
+psycopg, Django, Sequelize, Prisma, TypeORM, Mongoose, GORM, `database/sql`, JDBC, JPA, Hibernate
+and others), or when a config file sets `DATABASE_URL` or a similar setting. It is skipped
+when a Terraform or Kubernetes source already defines a queryable database. Code execution in a
+service reaches it through the service's own connection, and SQL or NoSQL injection reaches it
+directly. When the repository serves HTTP routes and has no deployment configuration at all, the
+application is modeled as one workload assumed to be internet-facing, and the coverage line says
+so.
 
 ## Credentials and other ways in
 
