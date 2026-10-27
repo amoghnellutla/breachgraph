@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-27
+
 ### Added
 
 - **Public benchmark** (`benchmarks/`, docs/benchmark.md): breachgraph on TerraGoat, CloudGoat,
@@ -124,5 +126,6 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/amoghnellutla/breachgraph/releases/tag/v0.1.0

@@ -126,8 +126,8 @@ def render(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) ->
         "python benchmarks/report.py        # rebuilds this page from results/ and labels/",
         "```",
         "",
-        "Versions: "
-        + ", ".join(sorted({f"breachgraph {r['breachgraph_version']}" for _t, r, _l in rows}))
+        "Run with breachgraph at commit "
+        + ", ".join(sorted({f"`{r.get('breachgraph_commit', 'unknown')}`" for _t, r, _l in rows}))
         + ". "
         "Scanner versions are recorded per run in `benchmarks/results/`.",
         "",

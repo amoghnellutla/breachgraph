@@ -22,8 +22,8 @@ three hundred that can't.
 
 ## Why this is different
 
-Most tools hand you a list. A big security team already has Snyk, CodeQL and a cloud scanner 
-what they lack is the *connection between layers*. A medium-severity SSRF is boring on its own.
+Most tools hand you a list. A big security team already has Snyk, CodeQL and a cloud scanner.
+What they lack is the *connection between layers*. A medium-severity SSRF is boring on its own.
 SSRF on an internet-facing route, in a pod with host networking, whose node role can read the
 customer-data bucket, is a breach. No single scanner sees that chain, because each one looks at
 only one layer.

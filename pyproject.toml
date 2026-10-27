@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "breachgraph"
-version = "0.1.0"
+version = "0.2.0"
 description = "Attack-path-aware security gate for CI: runs Semgrep, Gitleaks, Trivy, Checkov, zizmor and ZAP, links findings to code, Kubernetes, cloud IAM (AWS, Azure, GCP) and GitHub Actions, and fails the build on real internet-to-crown-jewel paths."
 readme = "README.md"
 license = "Apache-2.0"

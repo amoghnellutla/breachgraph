@@ -126,4 +126,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Versions: breachgraph 0.1.0. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `ed5d0b1`. Scanner versions are recorded per run in `benchmarks/results/`.

@@ -92,6 +92,9 @@ def summarize(target: dict[str, Any], report: dict[str, Any], elapsed: float) ->
         "sha": target["sha"],
         "kind": target["kind"],
         "breachgraph_version": report["breachgraph_version"],
+        "breachgraph_commit": subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True
+        ).stdout.strip(),
         "wall_time_s": round(elapsed, 1),
         "tools": [
             {k: t.get(k) for k in ("name", "status", "version", "findings", "duration_s", "message")}

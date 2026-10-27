@@ -4,6 +4,7 @@
   "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
   "kind": "vulnerable",
   "breachgraph_version": "0.1.0",
+  "breachgraph_commit": "ed5d0b1",
   "wall_time_s": 43.3,
   "tools": [
     {

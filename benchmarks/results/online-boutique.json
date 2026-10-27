@@ -4,6 +4,7 @@
   "sha": "38e7348eb289eb5b87c0c6e8cb19ced0449dc389",
   "kind": "control",
   "breachgraph_version": "0.1.0",
+  "breachgraph_commit": "ed5d0b1",
   "wall_time_s": 67.2,
   "tools": [
     {
