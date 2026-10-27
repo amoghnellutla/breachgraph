@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-27
+
 ### Added
 
 - IAM users, groups and their policies in the attack graph, and AssumeRole chains: a principal
@@ -42,13 +44,20 @@ All notable changes to this project are documented here. The format follows
   model doesn't need a release.
 - Compose services that publish ports, or sit behind an nginx, Traefik, Caddy, HAProxy or Envoy
   service that does, are exposed to the internet at medium confidence.
+- The action's `imports` input merges reports from earlier steps (ZAP, CodeQL, any SARIF).
+- The benchmark also reports what the credentials and cluster entry points find on each project,
+  apart from the hand-labeled results.
 
-### Security
+### Changed
 
-- The Docker image and CI install every Python package from hash-pinned locks
-  (`requirements/*.txt`, regenerated with `scripts/lock.py`), including the build backend.
-- The intentionally vulnerable demo apps carry `osv-scanner.toml` ignore lists, so OSV-based
-  checks don't report their pinned old dependencies as breachgraph's own.
+- The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
+  and secrets. On the benchmark projects 350 findings block, where P2 blocked 1,497 in the previous
+  run; on the healthy control project, 10 where P2 blocked 131. Set `fail_on.priority: P2` for the
+  stricter gate.
+- Reports and PR comments use plain text instead of emoji icons.
+- Findings in CI configuration, tests, fixtures, examples and docs no longer count as weaknesses
+  of the service that ships the code. They remain findings; they just don't open attack paths.
+  When a service has several matching weaknesses, the path cites its own source first.
 
 ### Removed
 
@@ -56,16 +65,6 @@ All notable changes to this project are documented here. The format follows
   input are gone. Scanning a running application is a separate job from gating a change: run
   ZAP's own action and merge its report with `--import zap=report_json.json`, or with the action's
   new `imports` input, which takes any supported report including SARIF.
-
-### Changed
-
-- The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
-  and secrets. On the benchmark projects P2 blocked 1,497 findings, 131 of them on a healthy
-  production-style repository. Set `fail_on.priority: P2` for the stricter gate.
-- Reports and PR comments use plain text instead of emoji icons.
-- Findings in CI configuration, tests, fixtures, examples and docs no longer count as weaknesses
-  of the service that ships the code. They remain findings; they just don't open attack paths.
-  When a service has several matching weaknesses, the path cites its own source first.
 
 ### Fixed
 
@@ -77,8 +76,17 @@ All notable changes to this project are documented here. The format follows
 - A path that needed a weakness the graph derives itself (a committed password, a privileged pod)
   could replace a path to the same target that needed nothing, such as an anonymous storage
   container, because both looked like they used no scanner finding. Both are now reported.
+
+### Security
+
 - A symlink in the scanned repository that points outside it (to `~/.aws/credentials`, say) was
   read by the configuration parsers. Such links are now skipped.
+- The Docker image and CI install every Python package from hash-pinned locks
+  (`requirements/*.txt`, regenerated with `scripts/lock.py`), including the build backend.
+- The intentionally vulnerable demo apps carry `osv-scanner.toml` ignore lists, so OSV-based
+  checks don't report their pinned old dependencies as breachgraph's own.
+- Wheels and source archives on GitHub releases are signed with Sigstore (`.sigstore.json` bundles
+  next to each file), and release notes come from this changelog.
 
 ## [0.2.0] - 2026-10-27
 
@@ -200,6 +208,7 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/amoghnellutla/breachgraph/releases/tag/v0.1.0

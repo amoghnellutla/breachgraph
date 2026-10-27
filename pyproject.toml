@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "breachgraph"
-version = "0.2.0"
+version = "0.3.0"
 description = "Finds the attack paths in a repository. Links Semgrep, Gitleaks, Trivy, Checkov and zizmor findings to your code, Kubernetes, cloud IAM (AWS, Azure, GCP) and GitHub Actions, and fails a pull request when it opens a way from the internet to your data."
 readme = "README.md"
 license = "Apache-2.0"

@@ -1,249 +1,203 @@
-﻿<div align="center">
+# breachgraph
 
-# 🛡️ breachgraph
-
-**Find the attack paths that matter — from code to cloud.**
-
-breachgraph runs the open-source scanners you already trust (Semgrep, Gitleaks, Trivy, Checkov, zizmor,
-ZAP), then does what they can't: it builds one **code-to-cloud graph** and finds the real
-**attack paths** — the chains where an internet-facing route, a vulnerability, a container and an
-over-broad IAM role line up so an outsider can reach your crown-jewel data. It ranks findings by
-whether they actually lie on such a path, so you fix the ten things that can hurt you, not the
-three hundred that can't.
+**Find the few security findings an attacker can actually chain into a breach.**
 
 [![ci](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml)
-[![self-scan](https://github.com/amoghnellutla/breachgraph/actions/workflows/self-scan.yml/badge.svg)](https://github.com/amoghnellutla/breachgraph/actions/workflows/self-scan.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amoghnellutla/breachgraph/badge)](https://scorecard.dev/viewer/?uri=github.com/amoghnellutla/breachgraph)
+[![PyPI](https://img.shields.io/pypi/v/breachgraph.svg)](https://pypi.org/project/breachgraph/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
-</div>
+breachgraph runs Semgrep, Gitleaks, Trivy, Checkov and zizmor on your repository, then reads your
+code, Kubernetes manifests, Terraform (AWS, Azure, GCP) and GitHub Actions workflows to build one
+graph of how they connect. It reports the **attack paths**: an SSRF on a public route, in a pod on a
+node whose role can read the customer bucket, is a breach, even though each scanner saw only one
+piece of it. On a pull request it answers one question first: does this change open a new way in?
 
----
+## Results on real projects
 
-## Why this is different
+breachgraph was run with default settings on eight public projects: deliberately vulnerable
+training projects, where the real attack chains are documented, and Google's Online Boutique as a
+healthy control. Every path it reported was checked by hand.
 
-Most tools hand you a list. A big security team already has Snyk, CodeQL and a cloud scanner.
-What they lack is the *connection between layers*. A medium-severity SSRF is boring on its own.
-SSRF on an internet-facing route, in a pod with host networking, whose node role can read the
-customer-data bucket, is a breach. No single scanner sees that chain, because each one looks at
-only one layer.
+| Project | Findings after dedupe | Attack paths | Real |
+|---|---:|---:|---:|
+| [terragoat](https://github.com/bridgecrewio/terragoat) | 1,088 | 2 | 2 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 795 | 0 | 0 |
+| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 1,446 | 1 | 1 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | 785 | 3 | 3 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | 504 | 2 | 2 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 411 | 5 | 4 |
+| [juice-shop](https://github.com/juice-shop/juice-shop) | 411 | 2 | 2 |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 878 | 0 | 0 |
+| **Total** | **6,318** | **15** | **14** |
 
-breachgraph joins the layers — **code → container → Kubernetes → cloud IAM → data** — into one
-graph and asks the question that matters: *what can an attacker actually reach, and how?*
+6,318 findings come down to 15 attack paths, and 14 of them are real chains an attacker could use
+(93% precision). The control project gets none. The method, every path with the reason it is or
+isn't real, the scenarios breachgraph missed, and what it finds from a leaked key or a foothold
+inside the cluster are in [docs/benchmark.md](docs/benchmark.md). Anyone can rerun it.
 
-**It is not a gimmick:** every step that represents gaining control requires a real weakness.
-Being reachable on the network is not the same as being owned. With zero code vulnerabilities,
-breachgraph reports **no path** to your data even if the pod is public and its role is over-broad
-— you can [see that guarantee as a test](tests/test_graph_paths.py). Fix the one cheapest link
-(the "choke point") and the whole path disappears.
-
-**Measured, not claimed.** On 8 public projects (TerraGoat, CloudGoat, Kubernetes Goat, AWS/Azure/GCP
-Goat, OWASP Juice Shop, and Google's Online Boutique as a control), 6,346 deduplicated findings reduced to
-**12 attack paths, 11 of them real (92% precision)**, with no false paths on the control project. Every
-path is hand-labeled, every miss is documented, and anyone can re-run it:
-[docs/benchmark.md](docs/benchmark.md).
-
-<p align="center"><img src="docs/img/attack-paths.png" alt="breachgraph attack-graph explorer: a selected path from the internet through an injectable CI job and its OIDC deploy role to the customer-data bucket" width="860"></p>
-
-## What you get
-
-| | |
-|---|---|
-| 🎯 **Attack-path analysis** | Joins code, containers, Kubernetes and Terraform (AWS, Azure, GCP) into one graph and finds every chain from the internet to a crown-jewel asset. Each independent entry point surfaces separately; each path names the cheapest fix |
-| ☁️ **Real cloud reasoning** | Evaluates AWS IAM policies (scoping, managed policies, explicit-Deny-wins, **privilege-escalation** primitives), Azure role assignments (Actions/NotActions/DataActions by scope, Key Vault access policies), GCP IAM bindings (predefined and custom roles, service-account impersonation), EKS IRSA, AKS and GKE workload identity, node identities, public exposure (LBs, security groups, public buckets/DBs, unauth Lambda URLs), Kubernetes RBAC and container escape |
-| 🔍 **Coverage** | SAST (Semgrep) · secrets (Gitleaks) · dependency CVEs, IaC, container images, licenses (Trivy) · IaC (Checkov) · GitHub Actions (zizmor, plus built-in pwn-request, script-injection and dependency-confusion checks) · DAST (ZAP) · plus **any SARIF** tool (CodeQL, Bandit, gosec…) via `--import` |
-| 🔗 **CI/CD attack paths** | A script injection in an `issue_comment` workflow is not just a finding: breachgraph follows the job's OIDC deploy role, secrets and write token to what they reach, and checks trust policies against the token the job really gets. See [docs/cicd.md](docs/cicd.md) |
-| 🧹 **Deduplication** | Cross-tool clustering (e.g. Trivy `AVD-DS-0002` ≡ Checkov `CKV_DOCKER_3`) and same-tool rule overlap — at most one finding per tool in each cluster |
-| 📊 **Risk-based priority** | CVSS/severity adjusted by **CISA KEV** (actively exploited → always P1), **FIRST EPSS**, confidence, multi-tool agreement and reachability to crown jewels. Every score explains itself |
-| 🚦 **Gate that teams keep on** | Content-based fingerprints + **baselines**, so only *new* findings and *new* attack paths fail the build. **Suppressions require a reason and an expiry date** |
-| 💬 **Feedback where developers are** | Sticky PR comment with the attack-path diagram · inline code-scanning annotations (SARIF) · job summary · auto-managed GitHub issues |
-| 📦 **Reports** | SARIF 2.1.0 · JSON · self-contained HTML (interactive attack-path flows) · Markdown · JUnit · CycloneDX SBOM · **OpenVEX** from reachability, consumable by Trivy/Grype ([docs/vex.md](docs/vex.md)) |
-| 🤖 **Optional AI triage** | Bring your own Anthropic key: a real / likely-false-positive / needs-review verdict and a concrete fix per top finding, judged from the enclosing function, its HTTP route, its attack path, and how a vulnerable package is actually called. Advisory only, secrets redacted, spend cap. See [docs/ai-triage.md](docs/ai-triage.md) |
-| 🔒 **Trustworthy itself** | Scanner binaries pinned and SHA-256 verified · actions pinned to commit SHAs · signed images with SBOM + provenance · secrets always redacted · untrusted scanner output escaped |
-
-<p align="center"><img src="docs/img/html-report.png" alt="breachgraph HTML report header" width="820"></p>
+<p align="center"><img src="docs/img/attack-paths.png" alt="The HTML report's attack-graph explorer with one path selected, from the internet through an injectable CI job and its deploy role to a customer-data bucket" width="860"></p>
 
 ## Quick start
 
-### GitHub Actions
+On GitHub, add a workflow:
 
 ```yaml
 # .github/workflows/breachgraph.yml
 name: breachgraph
-on: [pull_request, push]
+on:
+  pull_request:
+  push:
+    branches: [main]
 permissions:
   contents: read
-  security-events: write   # code scanning upload
-  pull-requests: write     # PR comment
+  security-events: write   # findings in code scanning
+  pull-requests: write     # the PR comment
 jobs:
   breachgraph:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: amoghnellutla/breachgraph@v0
 ```
 
-More recipes (baselines, DAST, container images, issue tracking) are in [docs/github-action.md](docs/github-action.md).
-
-### Docker (any CI, or your laptop)
-
-```bash
-docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
-open breachgraph-report/breachgraph.html
-```
-
-### pip
+Or let breachgraph write it, along with a starter config, and tell you what it found in the repository:
 
 ```bash
 pip install breachgraph
-breachgraph doctor          # shows which scanners are on PATH
-breachgraph scan .
+breachgraph init
 ```
 
-The pip package only orchestrates. It runs whichever scanners are installed and skips the rest.
-The Docker image bundles all of them at pinned versions.
+Anywhere else, the Docker image has every scanner at a pinned version:
 
-### GitLab CI
+```bash
+docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .
+```
+
+The report lands in `breachgraph-report/` (HTML, JSON, SARIF, Markdown). `pip install breachgraph`
+works too; it runs whichever scanners are installed and `breachgraph doctor` lists them. There is a
+GitLab CI template in [templates/](templates/gitlab-ci.yml) and more GitHub recipes in
+[docs/github-action.md](docs/github-action.md).
+
+## What a pull request sees
+
+The comment leads with the change in attack paths compared with the default branch, drawn as a
+diagram, then the findings that block the merge:
+
+> **This change opens 1 new attack path(s)**
+>
+> **→ S3 bucket shop-customer-data-prod** · high confidence
+
+```mermaid
+flowchart LR
+  n0["Internet"] --> n1["Ingress api"] --> n2["Deployment shop/api"] --> n3["GET /fetch"]
+  n3 -- "ssrf" --> n4["IAM role eks-node-role"] --> n5["S3 bucket shop-customer-data-prod"]
+  style n5 stroke-width:3px
+```
+
+> `Internet` → Ingress api → Deployment shop/api → GET /fetch → **IAM role eks-node-role** (ssrf,
+> `services/api/app.py:19`) → S3 bucket shop-customer-data-prod
+>
+> MITRE ATT&CK: T1190, T1552.005, T1530
+>
+> **Fix these first:** SSRF `services/api/app.py:23`, breaks 1 path
+
+That is the demo in [examples/vulnerable-platform](examples/vulnerable-platform), compared with a
+version of it without the SSRF: the API runs on a node whose role can read the customer bucket, so
+the SSRF is a way to that bucket, not just a finding.
+
+Findings and paths that already exist on the default branch don't fail the pull request, so you can
+turn the gate on in a legacy repository on day one. If a pull request edits the gate's own settings
+(a lower threshold, a new suppression, a scanner turned off), the comment says so.
+
+## How it decides what matters
+
+- **No free ride.** Reaching a workload over the network is not owning it. Every step that gains
+  control needs a real weakness at that step: code execution, injection, SSRF to a metadata
+  endpoint, a committed credential, a known-exploited CVE in a package the code imports. With no
+  such weakness, a public pod with an over-broad role is reported as exposure, not as a path. This is
+  [a test](tests/test_graph_paths.py), not a promise.
+- **Cloud permissions are evaluated, not listed.** AWS policies with wildcards, resource scoping,
+  explicit deny and privilege-escalation primitives; AssumeRole chains where both the caller's
+  policy and the role's trust allow it; Azure role definitions by scope and data actions; GCP
+  bindings and service-account impersonation; EKS, AKS and GKE workload identity.
+- **CI is part of the attack surface.** A script injection in an `issue_comment` workflow reaches
+  whatever that job can reach: its OIDC deploy role (checked against the trust policy's `sub`
+  claim), its secrets, a token that can push code. See [docs/cicd.md](docs/cicd.md).
+- **The cheapest fix is named.** Each path lists the findings it needs, and the report ranks the
+  fixes that break the most paths.
+- **It says what it couldn't see.** Every report has a coverage line: how many routes, workloads,
+  cloud resources, Kubernetes objects and CI jobs were modeled, and why a clean result might be
+  incomplete (a scanner that didn't run, Helm charts that weren't rendered, no deployment
+  configuration).
+- **Findings are scored by exploitability**: CISA KEV, FIRST EPSS, whether a vulnerable package is
+  imported at all, agreement between tools, and whether the finding sits on a path.
+
+The model, its rules and its limits: [docs/attack-graph.md](docs/attack-graph.md).
+
+## Starting points beyond the internet
+
+Some breaches start from a key that leaked or a pod that was already compromised. Turn these on to
+see what each would reach:
 
 ```yaml
-include:
-  - remote: https://raw.githubusercontent.com/amoghnellutla/breachgraph/v0/templates/gitlab-ci.yml
+# .breachgraph.yml
+attack_graph:
+  entry_points: [internet, credentials, cluster]
 ```
 
-## Try it on the demo app
+`credentials` treats every access key Terraform manages as leaked; `cluster` assumes code running
+inside the Kubernetes network. Paths that start from an assumption are named that way in every report.
 
-[`examples/vulnerable-app`](examples/vulnerable-app) is an intentionally vulnerable Flask app
-with Terraform, Kubernetes and Dockerfile misconfigurations, fake secrets and Log4Shell:
-
-```bash
-docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan examples/vulnerable-app
-```
-
-```
-      ok gitleaks     2 findings     0.7s
-      ok checkov     50 findings     8.2s
-      ok semgrep     26 findings     9.2s
-      ok trivy      149 findings    25.5s
-| Prio | Risk | Finding                                                      | Location     | Tools            | Status     |
-| P1   | 10.0 | CVE-2021-44228 in log4j-core 2.14.1: Remote code exec  KEV   | pom.xml:11   | trivy            | BLOCKS new |
-| P1   | 10.0 | Hardcoded secret: Identified a Private Key                   | settings.py:6| gitleaks,semgrep | BLOCKS new |
-...
-Gate failed: 104 finding(s) at or above the threshold (priority >= P2, any KEV, any secret)
-```
-
-## Adopting it on an existing codebase
-
-```bash
-# 1. Accept what exists today
-breachgraph scan --write-baseline .breachgraph-baseline.json && git add .breachgraph-baseline.json
-
-# 2. Turn the gate on. From now on only NEW findings fail PRs.
-# 3. Burn down the baseline over time; accepted risks go into .breachgraph.yml with an expiry:
-```
+## Policy
 
 ```yaml
 # .breachgraph.yml
 fail_on:
-  priority: P2        # new P1/P2 findings fail the build
-  kev: true           # so does anything actively exploited
-  secrets: true       # and any hardcoded secret
+  priority: P1      # new P1 findings fail; attack paths, KEV CVEs and secrets always do
 suppressions:
   - vuln: CVE-2023-12345
-    reason: "Vulnerable code path not reachable; tracked in SEC-142"
+    reason: "Parser not reachable from any route; tracked in SEC-142"
     expires: 2026-12-31
 ```
 
-Full reference: [docs/configuration.md](docs/configuration.md).
+Suppressions need a reason and an expiry date. Everything else is in
+[docs/configuration.md](docs/configuration.md).
 
-## Attack paths
+## Output
 
-[`examples/vulnerable-platform`](examples/vulnerable-platform) is a small microservice (Flask API
-on EKS with IRSA, plus Terraform) with a real internet-to-S3 path. breachgraph reports:
+SARIF for GitHub code scanning (with MITRE ATT&CK and OWASP CI/CD tags), a sticky PR comment and job
+summary, a self-contained HTML report with an interactive graph, JSON, Markdown, a CycloneDX SBOM,
+and GitHub issues per finding if you want them. Also available: JUnit, and OpenVEX statements from
+reachability for Trivy and Grype ([docs/vex.md](docs/vex.md)). Existing reports from ZAP, CodeQL or
+any SARIF tool merge in with `--import`.
 
-```
-🎯 2 attack path(s) to crown-jewel assets
-  1. [high] risk 14.0 BLOCKS
-     Internet → Ingress api → Deployment shop/api → GET /thumbnail
-       → ServiceAccount shop/api (code_execution) → IAM role api-pod-role
-       → S3 bucket shop-customer-data-prod
-  2. [high] risk 12.73 BLOCKS
-     Internet → Ingress api → Deployment shop/api → GET /fetch
-       → IAM role eks-node-role (ssrf → node metadata) → S3 bucket shop-customer-data-prod
-  Fix first:
-    • Command injection via os.popen (services/api/app.py:30) — breaks 1 path(s)
-    • SSRF via requests.get (services/api/app.py:23) — breaks 1 path(s)
-```
+Optional AI triage with your own Anthropic key gives each top finding a verdict and a concrete fix,
+judged from the enclosing function, its route and its attack path. It is advisory, never changes
+the gate, and has a hard spend cap. See [docs/ai-triage.md](docs/ai-triage.md).
 
-Two independent ways in (command injection gives the pod role; SSRF steals the node role via the
-metadata endpoint) surface separately, because fixing one does not fix the other. Run it yourself:
+## Trust
 
-```bash
-breachgraph scan examples/vulnerable-platform     # scanners + attack graph
-breachgraph graph examples/vulnerable-platform    # attack graph only
-```
+breachgraph reads code it does not trust, often next to CI credentials. It never executes repository
+content, never reads outside the scanned tree, and redacts secrets twice. Scanner binaries are
+checksum-verified, every Python package is installed from a hash-pinned lock, actions are pinned to
+commits, and releases are signed with Sigstore and ship with SBOM and provenance. The threat model is
+in [docs/architecture.md](docs/architecture.md#threat-model).
 
-How reachability and IAM are modeled: [docs/attack-graph.md](docs/attack-graph.md).
+## Limits
 
-## How it works
-
-```mermaid
-flowchart LR
-    A[Semgrep · Gitleaks · Trivy · Checkov · zizmor · built-in CI/CD · ZAP · SARIF] --> B[Normalize<br/>CWE · OWASP · fingerprint]
-    B --> C[Dedupe] --> D[Enrich<br/>KEV · EPSS] --> E[Score P1–P4]
-    E --> G2[Attack graph<br/>code→cloud paths]
-    CFG[Kubernetes · Terraform · routes] --> G2
-    G2 --> F[Baseline ·<br/>suppressions]
-    F --> GATE{Gate}
-    GATE --> H[SARIF · PR comment · HTML · issues]
-```
-
-Design notes and how to add a scanner: [docs/architecture.md](docs/architecture.md).
-
-## CLI
-
-```
-breachgraph scan [PATH]      Scan and gate
-  -c, --config FILE        .breachgraph.yml (auto-detected)
-  -b, --baseline FILE      accepted findings (auto-detected .breachgraph-baseline.json)
-  --write-baseline FILE    accept all current findings
-  -f, --format LIST        json,sarif,html,md,junit
-  --only / --skip LIST     choose scanners
-  --import TOOL=FILE       ingest existing reports (semgrep, gitleaks, trivy, checkov, zap, sarif)
-  --fail-on P1..P4|none    override the threshold
-  --dast-url URL           run ZAP against a running app
-  --image REF              scan a container image
-  --github-comment         sticky PR comment
-  --github-issues P1       open/close issues per finding
-  --ai                     AI triage (bring your own ANTHROPIC_API_KEY): verdicts + fixes, advisory
-  --offline                skip KEV/EPSS
-  --no-fail                report only
-breachgraph graph [PATH]          build the attack graph only (--findings a prior scan)
-breachgraph report results.json   re-render reports, optionally with a new policy
-breachgraph doctor                show installed scanners
-breachgraph init                  write a starter .breachgraph.yml and workflow
-```
-
-Exit codes: `0` pass · `1` gate failed · `2` usage/config error · `3` scanner error (opt-in).
-
-## Roadmap
-
-- [x] **Reachability** for dependency CVEs: is the package imported by first-party code, and is that code reachable from an HTTP route (Python/JS/TS/Java/Go)
-- [x] **Public benchmark** on 8 real projects with hand-labeled paths and documented misses ([docs/benchmark.md](docs/benchmark.md))
-- [ ] Function-level reachability: is the vulnerable function itself called
-- [ ] Entry points beyond the internet: leaked credentials (IAM user keys, SSH keys) and an "assume breach inside the cluster" mode
-- [ ] Know when an SSRF controls request headers (decides whether metadata servers that need a header are reachable)
-- [x] **Bring-your-own-key AI triage**: optional; with your own Anthropic key, a verdict and fix per top finding, grounded in the enclosing code, route and attack path. Advisory, defensive-only, with a spend cap. See [docs/ai-triage.md](docs/ai-triage.md)
-- [x] Azure and GCP in the attack graph
-- [x] **CI/CD and supply chain**: GitHub Actions script injection and pwn requests, zizmor audits, dependency confusion, and CI jobs as attack-graph entry points (OIDC roles, secrets, write tokens). See [docs/cicd.md](docs/cicd.md)
-- [ ] Malicious-package detection; GitLab CI
-- [ ] OSV-Scanner and Grype adapters; GitLab merge-request notes; trend history across runs
+Dependency reachability is import-level: it knows a package is imported, not that the vulnerable
+function is called. Azure and GCP are read from Terraform only. Unrendered Helm charts are listed as
+blind spots. Network policies are not modeled yet, so cluster-internal paths are an upper bound.
 
 ## Contributing
 
-Issues and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability in
-breachgraph itself, see [SECURITY.md](SECURITY.md).
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Report a vulnerability
+in breachgraph privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[Apache-2.0](LICENSE). The bundled scanners keep their own licenses: Semgrep CE (LGPL-2.1),
-Gitleaks (MIT), Trivy (Apache-2.0), Checkov (Apache-2.0), zizmor (MIT), ZAP (Apache-2.0).
+[Apache-2.0](LICENSE). The bundled scanners keep their own licenses: Semgrep CE (LGPL-2.1), Gitleaks
+(MIT), Trivy (Apache-2.0), Checkov (Apache-2.0), zizmor (MIT).
