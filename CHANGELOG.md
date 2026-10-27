@@ -38,6 +38,10 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   `identity.0.principal_id` references, resource groups named by a variable, and privilege
   escalation by running code on a VM, app or runbook in scope (Contributor -> Owner identity).
 - Kubernetes worker nodes are crown jewels, so container-escape paths have a target.
+- API Gateway REST APIs (v1) now expose the Lambda functions they integrate (high confidence when
+  the method has `authorization = "NONE"`), and SQL/NoSQL injection reaches every queryable store
+  the service's identity can read (RDS, DynamoDB, Azure SQL/Cosmos DB, Cloud SQL, BigQuery), also
+  from serverless handlers that have no framework routes.
 - IAM policies read from files (`file("policies/x.json")`), and `jsonencode` policies with
   function calls or reference lists, are now evaluated instead of reported as blind spots.
 - Reachability no longer calls a package "unused" when another dependency that the code imports

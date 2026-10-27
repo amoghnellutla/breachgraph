@@ -275,7 +275,7 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                 if e.kind is not EdgeKind.USES_IDENTITY:
                     continue
                 for e2 in adj.get(e.dst, []):
-                    if e2.kind is EdgeKind.CAN_ACCESS and graph.nodes[e2.dst].attrs.get("relational"):
+                    if e2.kind is EdgeKind.CAN_ACCESS and graph.nodes[e2.dst].attrs.get("queryable"):
                         graph.add_edge(
                             Edge(
                                 src=route.id,
@@ -287,6 +287,27 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                                 note="query injection against the database this service uses",
                             )
                         )
+    # Query injection in a workload's own code (serverless handlers have no framework routes).
+    for w in graph.of_kind(NodeKind.WORKLOAD):
+        hits = w.has({WeaknessClass.INJECTION_DATA})
+        if not hits:
+            continue
+        for e in adj.get(w.id, []):
+            if e.kind is not EdgeKind.USES_IDENTITY:
+                continue
+            for e2 in adj.get(e.dst, []):
+                if e2.kind is EdgeKind.CAN_ACCESS and graph.nodes[e2.dst].attrs.get("queryable"):
+                    graph.add_edge(
+                        Edge(
+                            src=w.id,
+                            dst=e2.dst,
+                            kind=EdgeKind.CONNECTS_TO,
+                            requires=[WeaknessClass.INJECTION_DATA],
+                            evidence=[hits[0].evidence],
+                            confidence=Confidence.MEDIUM,
+                            note="query injection against the database this service uses",
+                        )
+                    )
     # Exposed workloads whose image/dependencies carry a known-exploited CVE.
     for w in graph.of_kind(NodeKind.WORKLOAD):
         if w.has({WeaknessClass.VULNERABLE_DEPENDENCY}):

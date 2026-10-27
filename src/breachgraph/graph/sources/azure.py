@@ -262,6 +262,7 @@ class AzureTerraform:
                         "tf_range": r.tf_range,
                         "rg": self._rg(r.body.get("resource_group_name")),
                         "relational": relational,
+                        "queryable": relational or r.rtype == "azurerm_cosmosdb_account",
                         "rbac": rbac,
                     },
                     evidence=[r.ev],

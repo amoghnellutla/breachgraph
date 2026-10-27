@@ -262,3 +262,56 @@ def test_jsonencode_with_function_calls_and_reference_lists() -> None:
     st = doc["Statement"][0]
     assert st["Resource"] == ["${aws_s3_bucket.b.arn}", "x"]
     assert st["Condition"]["IpAddress"]["aws:SourceIp"].startswith("${concat(")
+
+
+APIGW_LAMBDA = """
+data "archive_file" "fn" {
+  type        = "zip"
+  source_dir  = "src"
+  output_path = "fn.zip"
+}
+resource "aws_dynamodb_table" "posts" {
+  name = "blog-posts"
+}
+resource "aws_iam_role" "fn" {
+  name               = "fn-role"
+  assume_role_policy = jsonencode({ Statement = [{ Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole" }] })
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"]
+}
+resource "aws_lambda_function" "data" {
+  function_name = "blog-data"
+  filename      = data.archive_file.fn.output_path
+  role          = aws_iam_role.fn.arn
+}
+resource "aws_api_gateway_method" "get" {
+  http_method   = "GET"
+  authorization = "NONE"
+}
+resource "aws_api_gateway_integration" "get" {
+  http_method = aws_api_gateway_method.get.http_method
+  type        = "AWS_PROXY"
+  uri         = aws_lambda_function.data.invoke_arn
+}
+"""
+
+
+def test_rest_api_gateway_exposes_lambda_and_nosql_injection_reads_dynamodb(tmp_path: Path) -> None:
+    """AWSGoat: REST API Gateway (v1) integrations weren't exposure, and NoSQL injection in a
+    handler (no framework route) never reached the DynamoDB table its role can read."""
+    write(
+        tmp_path,
+        "src/handler.py",
+        "def handler(event, ctx):\n    return table.scan(FilterExpression=event['q'])\n",
+    )
+    write(tmp_path, "main.tf", APIGW_LAMBDA)
+    nosqli = finding("src/handler.py", 2, "CWE-943", "NoSQL injection", "nosqli")
+    res = build_attack_graph(tmp_path, [nosqli], Config())
+    assert ["internet", "aws:lambda:blog-data", "aws:dynamodb_table:blog-posts"] in [
+        p.nodes for p in res.paths
+    ]
+    exposure = next(e for e in res.graph.edges if e.src == INTERNET_ID and e.dst == "aws:lambda:blog-data")
+    assert "authorization NONE" in exposure.note
+    assert not any(
+        p.target.id == "aws:dynamodb_table:blog-posts"
+        for p in build_attack_graph(tmp_path, [], Config()).paths
+    )

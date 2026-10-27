@@ -218,7 +218,13 @@ class GcpTerraform:
                     kind=kind,
                     name=f"{label} {name}",
                     value=value,
-                    attrs={"platform": "gcp", "tf": key, "tf_range": r.tf_range, "relational": relational},
+                    attrs={
+                        "platform": "gcp",
+                        "tf": key,
+                        "tf_range": r.tf_range,
+                        "relational": relational,
+                        "queryable": relational or r.rtype == "google_bigquery_dataset",
+                    },
                     evidence=[r.ev],
                 )
             )

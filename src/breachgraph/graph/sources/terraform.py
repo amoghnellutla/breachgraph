@@ -265,6 +265,8 @@ class TerraformSource:
                         "tf_range": [r.ev.path, r.ev.line, r.end_line],
                         "arn_name": ident,
                         "relational": r.rtype in ("aws_db_instance", "aws_rds_cluster"),
+                        # Query injection (SQL or NoSQL) reads what the service can query.
+                        "queryable": r.rtype in ("aws_db_instance", "aws_rds_cluster", "aws_dynamodb_table"),
                     },
                     evidence=[r.ev],
                 )
@@ -830,6 +832,24 @@ class TerraformSource:
                             kind=EdgeKind.EXPOSES,
                             evidence=[r.ev],
                             note="Lambda function URL with authorization_type NONE",
+                        )
+                    )
+            if r.rtype == "aws_api_gateway_integration":
+                fn = self._node_for_ref(st, r.body.get("uri"), "aws_lambda_function")
+                method = self._node_for_ref(st, r.body.get("http_method"), "aws_api_gateway_method")
+                auth = literal(method.body.get("authorization")) if method else None
+                if fn and fn.node_id:
+                    graph.add_node(internet())
+                    graph.add_edge(
+                        Edge(
+                            src=INTERNET_ID,
+                            dst=fn.node_id,
+                            kind=EdgeKind.EXPOSES,
+                            evidence=[r.ev],
+                            confidence=Confidence.HIGH if auth == "NONE" else Confidence.LOW,
+                            note="API Gateway REST method with authorization NONE"
+                            if auth == "NONE"
+                            else f"API Gateway REST method (authorization: {auth or 'not resolved'})",
                         )
                     )
             if r.rtype == "aws_apigatewayv2_integration":
