@@ -20,10 +20,10 @@ In scope:
   leak secrets, write outside the output directory, or inject content into PR comments, issues
   or HTML reports.
 
-Vulnerabilities in the bundled scanners (Semgrep, Gitleaks, Trivy, Checkov, ZAP) should be
+Vulnerabilities in the bundled scanners (Semgrep, Gitleaks, Trivy, Checkov, zizmor, ZAP) should be
 reported to those projects. We will bump the pinned version once a fix is released.
 
-The intentionally vulnerable code in `examples/vulnerable-app/` is out of scope.
+The intentionally vulnerable code in `examples/` is out of scope.
 
 ## Supported versions
 
@@ -37,3 +37,16 @@ Only the latest minor release receives security fixes.
 - Secrets are redacted by Gitleaks and redacted again by breachgraph. Secret values are never written to reports.
 - Scanner output is treated as untrusted: HTML is auto-escaped, only `http(s)` links are rendered,
   and `@` mentions are neutralized in GitHub comments and issues.
+
+## Verifying a release
+
+Images are signed keylessly by the release workflow, so you can check that an image was built by
+this repository's workflow, from a tag, and recorded in the public transparency log. Use cosign v3
+or later; v2 cannot read the signature format:
+
+```bash
+cosign verify ghcr.io/amoghnellutla/breachgraph:v0.1.0   --certificate-identity-regexp 'https://github.com/amoghnellutla/breachgraph/.github/workflows/release.yml@refs/tags/v.*'   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Each GitHub release lists the image digest. Pin the digest (`@sha256:...`) in your workflows, and
+let Dependabot or Renovate propose updates.
