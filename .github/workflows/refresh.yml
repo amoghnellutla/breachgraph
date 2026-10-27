@@ -58,8 +58,8 @@ jobs:
             echo "Binaries:"
             if [ -s binaries.txt ]; then sed 's/^/- /' binaries.txt; else echo "- no change"; fi
             echo
-            echo "Python packages (top-level and transitive):"
-            git diff -U0 -- requirements/*.txt | grep -E '^[-+][A-Za-z0-9_.-]+==' | sed -E 's/ \\$//; s/^/    /' | sort -u | head -80
+            echo "Python packages:"
+            python scripts/lock_diff.py | sed 's/^/- /' | head -80
             echo
             echo "Review and merge: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${branch}?expand=1"
           } > body.md

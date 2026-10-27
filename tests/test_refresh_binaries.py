@@ -80,3 +80,17 @@ def test_missing_checksums_leave_the_pin_alone(monkeypatch: pytest.MonkeyPatch) 
     )
     text, changes = refresh.refresh(DOCKER, NOW)
     assert text == DOCKER and changes == ["trivy 0.76.1: checksums missing, not updated"]
+
+
+def test_lock_diff_pairs_old_and_new_versions() -> None:
+    spec2 = importlib.util.spec_from_file_location("lock_diff", ROOT / "scripts" / "lock_diff.py")
+    assert spec2 and spec2.loader
+    lock_diff = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(lock_diff)
+    old = "semgrep==1.179.0 \\n    --hash=sha256:x\nrich==13.0 ; python_version >= '3.11'\ngone==1\n"
+    new = "semgrep==1.180.0 \\n    --hash=sha256:y\nrich==13.0\nfresh==2\n"
+    assert lock_diff.changes(old, new) == [
+        "fresh (new) -> 2",
+        "gone 1 -> (removed)",
+        "semgrep 1.179.0 -> 1.180.0",
+    ]
