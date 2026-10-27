@@ -284,6 +284,8 @@ class GcpTerraform:
             )
         )
         sa = self._sa(sa_value, graph) if sa_value else None
+        if sa is None and platform in ("cloud-run", "cloud-functions"):
+            sa = self._default_sa(graph, r, platform)
         if sa is None:
             return
         limited = scopes is not None and not any("cloud-platform" in s for s in list_of(scopes))
@@ -331,6 +333,34 @@ class GcpTerraform:
                 self._workload(
                     graph, r, "Cloud Function", "cloud-functions", [], svc.get("service_account_email")
                 )
+
+    def _default_sa(self, graph: Graph, r: Res, platform: str) -> str:
+        """Cloud Run / Cloud Functions without a service account run as a default one, which gets
+        the project Editor role unless the organization disables automatic role grants."""
+        which = "App Engine" if platform == "cloud-functions" else "Compute Engine"
+        nid = f"gcp:service_account:default-{which.lower().replace(' ', '-')}"
+        graph.add_node(
+            Node(
+                id=nid,
+                kind=NodeKind.IDENTITY,
+                name=f"{which} default service account",
+                attrs={"platform": "gcp", "default": True},
+                evidence=[r.ev],
+            )
+        )
+        for store in self.stores:
+            graph.add_edge(
+                Edge(
+                    src=nid,
+                    dst=store,
+                    kind=EdgeKind.CAN_ACCESS,
+                    evidence=[r.ev],
+                    confidence=Confidence.LOW,
+                    note="default service accounts get roles/editor on the project unless the "
+                    "iam.automaticIamGrantsForDefaultServiceAccounts org policy is enforced",
+                )
+            )
+        return nid
 
     def _gke(self, graph: Graph) -> None:
         for r in self.res.values():

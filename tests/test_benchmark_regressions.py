@@ -315,3 +315,52 @@ def test_rest_api_gateway_exposes_lambda_and_nosql_injection_reads_dynamodb(tmp_
         p.target.id == "aws:dynamodb_table:blog-posts"
         for p in build_attack_graph(tmp_path, [], Config()).paths
     )
+
+
+def test_ssrf_in_a_function_reaches_its_default_service_account(tmp_path: Path) -> None:
+    """GCPGoat: a public Cloud Function with an SSRF (Semgrep's dynamic-urllib rule, CWE-939) and
+    no service account set runs as the App Engine default account (Editor by default)."""
+    write(
+        tmp_path,
+        "fn/main.py",
+        "import urllib.request\n\ndef main(req):\n    return urllib.request.urlopen(req.args['u']).read()\n",
+    )
+    write(
+        tmp_path,
+        "main.tf",
+        """
+data "archive_file" "src" {
+  type        = "zip"
+  source_dir  = "fn"
+  output_path = "function.zip"
+}
+resource "google_storage_bucket_object" "zip" {
+  name   = "function.zip"
+  source = "function.zip"
+}
+resource "google_storage_bucket" "private" {
+  name = "private-data"
+}
+resource "google_cloudfunctions_function" "backend" {
+  name                  = "backend"
+  source_archive_object = google_storage_bucket_object.zip.name
+}
+resource "google_cloudfunctions_function_iam_member" "public" {
+  cloud_function = google_cloudfunctions_function.backend.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "allUsers"
+}
+""",
+    )
+    ssrf = finding(
+        "fn/main.py", 4, "CWE-939", "python.lang.security.audit.dynamic-urllib-use-detected", "ssrf-fn"
+    )
+    res = build_attack_graph(tmp_path, [ssrf], Config())
+    path = next(p for p in res.paths if p.target.id == "gcp:storage_bucket:private-data")
+    assert path.nodes == [
+        "internet",
+        "gcp:cloudfunctions_function:backend",
+        "gcp:service_account:default-app-engine",
+        "gcp:storage_bucket:private-data",
+    ]
+    assert path.confidence.value == "low"  # Metadata-Flavor header + Editor-by-default assumption

@@ -38,6 +38,14 @@ CWE_CLASSES: dict[WeaknessClass, set[str]] = {
 }
 
 
+# Well-known rules whose CWE doesn't say what they let an attacker do.
+RULE_HINTS: list[tuple[str, WeaknessClass]] = [
+    ("ssrf", WeaknessClass.SSRF),
+    ("dynamic-urllib-use-detected", WeaknessClass.SSRF),  # CWE-939; also file:// reads
+    ("server-side-request", WeaknessClass.SSRF),
+]
+
+
 def weakness_class(f: Finding) -> WeaknessClass | None:
     if f.category is Category.SECRETS:
         return WeaknessClass.CREDENTIAL_EXPOSURE
@@ -52,6 +60,10 @@ def weakness_class(f: Finding) -> WeaknessClass | None:
         return None
     for cls, cwes in CWE_CLASSES.items():
         if set(f.cwe) & cwes:
+            return cls
+    rule = f.rule_id.lower()
+    for hint, cls in RULE_HINTS:
+        if hint in rule:
             return cls
     return None
 
@@ -308,6 +320,31 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                             note="query injection against the database this service uses",
                         )
                     )
+    # SSRF in a workload's own code reaches its metadata/credential endpoint (serverless handlers).
+    for w in graph.of_kind(NodeKind.WORKLOAD):
+        ssrf = w.has({WeaknessClass.SSRF})
+        if (
+            not ssrf
+            or not w.has({WeaknessClass.METADATA_REACHABLE})
+            or w.attrs.get("platform") == "kubernetes"
+        ):
+            continue
+        header = w.attrs.get("metadata_header")
+        plain = w.attrs.get("imdsv2") is False and not header
+        for e in adj.get(w.id, []):
+            if e.kind is EdgeKind.USES_IDENTITY:
+                graph.add_edge(
+                    Edge(
+                        src=w.id,
+                        dst=e.dst,
+                        kind=EdgeKind.USES_IDENTITY,
+                        requires=[WeaknessClass.SSRF],
+                        evidence=[ssrf[0].evidence],
+                        confidence=Confidence.HIGH if plain else Confidence.LOW,
+                        note="server-side requests reach the cloud credential endpoint"
+                        + ("" if plain else f" ({header or 'IMDSv2'} reduces this risk)"),
+                    )
+                )
     # Exposed workloads whose image/dependencies carry a known-exploited CVE.
     for w in graph.of_kind(NodeKind.WORKLOAD):
         if w.has({WeaknessClass.VULNERABLE_DEPENDENCY}):

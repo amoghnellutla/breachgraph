@@ -38,6 +38,9 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   `identity.0.principal_id` references, resource groups named by a variable, and privilege
   escalation by running code on a VM, app or runbook in scope (Contributor -> Owner identity).
 - Kubernetes worker nodes are crown jewels, so container-escape paths have a target.
+- GCP: Cloud Run / Cloud Functions without a service account run as the default one (Editor by
+  default; low confidence), and SSRF in serverless code reaches the metadata server; Semgrep's
+  SSRF rules are recognized even when their CWE isn't CWE-918.
 - API Gateway REST APIs (v1) now expose the Lambda functions they integrate (high confidence when
   the method has `authorization = "NONE"`), and SQL/NoSQL injection reaches every queryable store
   the service's identity can read (RDS, DynamoDB, Azure SQL/Cosmos DB, Cloud SQL, BigQuery), also
