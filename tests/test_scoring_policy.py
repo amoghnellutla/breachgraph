@@ -198,4 +198,4 @@ def test_load_config_rejects_unknown_keys(tmp_path: Path) -> None:
 def test_load_config_empty_file(tmp_path: Path) -> None:
     p = tmp_path / ".breachgraph.yml"
     p.write_text("", encoding="utf-8")
-    assert load_config(p).fail_on.priority is Priority.P2
+    assert load_config(p).fail_on.priority is Priority.P1

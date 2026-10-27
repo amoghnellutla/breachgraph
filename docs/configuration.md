@@ -55,7 +55,7 @@ deprioritize_paths:              # still reported, but scored 2 points lower
   - docs/
 
 fail_on:
-  priority: P2                   # fail on findings at P2 or more urgent; null to disable
+  priority: P1                   # fail on P1 findings (P2 for a stricter gate); null to disable
   severity: null                 # alternatively gate on raw severity: critical|high|medium|low
   kev: true                      # any CVE in CISA's Known Exploited Vulnerabilities catalog
   secrets: true                  # any hardcoded secret

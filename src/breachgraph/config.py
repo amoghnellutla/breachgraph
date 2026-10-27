@@ -101,7 +101,10 @@ class Scanners(_Strict):
 
 
 class FailOn(_Strict):
-    priority: Priority | None = Priority.P2  # fail on findings at this priority or more urgent
+    # Fail on findings at this priority or more urgent. P1 by default: on real projects P2 blocks
+    # hundreds of findings per repo (docs/benchmark.md), and attack paths, KEV CVEs and secrets
+    # gate separately below.
+    priority: Priority | None = Priority.P1
     severity: Severity | None = None  # alternatively/additionally fail on raw severity
     kev: bool = True  # any finding with a CISA KEV CVE fails the gate
     secrets: bool = True  # any verified-format secret fails regardless of priority

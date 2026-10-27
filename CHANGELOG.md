@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The default gate fails on P1 findings instead of P2, alongside attack paths, known exploited CVEs
+  and secrets. On the benchmark projects P2 blocked 1,497 findings, 131 of them on a healthy
+  production-style repository. Set `fail_on.priority: P2` for the stricter gate.
+
 ## [0.2.0] - 2026-10-27
 
 ### Added

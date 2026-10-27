@@ -491,7 +491,7 @@ scanners:
     target_url: null
 
 fail_on:
-  priority: P2                 # fail on new P1/P2 findings
+  priority: P1                 # fail on new P1 findings; P2 is stricter
   kev: true                    # always fail on actively exploited CVEs
   secrets: true                # always fail on new hardcoded secrets
   new_only: true               # with a baseline, pre-existing findings don't fail the build
