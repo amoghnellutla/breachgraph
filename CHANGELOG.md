@@ -16,6 +16,10 @@ All notable changes to this project are documented here. The format follows
   of findings it carried over) in the PR comment, console and HTML report, and no longer adds a
   warning.
 - When scanners aren't installed, the scan says so once and gives the Docker command that has them.
+- CI/CD checks: what runs inside a side checkout of the pull request decides the rating. Building
+  or running it is critical; commands that only read it (git, or a trusted tool by absolute path)
+  are medium with what to verify. Found by a third survey (117 popular repositories that use
+  `issue_comment`), which also found one real pwn request, withheld until fixed.
 
 ## [0.5.0] - 2026-10-27
 

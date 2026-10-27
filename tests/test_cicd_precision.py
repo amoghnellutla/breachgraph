@@ -148,3 +148,21 @@ def test_no_secrets_and_read_only_is_medium(tmp_path: Path) -> None:
     assert [(f.rule_id, f.severity.value) for f in analyze(tmp_path, [])[0]] == [
         ("cicd/untrusted-checkout", "medium")
     ]
+
+
+def test_what_runs_inside_a_side_checkout_decides(tmp_path: Path) -> None:
+    """From the issue_comment survey: reading the checkout is not running it; building it is."""
+    side = "          path: pr\n"
+    # Only git and an echo that mentions make: data (OpenTelemetry's codeowners check).
+    run = "|\n          make gen ARGS=-folder=pr\n          git -C pr diff || (echo 'run \"make gen\" in this PR' && git -C pr diff)"
+    assert found(tmp_path, path=side, run=run) == []
+    # Commands inside it that only read it: reported, but as something to verify (mathlib4).
+    run = '|\n          cd pr\n          git merge origin/master --no-commit\n          python "${CI}/count.py" Mathlib/'
+    assert found(tmp_path, path=side, run=run) == [("cicd/untrusted-checkout", "medium")]
+    # Building or running it from inside: the real thing (logchimp).
+    for run in (
+        "|\n          cd pr\n          npm ci",
+        "|\n          cd pr && python -m pytest",
+        "|\n          cd pr\n          ./build.sh",
+    ):
+        assert found(tmp_path, path=side, run=run) == [("cicd/untrusted-checkout", "critical")], run

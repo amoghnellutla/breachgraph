@@ -149,23 +149,53 @@ def _permission_job(wf: Workflow, job: Job) -> str:
     return ""
 
 
-def _executes_from(path: str, steps: list[Step]) -> bool:
-    """Whether any step runs code from a checkout placed at ``path`` (not just reads it as data)."""
+# Commands that build or run the code in the directory they run in.
+_BUILDS = re.compile(
+    r"^(?:make|gmake|cmake|ninja|npm|npx|pnpm|yarn|bun|deno|node|pip3?|uv|poetry|pipx|pytest|tox|nox|"
+    r"cargo|go|mvn|mvnw|gradle|gradlew|ant|bundle|rake|composer|dotnet|lake|docker|docker-compose|"
+    r"source|\.)$"
+)
+_INTERPRETERS = re.compile(r"^(?:python3?|ruby|perl|php|bash|sh|zsh|node|pwsh)$")
+
+
+def _executes_from(path: str, steps: list[Step]) -> str:
+    """How steps use a checkout placed at ``path``: "runs" (code from it is built or executed),
+    "inside" (commands run in it, but only ones that read it, such as git or a trusted tool given
+    by absolute path), or "" (only passed around as data)."""
     p = re.escape(path.strip().removeprefix("./").rstrip("/"))
-    pattern = re.compile(
+    direct = re.compile(
         rf"(?:^|[\s;&|(\"'])(?:\./)?{p}/\S+\.(?:sh|bash|py|js|mjs|cjs|ts|rb|pl|ps1)\b"
-        rf"|(?:cd|pushd)\s+[\"']?(?:\./)?{p}\b|-C\s+(?:\./)?{p}\b|--prefix[ =](?:\./)?{p}\b"
-        rf"|(?:pip|uv pip|npm|pnpm|yarn)\s+(?:install|ci)\b[^\n]*(?:\./)?{p}\b",
+        rf"|(?:^|[;&|(][ \t]*)(?:make|gmake)(?:[ \t]+[^\s;&|]+)*?[ \t]+-C[ \t]+(?:\./)?{p}\b|--prefix[ =](?:\./)?{p}\b"
+        rf"|(?:pip3?|uv pip|npm|pnpm|yarn)\s+(?:install|ci)\b[^\n]*(?:\./)?{p}\b",
         re.M,
     )
+    enters = re.compile(rf"(?:^|[\s;&|(])(?:cd|pushd)\s+[\"']?(?:\./)?{p}(?:/|\b)", re.M)
+    verdict = ""
     for s in steps:
+        if s.uses.startswith(f"./{path.strip().removeprefix('./')}") or direct.search(s.run):
+            return "runs"
         wd = s.working_directory.strip().removeprefix("./")
-        if wd and re.match(rf"{p}(?:/|$)", wd):
+        inside = bool(wd and re.match(rf"{p}(?:/|$)", wd)) or bool(enters.search(s.run))
+        if inside:
+            if _builds_here(s.run):
+                return "runs"
+            verdict = "inside"
+    return verdict
+
+
+def _builds_here(script: str) -> bool:
+    """Whether a script runs a build tool or a relative program (code from the current directory)."""
+    for segment in re.split(r"\n|;|&&|\|\||\||\$\(|`", script):
+        words = [w for w in segment.strip().split() if not re.match(r"^\w+=", w)]
+        if not words:
+            continue
+        cmd = words[0].strip("\"'")
+        if cmd.startswith("./") or _BUILDS.match(cmd):
             return True
-        if s.uses.startswith(f"./{path.strip().removeprefix('./')}"):
-            return True
-        if pattern.search(s.run):
-            return True
+        if _INTERPRETERS.match(cmd):
+            target = next((w.strip("\"'") for w in words[1:] if not w.startswith("-")), "")
+            if "-m" in words[1:] or (target and not target.startswith(("$", "/", "~"))):
+                return True  # a relative script, or a module resolved from here
     return False
 
 
@@ -273,12 +303,18 @@ def _untrusted_checkout(wf: Workflow, job: Job, by_name: dict[str, Workflow] | N
         if not runs:
             continue  # checked out but never executed (e.g. only read by a linter action)
         path = str(step.with_.get("path") or "").strip()
-        if path not in ("", ".", "./") and not _executes_from(path, job.steps[i + 1 :]):
+        use = "runs" if path in ("", ".", "./") else _executes_from(path, job.steps[i + 1 :])
+        if not use:
             continue  # checked out to a side directory and only read as data
         secrets = sorted(job_secrets(wf, job))
         perms = wf.job_permissions(job)
         write = perms == "write-all" or (isinstance(perms, dict) and "write" in perms.values())
         gate = gated(wf, job, step)
+        if not gate and use == "inside":
+            gate = (
+                f"commands run inside the checkout at `{path}` but appear only to read it (git, or tools "
+                "from outside it); check that nothing there builds or runs the pull request's code"
+            )
         severity = Severity.CRITICAL if (secrets or write) and not gate else Severity.HIGH
         if gate or not (secrets or write):
             # Gated, or the job holds nothing worth stealing: what remains for an attacker is

@@ -3,6 +3,7 @@
     python benchmarks/ci_survey.py --top 100            # the most-starred repositories
     python benchmarks/ci_survey.py --repo owner/name    # specific ones (repeatable)
     python benchmarks/ci_survey.py --uses-trigger pull_request_target --min-stars 500 --limit 300
+    python benchmarks/ci_survey.py --out summary.json --reanalyze   # after changing the checks
 
 Only the workflow files are fetched (through the GitHub API, with GH_TOKEN), never the code.
 Results go to .tmp/ci-survey/ and are NOT committed: a finding in someone else's CI is reported
@@ -117,7 +118,11 @@ def main() -> int:
     ap.add_argument("--min-stars", type=int, default=500)
     ap.add_argument("--limit", type=int, default=300)
     ap.add_argument("--out", default="summary.json")
+    ap.add_argument("--reanalyze", action="store_true", help="re-run the checks on --out's cached repos")
     opts = ap.parse_args()
+    if opts.reanalyze:  # no API calls: same repositories, same cached workflows
+        opts.repo = [r["repo"] for r in json.loads((OUT / opts.out).read_text(encoding="utf-8"))]
+        opts.top, opts.uses_trigger = 0, ""
     repos = [*opts.repo, *(top_repos(opts.top) if opts.top else [])]
     if opts.uses_trigger:
         repos += repos_using(opts.uses_trigger, opts.min_stars, opts.limit)
