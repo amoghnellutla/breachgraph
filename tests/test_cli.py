@@ -1,6 +1,7 @@
 """End-to-end CLI tests using --import, so they run without scanners installed."""
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -112,6 +113,19 @@ def test_init(tmp_path: Path) -> None:
     from breachgraph.config import load_config
 
     load_config(tmp_path / ".breachgraph.yml")  # the starter config must be valid
+    assert "What breachgraph sees here" in res.output and "0 HTTP routes" in res.output
+    assert (
+        "persist-credentials: false" in (tmp_path / ".github" / "workflows" / "breachgraph.yml").read_text()
+    )
+
+
+def test_init_describes_the_repository(tmp_path: Path) -> None:
+    shutil.copytree(Path(__file__).parent.parent / "examples" / "vulnerable-platform", tmp_path / "repo")
+    (tmp_path / "repo" / ".breachgraph.yml").unlink(missing_ok=True)
+    res = runner.invoke(app, ["init", str(tmp_path / "repo"), "--no-workflow"])
+    assert res.exit_code == 0
+    assert "3 HTTP routes" in res.output and "S3 bucket shop-customer-data-prod" in res.output
+    assert "add 'cluster' to attack_graph.entry_points" in res.output
 
 
 def test_version() -> None:

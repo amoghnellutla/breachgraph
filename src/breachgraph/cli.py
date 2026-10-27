@@ -516,8 +516,10 @@ jobs:
   breachgraph:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: {repo}@v0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: {repo}@v0        # or pin a release commit SHA
         with:
           comment: true
 """
@@ -545,6 +547,52 @@ def init_cmd(
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(content, encoding="utf-8")
         console.print(f"[green]wrote[/] {file}")
+    _describe_repository(path)
+
+
+def _describe_repository(path: Path) -> None:
+    """What the attack graph will model in this repository, and the settings that fit it."""
+    from breachgraph.graph import build_attack_graph
+    from breachgraph.graph.summary import WEAKNESS_SOURCES, coverage, summarize
+
+    try:
+        config = load_config(find_config(path))
+        ag = build_attack_graph(path, [], config)
+    except Exception as exc:
+        console.print(f"[yellow]could not inspect the repository:[/] {exc}")
+        return
+    summary = summarize(ag, [], config.attack_graph, baseline_used=False)
+    ran = [ToolRun(name=n, status=ToolStatus.OK) for n in WEAKNESS_SOURCES]  # structure only
+    cov = coverage(summary, ag, ran)
+    console.print()
+    console.print("[bold]What breachgraph sees here[/] (before any scanner runs)")
+    console.print(
+        f"  {cov.routes} HTTP routes, {cov.workloads} workloads, {cov.cloud_resources} cloud resources, "
+        f"{cov.kubernetes_objects} Kubernetes objects, {cov.ci_jobs} CI jobs"
+    )
+    jewels = [n.name for n in ag.graph.nodes.values() if n.value >= config.attack_graph.crown_value]
+    if jewels:
+        more = f" and {len(jewels) - 5} more" if len(jewels) > 5 else ""
+        console.print(f"  Crown jewels: {', '.join(sorted(jewels)[:5])}{more}")
+    tips = [*cov.gaps]
+    if any(n.attrs.get("access_key") for n in ag.graph.nodes.values()):
+        tips.append(
+            "Terraform manages IAM access keys: add 'credentials' to attack_graph.entry_points "
+            "to see what a leaked key reaches"
+        )
+    if cov.kubernetes_objects:
+        tips.append(
+            "Kubernetes workloads found: add 'cluster' to attack_graph.entry_points to see what a "
+            "compromised pod reaches"
+        )
+    if not jewels:
+        tips.append("mark your sensitive stores as crown jewels under attack_graph.crown_jewels")
+    if any("helm" in s.lower() for s in summary.skipped):
+        tips.append("Helm charts are not rendered: run `helm template` into a directory and scan it")
+    for tip in tips:
+        console.print(f"  - {tip}")
+    console.print()
+    console.print("Next: [bold]breachgraph scan[/] (or commit the workflow and open a pull request).")
 
 
 if __name__ == "__main__":

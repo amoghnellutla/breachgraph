@@ -11,6 +11,10 @@ updates:
         patterns: ["*"]
   - package-ecosystem: pip
     directory: /
+    # The scanner locks are separate environments that conflict on purpose (each gets its own
+    # virtualenv); they are regenerated together with scripts/lock.py.
+    exclude-paths:
+      - "requirements/**"
     schedule:
       interval: weekly
     cooldown:
