@@ -1,7 +1,7 @@
 """Regenerate the hash-pinned requirement files in requirements/ (needs Docker).
 
     python scripts/lock.py             # re-resolve within the pins in *.in and pyproject.toml
-    python scripts/lock.py --upgrade   # take the newest allowed versions
+    python scripts/lock.py --upgrade   # take the newest versions at least 14 days old
 
 The Docker image and CI install only from these files with --require-hashes, so every Python
 package that ends up in a release is fixed by hash. Resolution is universal (any platform), which
@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+COOLDOWN_DAYS = 14
 UV = (
     "ghcr.io/astral-sh/uv:0.13.4-python3.12-trixie-slim"
     "@sha256:0d42b7b065ada5139af940bf3fb178b926675450e786badc854c9f73736cc6c4"
@@ -31,7 +33,11 @@ LOCKS = {
 
 
 def main() -> int:
-    upgrade = ["--upgrade"] if "--upgrade" in sys.argv[1:] else []
+    upgrade: list[str] = []
+    if "--upgrade" in sys.argv[1:]:
+        # Only releases at least COOLDOWN_DAYS old, so a bad release can be pulled before we take it.
+        cutoff = (datetime.now(UTC) - timedelta(days=COOLDOWN_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
+        upgrade = ["--upgrade", "--exclude-newer", cutoff]
     for out, args in LOCKS.items():
         cmd = [
             "docker",

@@ -32,7 +32,7 @@ Only the latest minor release receives security fixes.
 ## Hardening built in
 
 - Scanner binaries are pinned and verified against SHA-256 values committed in the `Dockerfile`.
-- Every Python package in the image and in CI is installed from a hash-pinned lock (`requirements/`).
+- Every Python package in the image and in CI is installed from a hash-pinned lock (`requirements/`), refreshed weekly with a 14-day cooldown.
 - Files are read only inside the scanned tree: symlinks that point outside it are skipped.
 - Release images are signed with cosign (keyless) and published with SBOM and provenance attestations.
 - Third-party GitHub Actions are pinned to full commit SHAs.

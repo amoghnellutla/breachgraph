@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 - A live demo on GitHub Pages: the HTML report for examples/vulnerable-platform, rebuilt from
   `main` on every change, linked first in the README.
+- A weekly refresh workflow for what Dependabot can't update: the hash-pinned Python locks and
+  the Trivy and Gitleaks binaries (version and SHA-256 from the release's checksums file). It
+  takes only releases at least 14 days old, runs the tests, builds the image and checks the demo's
+  attack paths, then pushes a branch and opens an issue to review. It never merges on its own.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 

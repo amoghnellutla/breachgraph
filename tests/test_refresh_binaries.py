@@ -1,0 +1,82 @@
+"""The weekly refresh only takes settled releases, and only with checksums from the release."""
+
+import importlib.util
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).parent.parent
+spec = importlib.util.spec_from_file_location("refresh_binaries", ROOT / "scripts" / "refresh_binaries.py")
+assert spec and spec.loader
+refresh = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(refresh)
+
+NOW = datetime(2026, 10, 27, tzinfo=UTC)
+DOCKER = """ARG TRIVY_VERSION=0.75.0
+ARG TRIVY_SHA256_AMD64=old1
+ARG TRIVY_SHA256_ARM64=old2
+ARG GITLEAKS_VERSION=8.30.1
+ARG GITLEAKS_SHA256_AMD64=old3
+ARG GITLEAKS_SHA256_ARM64=old4
+"""
+A, B = "a" * 64, "b" * 64
+
+
+def fake(responses: dict[str, object]):  # type: ignore[no-untyped-def]
+    def get(url: str) -> bytes:
+        body = responses[url]
+        return body.encode() if isinstance(body, str) else json.dumps(body).encode()
+
+    return get
+
+
+def releases(*items: tuple[str, str, bool]) -> list[dict[str, object]]:
+    return [{"tag_name": t, "published_at": d, "prerelease": pre, "draft": False} for t, d, pre in items]
+
+
+def test_takes_the_newest_settled_release(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        refresh,
+        "_get",
+        fake(
+            {
+                "https://api.github.com/repos/aquasecurity/trivy/releases?per_page=30": releases(
+                    ("v0.77.0", "2026-10-25T00:00:00Z", False),  # too new
+                    ("v0.76.2-rc1", "2026-10-01T00:00:00Z", True),  # prerelease
+                    ("v0.76.1", "2026-10-05T00:00:00Z", False),
+                ),
+                "https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_checksums.txt": (
+                    f"{A}  trivy_0.76.1_Linux-64bit.tar.gz\n{B}  trivy_0.76.1_Linux-ARM64.tar.gz\n"
+                ),
+                "https://api.github.com/repos/gitleaks/gitleaks/releases?per_page=30": releases(
+                    ("v8.30.1", "2026-01-01T00:00:00Z", False)
+                ),
+            }
+        ),
+    )
+    text, changes = refresh.refresh(DOCKER, NOW)
+    assert changes == ["trivy 0.75.0 -> 0.76.1"]
+    assert f"ARG TRIVY_VERSION=0.76.1\nARG TRIVY_SHA256_AMD64={A}\nARG TRIVY_SHA256_ARM64={B}" in text
+    assert "ARG GITLEAKS_VERSION=8.30.1\nARG GITLEAKS_SHA256_AMD64=old3" in text  # already current
+
+
+def test_missing_checksums_leave_the_pin_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        refresh,
+        "_get",
+        fake(
+            {
+                "https://api.github.com/repos/aquasecurity/trivy/releases?per_page=30": releases(
+                    ("v0.76.1", "2026-10-05T00:00:00Z", False)
+                ),
+                "https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_checksums.txt": (
+                    f"{A}  trivy_0.76.1_Linux-64bit.tar.gz\n"
+                ),
+                "https://api.github.com/repos/gitleaks/gitleaks/releases?per_page=30": [],
+            }
+        ),
+    )
+    text, changes = refresh.refresh(DOCKER, NOW)
+    assert text == DOCKER and changes == ["trivy 0.76.1: checksums missing, not updated"]

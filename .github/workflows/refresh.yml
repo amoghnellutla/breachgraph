@@ -1,0 +1,75 @@
+# Weekly refresh of what Dependabot can't update: the hash-pinned Python locks (scanners and
+# breachgraph's own dependencies) and the Trivy and Gitleaks binaries. Only releases at least
+# 14 days old are taken. The new set is built and tested here, then pushed to a branch, and an
+# issue links the change for review. Nothing lands on main without a person merging it.
+name: refresh
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the refresh branch
+      issues: write # open or update the review issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Refresh locks and binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/lock.py --upgrade
+          python scripts/refresh_binaries.py | tee binaries.txt
+          if git diff --quiet; then echo "changed=false" >> "$GITHUB_ENV"; else echo "changed=true" >> "$GITHUB_ENV"; fi
+      - name: Test with the new locks
+        if: env.changed == 'true'
+        run: |
+          pip install --require-hashes -r requirements/dev.txt && pip install --no-deps -e .
+          pytest -q
+      - name: Build the image and scan the demo
+        if: env.changed == 'true'
+        run: |
+          docker build -t breachgraph:refresh .
+          docker run --rm breachgraph:refresh doctor
+          docker run --rm -v "$PWD/examples/vulnerable-platform:/src:ro" -v "$RUNNER_TEMP:/out" \
+            breachgraph:refresh scan . --output-dir /out --format json --no-fail --offline
+          python -c "import json,sys; r=json.load(open(sys.argv[1])); n=len(r['attack_graph']['paths']); print(n, 'paths'); sys.exit(n < 4)" "$RUNNER_TEMP/breachgraph.json"
+      - name: Push a branch and open an issue
+        if: env.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="refresh/$(date -u +%Y-%m-%d)"
+          {
+            echo "Weekly refresh, built and tested in [this run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}):"
+            echo "the test suite passed and the image found every attack path in the demo."
+            echo
+            echo "Binaries:"
+            if [ -s binaries.txt ]; then sed 's/^/- /' binaries.txt; else echo "- no change"; fi
+            echo
+            echo "Python packages (top-level and transitive):"
+            git diff -U0 -- requirements/*.txt | grep -E '^[-+][A-Za-z0-9_.-]+==' | sed -E 's/ \\$//; s/^/    /' | sort -u | head -80
+            echo
+            echo "Review and merge: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${branch}?expand=1"
+          } > body.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -qam "Refresh locks and scanner binaries"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${branch}"
+          number=$(gh issue list --state open --search "in:title Weekly dependency refresh" --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file body.md
+          else
+            gh issue create --title "Weekly dependency refresh" --body-file body.md
+          fi
