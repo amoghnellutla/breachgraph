@@ -9,8 +9,7 @@ paths: []
 misses:
   - scenario: Health-check command injection -> privileged pod / docker.sock -> worker node (scenarios/health-check).
     why: >
-      Not internet-exposed in the manifests (port-forward lab). breachgraph models attackers on the
-      internet; an "assume breach inside the cluster" entry point would surface this chain and is a
-      documented gap.
+      Not internet-exposed in the manifests (port-forward lab), so it is not a path from the internet.
+      With the cluster entry point turned on it is found; see the assumed-breach section below.
   - scenario: Helm-based scenarios (metadata-db, helm-tiller).
     why: Unrendered Helm templates are listed as blind spots, not analyzed.

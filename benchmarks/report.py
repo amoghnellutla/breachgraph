@@ -71,7 +71,8 @@ def render(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) ->
     details: list[str] = []
     for target, result, labels in rows:
         v, _unlabeled = verdicts(result, labels)
-        counts = {k: sum(1 for x in v.values() if x == k) for k in VERDICTS}
+        # Per path, not per key: two paths over the same nodes with different weaknesses share a key.
+        counts = {k: sum(1 for p in result["attack_paths"] if v[p["key"]] == k) for k in VERDICTS}
         total["raw"] += result["raw_findings"]
         total["findings"] += result["findings"]
         total["gating"] += result["gating_findings"]
@@ -90,7 +91,8 @@ def render(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) ->
             details += [str(labels["summary"]).strip(), ""]
         for p in result["attack_paths"]:
             label = next((x for x in labels.get("paths") or [] if x["key"] == p["key"]), {})
-            details.append(f"- **{v[p['key']]}** · {p['confidence']} confidence · `{p['key']}`")
+            via = f" via {'; '.join(w for w in p['weapons'] if w)}" if any(p["weapons"]) else ""
+            details.append(f"- **{v[p['key']]}** · {p['confidence']} confidence · `{p['key']}`{via}")
             if label.get("why"):
                 details.append(f"  {str(label['why']).strip()}")
         if not result["attack_paths"]:
@@ -110,14 +112,14 @@ def render(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) ->
         "to review first.",
         "",
         f"Of the {total['true']} real paths, {total['true'] - chains} are direct exposures of data (a public bucket, "
-        f"dataset or storage account) and {chains} {'is a chain' if chains == 1 else 'are chains'} that needed a code "
-        f"vulnerability to cross into the cloud. {misses} documented scenarios were not found as complete paths; "
-        "each is listed below with the reason, and most start from something breachgraph does not model as an entry "
-        "point (credentials handed to the player, a port-forwarded lab, a leaked SSH key).",
+        f"dataset or storage account) and {chains} {'is a chain' if chains == 1 else 'are chains'} that needed a "
+        "weakness (a code vulnerability or a committed credential) to get in. "
+        f"{misses} documented scenarios were not found as complete paths; each is listed below with the reason.",
         "",
         "## Per project",
         "",
         *details,
+        *_assumed(rows),
         "## Reproduce",
         "",
         "```bash",
@@ -133,6 +135,31 @@ def render(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) ->
         "",
     ]
     return "\n".join(lines)
+
+
+def _assumed(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) -> list[str]:
+    """Paths from the opt-in entry points, reported apart from the labeled results above."""
+    if not any(r.get("assumed_paths") for _t, r, _l in rows):
+        return []
+    out = [
+        "## Assumed-breach entry points",
+        "",
+        "Some scenarios start from a position the repository can't show: a leaked access key, or code",
+        "already running inside the cluster. breachgraph models these when asked",
+        "(`attack_graph.entry_points: [internet, credentials, cluster]`). The same scans, with those entry",
+        "points on, add the paths below. They are not hand-labeled and are not part of the precision figure.",
+        "",
+        "| Project | From a leaked access key | From inside the cluster |",
+        "|---|---:|---:|",
+    ]
+    examples: list[str] = []
+    for target, result, _labels in rows:
+        paths = result.get("assumed_paths") or []
+        keys = sum(1 for p in paths if not p["entry"].startswith("Inside the cluster"))
+        out.append(f"| {target['name']} | {keys} | {len(paths) - keys} |")
+        for p in sorted(paths, key=lambda p: (-p["key"].count(" -> "), p["key"]))[:2]:
+            examples.append(f"- {target['name']}: `{p['key']}`")
+    return [*out, "", "The longest chains:", "", *examples, ""]
 
 
 def main() -> int:

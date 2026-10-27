@@ -3,6 +3,7 @@
     python benchmarks/run.py                       # all targets, image breachgraph:dev
     python benchmarks/run.py --only terragoat      # one target
     python benchmarks/run.py --image ghcr.io/amoghnellutla/breachgraph:v0.1.0
+    python benchmarks/run.py --assumed-only        # redo only the assumed-breach graphs (no scan)
 
 Needs git and Docker. Targets are cloned at their pinned commit into .tmp/bench/ (disposable).
 Results go to benchmarks/results/<name>.json; label the paths in benchmarks/labels/<name>.yml
@@ -82,7 +83,56 @@ def scan(target: dict[str, Any], src: Path, image: str) -> tuple[dict[str, Any],
     return json.loads(report.read_text(encoding="utf-8")), elapsed
 
 
-def summarize(target: dict[str, Any], report: dict[str, Any], elapsed: float) -> dict[str, Any]:
+ASSUMED = "attack_graph:\n  entry_points: [internet, credentials, cluster]\n"
+
+
+def assumed(target: dict[str, Any], src: Path, image: str) -> list[dict[str, Any]]:
+    """Paths from the opt-in entry points (leaked Terraform access keys, a foothold inside the
+    cluster), rebuilt from the scan's own findings: the attack graph only, no scanners."""
+    out = WORK / f"{target['name']}-out"
+    (out / "assumed.yml").write_text(ASSUMED, encoding="utf-8")
+    proc = subprocess.run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{src}:/src",
+            "-v",
+            f"{out}:/out",
+            image,
+            "graph",
+            ".",
+            "--findings",
+            "/out/breachgraph.json",
+            "-c",
+            "/out/assumed.yml",
+            "-o",
+            "/out/assumed.json",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    graph = out / "assumed.json"
+    if proc.returncode not in (0, 1) or not graph.is_file():
+        raise RuntimeError(f"{target['name']}: graph failed (exit {proc.returncode}): {proc.stderr[-2000:]}")
+    paths = json.loads(graph.read_text(encoding="utf-8")).get("paths", [])
+    return [
+        {
+            "key": path_key(p),
+            "entry": p["steps"][0]["dst"],
+            "target": p["target"],
+            "confidence": p["confidence"],
+            "weapons": [s["weakness_title"] for s in p["steps"] if s.get("via")],
+        }
+        for p in paths
+        if p.get("node_ids", ["", ""])[1].startswith(("entry:key:", "entry:cluster"))
+    ]
+
+
+def summarize(target: dict[str, Any], report: dict[str, Any], elapsed: float, commit: str) -> dict[str, Any]:
     findings = report["findings"]
     open_findings = [f for f in findings if f["status"] != "suppressed"]
     ag = report.get("attack_graph") or {}
@@ -95,9 +145,7 @@ def summarize(target: dict[str, Any], report: dict[str, Any], elapsed: float) ->
         "sha": target["sha"],
         "kind": target["kind"],
         "breachgraph_version": report["breachgraph_version"],
-        "breachgraph_commit": subprocess.run(
-            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True
-        ).stdout.strip(),
+        "breachgraph_commit": commit,
         "wall_time_s": round(elapsed, 1),
         "tools": [
             {k: t.get(k) for k in ("name", "status", "version", "findings", "duration_s", "message")}
@@ -135,26 +183,37 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--image", default="breachgraph:dev")
     ap.add_argument("--only", action="append", default=[], help="target name (repeatable)")
+    ap.add_argument("--assumed-only", action="store_true", help="keep the scans, redo assumed-breach paths")
     opts = ap.parse_args()
+    # The commit the image was built from, taken once: commits made during a long run must not
+    # end up in its results.
+    commit = subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True
+    ).stdout.strip()
     targets = yaml.safe_load((ROOT / "benchmarks" / "targets.yml").read_text(encoding="utf-8"))
     RESULTS.mkdir(parents=True, exist_ok=True)
     failed = 0
     for target in targets:
         if opts.only and target["name"] not in opts.only:
             continue
+        stored = RESULTS / f"{target['name']}.json"
         try:
             src = checkout(target)
-            report, elapsed = scan(target, src, opts.image)
-        except (subprocess.CalledProcessError, RuntimeError) as exc:
+            if opts.assumed_only:
+                result = json.loads(stored.read_text(encoding="utf-8"))
+            else:
+                report, elapsed = scan(target, src, opts.image)
+                result = summarize(target, report, elapsed, commit)
+            result["assumed_paths"] = assumed(target, src, opts.image)
+        except (subprocess.CalledProcessError, RuntimeError, OSError) as exc:
             print(f"FAIL  {target['name']}: {exc}")
             failed += 1
             continue
-        result = summarize(target, report, elapsed)
-        (RESULTS / f"{target['name']}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        stored.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(
             f"ok    {target['name']:<16} {result['raw_findings']:>5} raw -> "
-            f"{result['findings']:>5} findings, "
-            f"{len(result['attack_paths'])} paths, {result['wall_time_s']}s"
+            f"{result['findings']:>5} findings, {len(result['attack_paths'])} paths, "
+            f"{len(result['assumed_paths'])} assumed-breach paths, {result['wall_time_s']}s"
         )
     return 1 if failed else 0
 

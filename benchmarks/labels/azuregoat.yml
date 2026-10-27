@@ -1,18 +1,24 @@
 summary: >
-  AzureGoat deploys Function Apps, a VM and an Automation account. breachgraph models its privilege
-  escalation chain: the VM's identity is Contributor on the resource group, which can run a runbook
-  job on the Automation account and act as its user-assigned identity (Owner). It reports the
-  anonymous storage containers as the only complete path, because the step that starts the
-  documented chain (logging in to the VM with an SSH key leaked in storage) is not linked to the VM.
+  AzureGoat deploys Function Apps, a VM and an Automation account. Its VM accepts SSH from anywhere
+  with a password that is written in main.tf, so anyone who reads the repository can log in and act
+  as the VM's managed identity, which is Contributor on the resource group. breachgraph reports that
+  chain and the anonymous storage containers. The documented start of the chain is an SSH key
+  leaked in storage; the committed password is a second, simpler way to the same login.
 paths:
   - key: "Internet -> Storage account storage_account"
     verdict: true
     why: >
       Containers with container_access_type blob and container (main.tf:89, 228, 236) on an account that
       allows public nested items: anyone can read the blobs.
-misses:
-  - scenario: Leaked SSH key -> internet-facing VM (NSG open on 22) -> VM identity (Contributor) -> Automation runbook -> Owner.
+  - key: "Internet -> VM dev-vm -> System-assigned identity of VM dev-vm -> Cosmos DB account db"
+    verdict: true
     why: >
-      Every edge after the VM login is in the graph. The start is not: breachgraph does not link a
-      private key found in a storage container to the VM that trusts it, so the VM is never
-      controlled from the internet.
+      NSG rule open on port 22 to * (main.tf:315), admin_password set to a literal (main.tf:412) with
+      disable_password_authentication = false (main.tf:415). After logging in, the VM's system identity
+      is Contributor on the resource group (main.tf:450), which can list the Cosmos DB account keys.
+      The same login also reaches the storage account; one target is reported per set of weaknesses.
+misses:
+  - scenario: Leaked SSH key in a storage container -> VM login.
+    why: >
+      breachgraph does not link a private key found inside a storage blob to the VM that trusts it.
+      The VM is still reached, through the committed password above.

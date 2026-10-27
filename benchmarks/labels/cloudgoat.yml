@@ -1,9 +1,9 @@
 summary: >
   CloudGoat is a collection of AWS privilege-escalation scenarios. Almost all of them start from
-  IAM user access keys handed to the player, an entry point breachgraph does not model (it starts
-  from the internet and from weaknesses in code it scans). breachgraph evaluates every IAM policy in
-  the repository, including policies read from files, but only one scenario starts from the
-  internet.
+  IAM user access keys handed to the player, which is not a path from the internet. breachgraph
+  evaluates every IAM policy, user, group and AssumeRole trust in the repository; only one scenario
+  starts from the internet. The key-based scenarios appear with the credentials entry point turned
+  on; see the assumed-breach section below.
 paths:
   - key: "Internet -> S3 bucket index_bucket"
     verdict: true
@@ -14,5 +14,5 @@ paths:
 misses:
   - scenario: IAM privilege-escalation scenarios that begin with leaked or provided IAM user keys (iam_privesc_by_rollback, by_attachment, ...).
     why: >
-      IAM users and their access keys are not entry points in breachgraph's model; the escalation
-      steps themselves (AttachRolePolicy, PassRole, ...) are evaluated for roles.
+      Not a path from the internet: the player is handed the keys. With the credentials entry point
+      these chains are found (assumed-breach section below).

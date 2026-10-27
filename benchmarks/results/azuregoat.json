@@ -3,24 +3,24 @@
   "repo": "https://github.com/ine-labs/AzureGoat",
   "sha": "b97045952e6df00de735a7f27fd7c4994dcfe8c0",
   "kind": "vulnerable",
-  "breachgraph_version": "0.1.0",
-  "breachgraph_commit": "ed5d0b1",
-  "wall_time_s": 274.3,
+  "breachgraph_version": "0.2.0",
+  "breachgraph_commit": "7ba3636",
+  "wall_time_s": 328.8,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 117,
-      "duration_s": 212.63,
+      "duration_s": 213.01,
       "message": null
     },
     {
       "name": "gitleaks",
       "status": "ok",
       "version": "8.30.1",
-      "findings": 48,
-      "duration_s": 9.12,
+      "findings": 42,
+      "duration_s": 23.08,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 409,
-      "duration_s": 166.51,
+      "duration_s": 156.02,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 37,
-      "duration_s": 12.75,
+      "duration_s": 27.07,
       "message": null
     },
     {
@@ -50,32 +50,47 @@
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "findings": 0,
-      "duration_s": 11.63,
+      "duration_s": 13.34,
       "message": null
     }
   ],
-  "raw_findings": 611,
-  "findings": 510,
+  "raw_findings": 605,
+  "findings": 504,
   "multi_tool_findings": 8,
   "by_priority": {
     "P1": 27,
-    "P2": 74,
+    "P2": 68,
     "P3": 284,
     "P4": 125
   },
-  "gating_findings": 99,
+  "gating_findings": 42,
   "graph_stats": {
     "nodes": 26,
-    "edges": 12,
+    "edges": 13,
     "routes": 17,
     "workloads": 4,
     "crown_jewels": 2,
-    "paths": 1
+    "paths": 2
   },
   "blind_spots": [],
   "attack_paths": [
+    {
+      "key": "Internet -> VM dev-vm -> System-assigned identity of VM dev-vm -> Cosmos DB account db",
+      "target": "Cosmos DB account db",
+      "confidence": "high",
+      "gating": true,
+      "score": 20.0,
+      "weapons": [
+        "admin password is hardcoded in Terraform and password login is enabled"
+      ],
+      "evidence": [
+        "main.tf:355",
+        "main.tf:381",
+        "main.tf:448"
+      ]
+    },
     {
       "key": "Internet -> Storage account storage_account",
       "target": "Storage account storage_account",
@@ -88,5 +103,12 @@
       ]
     }
   ],
-  "choke_points": []
+  "choke_points": [
+    {
+      "title": "admin password is hardcoded in Terraform and password login is enabled",
+      "paths_cut": 1,
+      "at": "main.tf:381"
+    }
+  ],
+  "assumed_paths": []
 }

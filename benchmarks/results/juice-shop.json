@@ -3,24 +3,24 @@
   "repo": "https://github.com/juice-shop/juice-shop",
   "sha": "717f5efa886b0417eeecb52378b03cf10567b7e2",
   "kind": "vulnerable",
-  "breachgraph_version": "0.1.0",
-  "breachgraph_commit": "ed5d0b1",
-  "wall_time_s": 1468.5,
+  "breachgraph_version": "0.2.0",
+  "breachgraph_commit": "7ba3636",
+  "wall_time_s": 191.6,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
-      "findings": 71,
-      "duration_s": 253.16,
+      "findings": 68,
+      "duration_s": 150.26,
       "message": null
     },
     {
       "name": "gitleaks",
       "status": "ok",
       "version": "8.30.1",
-      "findings": 72,
-      "duration_s": 4.22,
+      "findings": 69,
+      "duration_s": 11.92,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 89,
-      "duration_s": 104.91,
+      "duration_s": 100.22,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 120,
-      "duration_s": 23.27,
+      "duration_s": 23.17,
       "message": null
     },
     {
@@ -44,37 +44,108 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 101,
-      "duration_s": 8.8,
+      "duration_s": 11.83,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "findings": 0,
-      "duration_s": 11.38,
+      "duration_s": 11.86,
       "message": null
     }
   ],
-  "raw_findings": 453,
-  "findings": 417,
+  "raw_findings": 447,
+  "findings": 411,
   "multi_tool_findings": 34,
   "by_priority": {
     "P1": 34,
-    "P2": 41,
-    "P3": 255,
+    "P2": 38,
+    "P3": 252,
     "P4": 87
   },
-  "gating_findings": 137,
+  "gating_findings": 100,
   "graph_stats": {
-    "nodes": 257,
-    "edges": 12,
+    "nodes": 258,
+    "edges": 996,
     "routes": 245,
     "workloads": 6,
-    "crown_jewels": 3,
-    "paths": 0
+    "crown_jewels": 4,
+    "paths": 2
   },
   "blind_spots": [],
-  "attack_paths": [],
-  "choke_points": []
+  "attack_paths": [
+    {
+      "key": "Internet -> compose service juice-shop -> Application database (Sequelize)",
+      "target": "Application database (Sequelize)",
+      "confidence": "medium",
+      "gating": true,
+      "score": 9.86,
+      "weapons": [
+        "Found data from an Express or Next web request flowing to `eval`."
+      ],
+      "evidence": [
+        "infrastructure/docker-compose.yml:None",
+        "data/datacreator.ts:None"
+      ]
+    },
+    {
+      "key": "Internet -> compose service juice-shop -> Application database (Sequelize)",
+      "target": "Application database (Sequelize)",
+      "confidence": "medium",
+      "gating": true,
+      "score": 8.96,
+      "weapons": [
+        "Detected a sequelize statement that is tainted by user-input."
+      ],
+      "evidence": [
+        "infrastructure/docker-compose.yml:None",
+        "routes/login.ts:34"
+      ]
+    }
+  ],
+  "choke_points": [
+    {
+      "title": "Found data from an Express or Next web request flowing to `eval`.",
+      "paths_cut": 1,
+      "at": "routes/userProfile.ts:65"
+    },
+    {
+      "title": "Detected the use of eval().",
+      "paths_cut": 1,
+      "at": "routes/captcha.ts:22"
+    },
+    {
+      "title": "Detected a sequelize statement that is tainted by user-input.",
+      "paths_cut": 1,
+      "at": "routes/login.ts:34"
+    },
+    {
+      "title": "Detected a sequelize statement that is tainted by user-input.",
+      "paths_cut": 1,
+      "at": "routes/search.ts:23"
+    },
+    {
+      "title": "Detected a sequelize statement that is tainted by user-input.",
+      "paths_cut": 1,
+      "at": "data/static/codefixes/dbSchemaChallenge_1.ts:5"
+    },
+    {
+      "title": "Detected a sequelize statement that is tainted by user-input.",
+      "paths_cut": 1,
+      "at": "data/static/codefixes/dbSchemaChallenge_3.ts:11"
+    },
+    {
+      "title": "Detected a sequelize statement that is tainted by user-input.",
+      "paths_cut": 1,
+      "at": "data/static/codefixes/unionSqlInjectionChallenge_1.ts:6"
+    },
+    {
+      "title": "Detected a sequelize statement that is tainted by user-input.",
+      "paths_cut": 1,
+      "at": "data/static/codefixes/unionSqlInjectionChallenge_3.ts:10"
+    }
+  ],
+  "assumed_paths": []
 }

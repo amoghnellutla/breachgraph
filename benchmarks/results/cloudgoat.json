@@ -3,16 +3,16 @@
   "repo": "https://github.com/RhinoSecurityLabs/cloudgoat",
   "sha": "63c65bd26edc6919499adfa20b176c450e35c33c",
   "kind": "vulnerable",
-  "breachgraph_version": "0.1.0",
-  "breachgraph_commit": "ed5d0b1",
-  "wall_time_s": 465.3,
+  "breachgraph_version": "0.2.0",
+  "breachgraph_commit": "7ba3636",
+  "wall_time_s": 484.3,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 339,
-      "duration_s": 393.2,
+      "duration_s": 343.42,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 17,
-      "duration_s": 4.92,
+      "duration_s": 38.69,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 484,
-      "duration_s": 173.76,
+      "duration_s": 157.42,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 761,
-      "duration_s": 54.06,
+      "duration_s": 70.69,
       "message": null
     },
     {
@@ -44,15 +44,15 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 66,
-      "duration_s": 13.21,
+      "duration_s": 4.62,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "findings": 0,
-      "duration_s": 21.55,
+      "duration_s": 18.74,
       "message": null
     }
   ],
@@ -65,10 +65,10 @@
     "P3": 942,
     "P4": 228
   },
-  "gating_findings": 276,
+  "gating_findings": 59,
   "graph_stats": {
-    "nodes": 141,
-    "edges": 359,
+    "nodes": 178,
+    "edges": 488,
     "routes": 12,
     "workloads": 39,
     "crown_jewels": 32,
@@ -88,5 +88,189 @@
       ]
     }
   ],
-  "choke_points": []
+  "choke_points": [],
+  "assumed_paths": [
+    {
+      "key": "Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> AWS account administrator",
+      "entry": "Leaked access key of IAM user chris (assumed)",
+      "target": "AWS account administrator",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user secrets_manager_user (assumed) -> IAM user secrets_manager_user -> Secrets Manager secret final_flag",
+      "entry": "Leaked access key of IAM user secrets_manager_user (assumed)",
+      "target": "Secrets Manager secret final_flag",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user secrets_manager_user (assumed) -> IAM user secrets_manager_user -> Secrets Manager secret this",
+      "entry": "Leaked access key of IAM user secrets_manager_user (assumed)",
+      "target": "Secrets Manager secret this",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user secrets_manager_user (assumed) -> IAM user secrets_manager_user -> Secrets Manager secret primary_secret",
+      "entry": "Leaked access key of IAM user secrets_manager_user (assumed)",
+      "target": "Secrets Manager secret primary_secret",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user secrets_manager_user (assumed) -> IAM user secrets_manager_user -> Secrets Manager secret hard_secret",
+      "entry": "Leaked access key of IAM user secrets_manager_user (assumed)",
+      "target": "Secrets Manager secret hard_secret",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user secrets_manager_user (assumed) -> IAM user secrets_manager_user -> Secrets Manager secret easy_secret",
+      "entry": "Leaked access key of IAM user secrets_manager_user (assumed)",
+      "target": "Secrets Manager secret easy_secret",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user dev_user (assumed) -> IAM user dev_user -> DynamoDB table secrets_table",
+      "entry": "Leaked access key of IAM user dev_user (assumed)",
+      "target": "DynamoDB table secrets_table",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user low_priv_user (assumed) -> IAM user low_priv_user -> S3 bucket secrets_bucket",
+      "entry": "Leaked access key of IAM user low_priv_user (assumed)",
+      "target": "S3 bucket secrets_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user low_priv_user (assumed) -> IAM user low_priv_user -> S3 bucket secret",
+      "entry": "Leaked access key of IAM user low_priv_user (assumed)",
+      "target": "S3 bucket secret",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket cognito_s3",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket cognito_s3",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket assets_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket assets_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket index_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket index_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket flag_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket flag_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket cg-data-s3-bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket cg-data-s3-bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket keystore",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket keystore",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket logs",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket logs",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket web",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket web",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket data",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket data",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket cloudtrail_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket cloudtrail_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket secret-s3-bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket secret-s3-bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket secret_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket secret_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket cloudtrail_logs",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket cloudtrail_logs",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket cg-cardholder-data-bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket cg-cardholder-data-bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket target_s3_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket target_s3_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket kb_code_interpreter_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket kb_code_interpreter_bucket",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user1 (assumed) -> IAM user user1 -> S3 bucket kb_s3_bucket",
+      "entry": "Leaked access key of IAM user user1 (assumed)",
+      "target": "S3 bucket kb_s3_bucket",
+      "confidence": "high",
+      "weapons": []
+    }
+  ]
 }

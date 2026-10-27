@@ -1,7 +1,15 @@
 summary: >
-  OWASP Juice Shop is a deliberately vulnerable web application with no cloud, Kubernetes or
-  deployment configuration in the repository. breachgraph reports its code and dependency findings
-  (245 HTTP routes analyzed), and no attack paths: there is no crown-jewel asset in the repository
-  for a path to reach. This is the expected result for an application-only repository.
-paths: []
+  OWASP Juice Shop is a deliberately vulnerable Node.js shop with no cloud or Kubernetes
+  configuration. Its infrastructure/docker-compose.yml runs the app behind an nginx proxy that
+  publishes ports 80 and 443, and the code talks to its database through Sequelize. breachgraph
+  models that database as the crown jewel and reports two independent ways to it.
+paths:
+  - key: "Internet -> compose service juice-shop -> Application database (Sequelize)"
+    verdict: true
+    why: >
+      Both paths are real. One is the SQL injection in the login route (routes/login.ts:34, user input
+      concatenated into a Sequelize query), the challenge Juice Shop is best known for. The other is
+      its server-side template injection challenge: a username written as #{...} is passed to eval
+      (routes/userProfile.ts:65), which runs code in the app and so can use its database connection. The app is reached through the nginx service that publishes
+      port 80 (infrastructure/docker-compose.yml).
 misses: []

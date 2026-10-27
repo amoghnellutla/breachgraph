@@ -3,24 +3,24 @@
   "repo": "https://github.com/bridgecrewio/terragoat",
   "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
   "kind": "vulnerable",
-  "breachgraph_version": "0.1.0",
-  "breachgraph_commit": "ed5d0b1",
-  "wall_time_s": 43.3,
+  "breachgraph_version": "0.2.0",
+  "breachgraph_commit": "7ba3636",
+  "wall_time_s": 37.7,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 34,
-      "duration_s": 23.35,
+      "duration_s": 25.86,
       "message": null
     },
     {
       "name": "gitleaks",
       "status": "ok",
       "version": "8.30.1",
-      "findings": 7,
-      "duration_s": 1.71,
+      "findings": 4,
+      "duration_s": 0.84,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 684,
-      "duration_s": 36.79,
+      "duration_s": 30.98,
       "message": "package registry unavailable (rate limited); retried with --offline-scan, transitive Java dependencies were not resolved"
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 469,
-      "duration_s": 18.09,
+      "duration_s": 22.36,
       "message": null
     },
     {
@@ -44,31 +44,31 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 13,
-      "duration_s": 0.78,
+      "duration_s": 0.75,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "findings": 0,
-      "duration_s": 0.48,
+      "duration_s": 1.64,
       "message": null
     }
   ],
-  "raw_findings": 1207,
-  "findings": 1091,
+  "raw_findings": 1204,
+  "findings": 1088,
   "multi_tool_findings": 78,
   "by_priority": {
-    "P1": 52,
-    "P2": 300,
+    "P1": 51,
+    "P2": 298,
     "P3": 670,
     "P4": 69
   },
-  "gating_findings": 352,
+  "gating_findings": 52,
   "graph_stats": {
-    "nodes": 46,
-    "edges": 20,
+    "nodes": 47,
+    "edges": 26,
     "routes": 0,
     "workloads": 8,
     "crown_jewels": 30,
@@ -101,5 +101,49 @@
       ]
     }
   ],
-  "choke_points": []
+  "choke_points": [],
+  "assumed_paths": [
+    {
+      "key": "Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket logs",
+      "entry": "Leaked access key of IAM user user (assumed)",
+      "target": "S3 bucket logs",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data_science",
+      "entry": "Leaked access key of IAM user user (assumed)",
+      "target": "S3 bucket data_science",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket operations",
+      "entry": "Leaked access key of IAM user user (assumed)",
+      "target": "S3 bucket operations",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket financials",
+      "entry": "Leaked access key of IAM user user (assumed)",
+      "target": "S3 bucket financials",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data",
+      "entry": "Leaked access key of IAM user user (assumed)",
+      "target": "S3 bucket data",
+      "confidence": "high",
+      "weapons": []
+    },
+    {
+      "key": "Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket flowbucket",
+      "entry": "Leaked access key of IAM user user (assumed)",
+      "target": "S3 bucket flowbucket",
+      "confidence": "high",
+      "weapons": []
+    }
+  ]
 }

@@ -11,19 +11,19 @@ listed as misses.
 
 | Project | Kind | Scanner findings | After dedupe | Blocking findings | Attack paths | True | False | Unclear |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 1,207 | 1,091 | 352 | 2 | 2 | 0 | 0 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 903 | 799 | 188 | 0 | 0 | 0 | 0 |
-| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 1,667 | 1,446 | 276 | 1 | 1 | 0 | 0 |
-| [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 916 | 789 | 216 | 3 | 3 | 0 | 0 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 611 | 510 | 99 | 1 | 1 | 0 | 0 |
-| [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 512 | 416 | 98 | 5 | 4 | 1 | 0 |
-| [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 453 | 417 | 137 | 0 | 0 | 0 | 0 |
-| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 1,048 | 878 | 131 | 0 | 0 | 0 | 0 |
-| **Total** | | **7,317** | **6,346** | **1,497** | **12** | **11** | **1** | **0** |
+| [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 1,204 | 1,088 | 52 | 2 | 2 | 0 | 0 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 899 | 795 | 21 | 0 | 0 | 0 | 0 |
+| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 1,667 | 1,446 | 59 | 1 | 1 | 0 | 0 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 912 | 785 | 38 | 3 | 3 | 0 | 0 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 605 | 504 | 42 | 2 | 2 | 0 | 0 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 507 | 411 | 28 | 5 | 4 | 1 | 0 |
+| [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 447 | 411 | 100 | 2 | 2 | 0 | 0 |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 1,048 | 878 | 10 | 0 | 0 | 0 | 0 |
+| **Total** | | **7,289** | **6,318** | **350** | **15** | **14** | **1** | **0** |
 
-**Path precision: 92%** (11 of 12 decided paths are real attack chains). 6,346 deduplicated findings reduce to **12 attack paths** to review first.
+**Path precision: 93%** (14 of 15 decided paths are real attack chains). 6,318 deduplicated findings reduce to **15 attack paths** to review first.
 
-Of the 11 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 1 is a chain that needed a code vulnerability to cross into the cloud. 8 documented scenarios were not found as complete paths; each is listed below with the reason, and most start from something breachgraph does not model as an entry point (credentials handed to the player, a port-forwarded lab, a leaked SSH key).
+Of the 14 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 4 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
 
 ## Per project
 
@@ -47,18 +47,18 @@ Kubernetes workloads, RBAC, container escape, secrets, vulnerable apps. Commit `
 Kubernetes Goat is a lab cluster reached with `kubectl port-forward`: its manifests have no Ingress or LoadBalancer, and one NodePort service. breachgraph finds the ingredients of its best-known chain (Semgrep flags the command injection in the health-check service, CWE-94, in the route that handles POST /, and the pod is privileged with the Docker socket mounted, which reaches the node), but reports no attack path from the internet, because nothing in the manifests exposes those services to it. That is the correct answer for this repository.
 
 - No attack paths reported.
-- **miss**: Health-check command injection -> privileged pod / docker.sock -> worker node (scenarios/health-check). Not internet-exposed in the manifests (port-forward lab). breachgraph models attackers on the internet; an "assume breach inside the cluster" entry point would surface this chain and is a documented gap.
+- **miss**: Health-check command injection -> privileged pod / docker.sock -> worker node (scenarios/health-check). Not internet-exposed in the manifests (port-forward lab), so it is not a path from the internet. With the cluster entry point turned on it is found; see the assumed-breach section below.
 - **miss**: Helm-based scenarios (metadata-db, helm-tiller). Unrendered Helm templates are listed as blind spots, not analyzed.
 
 ### cloudgoat
 
 AWS IAM privilege escalation and exposure scenarios in Terraform. Commit `63c65bd26edc`.
 
-CloudGoat is a collection of AWS privilege-escalation scenarios. Almost all of them start from IAM user access keys handed to the player, an entry point breachgraph does not model (it starts from the internet and from weaknesses in code it scans). breachgraph evaluates every IAM policy in the repository, including policies read from files, but only one scenario starts from the internet.
+CloudGoat is a collection of AWS privilege-escalation scenarios. Almost all of them start from IAM user access keys handed to the player, which is not a path from the internet. breachgraph evaluates every IAM policy, user, group and AssumeRole trust in the repository; only one scenario starts from the internet. The key-based scenarios appear with the credentials entry point turned on; see the assumed-breach section below.
 
 - **true** · medium confidence · `Internet -> S3 bucket index_bucket`
   A bucket policy grants public read with all public access blocks disabled (scenarios/aws/s3_version_rollback_via_cfn/terraform/s3.tf:153). It is the scenario's public index, a website by design, which a team would exclude with an attack_graph.crown_jewels override.
-- **miss**: IAM privilege-escalation scenarios that begin with leaked or provided IAM user keys (iam_privesc_by_rollback, by_attachment, ...). IAM users and their access keys are not entry points in breachgraph's model; the escalation steps themselves (AttachRolePolicy, PassRole, ...) are evaluated for roles.
+- **miss**: IAM privilege-escalation scenarios that begin with leaked or provided IAM user keys (iam_privesc_by_rollback, by_attachment, ...). Not a path from the internet: the player is handed the keys. With the credentials entry point these chains are found (assumed-breach section below).
 
 ### awsgoat
 
@@ -70,7 +70,7 @@ AWSGoat runs a serverless blog (API Gateway REST -> Lambda -> DynamoDB) and an E
   aws_s3_bucket_acl public-read with every public access block disabled (modules/module-1/main.tf:3387).
 - **true** · medium confidence · `Internet -> S3 bucket dev`
   aws_s3_bucket_acl public-read with every public access block disabled (modules/module-1/main.tf:3307).
-- **true** · medium confidence · `Internet -> Lambda lambda_ba_data -> DynamoDB table blog-posts`
+- **true** · medium confidence · `Internet -> Lambda lambda_ba_data -> DynamoDB table blog-posts` via Detected user input used to manually construct a SQL string.
   User input is concatenated into a PartiQL statement passed to DynamoDB execute_statement (resources/lambda/data/lambda_function.py:503), behind an unauthenticated API Gateway method. The injection reads the blog-users table; the path names blog-posts because the function's role can read both and one target is reported per set of weaknesses.
 - **miss**: Module 2, ECS task / EC2 privilege escalation. Starts from command execution in a container image with no code in this repository and from the instance metadata, which breachgraph models only behind an application weakness.
 
@@ -78,11 +78,13 @@ AWSGoat runs a serverless blog (API Gateway REST -> Lambda -> DynamoDB) and an E
 
 Azure App Service, Functions, storage and managed identity flaws. Commit `b97045952e6d`.
 
-AzureGoat deploys Function Apps, a VM and an Automation account. breachgraph models its privilege escalation chain: the VM's identity is Contributor on the resource group, which can run a runbook job on the Automation account and act as its user-assigned identity (Owner). It reports the anonymous storage containers as the only complete path, because the step that starts the documented chain (logging in to the VM with an SSH key leaked in storage) is not linked to the VM.
+AzureGoat deploys Function Apps, a VM and an Automation account. Its VM accepts SSH from anywhere with a password that is written in main.tf, so anyone who reads the repository can log in and act as the VM's managed identity, which is Contributor on the resource group. breachgraph reports that chain and the anonymous storage containers. The documented start of the chain is an SSH key leaked in storage; the committed password is a second, simpler way to the same login.
 
+- **true** · high confidence · `Internet -> VM dev-vm -> System-assigned identity of VM dev-vm -> Cosmos DB account db` via admin password is hardcoded in Terraform and password login is enabled
+  NSG rule open on port 22 to * (main.tf:315), admin_password set to a literal (main.tf:412) with disable_password_authentication = false (main.tf:415). After logging in, the VM's system identity is Contributor on the resource group (main.tf:450), which can list the Cosmos DB account keys. The same login also reaches the storage account; one target is reported per set of weaknesses.
 - **true** · high confidence · `Internet -> Storage account storage_account`
   Containers with container_access_type blob and container (main.tf:89, 228, 236) on an account that allows public nested items: anyone can read the blobs.
-- **miss**: Leaked SSH key -> internet-facing VM (NSG open on 22) -> VM identity (Contributor) -> Automation runbook -> Owner. Every edge after the VM login is in the graph. The start is not: breachgraph does not link a private key found in a storage container to the VM that trusts it, so the VM is never controlled from the internet.
+- **miss**: Leaked SSH key in a storage container -> VM login. breachgraph does not link a private key found inside a storage blob to the VM that trusts it. The VM is still reached, through the committed password above.
 
 ### gcpgoat
 
@@ -98,7 +100,7 @@ GCPGoat runs public Cloud Functions, GCE instances and several buckets. breachgr
   allUsers is granted a custom role with object read permissions (main.tf:69).
 - **true** · high confidence · `Internet -> GCS bucket data_bucket`
   allUsers is granted a custom role with object read permissions (main.tf:55).
-- **false** · low confidence · `Internet -> Cloud Function backend-function -> App Engine default service account -> GCS bucket bucket`
+- **false** · low confidence · `Internet -> Cloud Function backend-function -> App Engine default service account -> GCS bucket bucket` via Detected a dynamic value being used with urllib.
   The SSRF is real (urllib.request.urlopen on a user URL, cloud_function/data/main.py:28), but the code sends a fixed User-Agent header, so it cannot add the Metadata-Flavor header the metadata server requires and no token can be taken. breachgraph marks the step low confidence (the header requirement, and Editor-by-default for the default account), which keeps it from gating, but it cannot tell whether an SSRF controls headers.
 - **miss**: Developer VM -> admin VM privilege escalation (GCE metadata and SSH keys). Starts from SSH access with credentials not present in the repository.
 
@@ -106,9 +108,12 @@ GCPGoat runs public Cloud Functions, GCE instances and several buckets. breachgr
 
 Node.js web application vulnerabilities, dependencies and CI workflows. Commit `717f5efa886b`.
 
-OWASP Juice Shop is a deliberately vulnerable web application with no cloud, Kubernetes or deployment configuration in the repository. breachgraph reports its code and dependency findings (245 HTTP routes analyzed), and no attack paths: there is no crown-jewel asset in the repository for a path to reach. This is the expected result for an application-only repository.
+OWASP Juice Shop is a deliberately vulnerable Node.js shop with no cloud or Kubernetes configuration. Its infrastructure/docker-compose.yml runs the app behind an nginx proxy that publishes ports 80 and 443, and the code talks to its database through Sequelize. breachgraph models that database as the crown jewel and reports two independent ways to it.
 
-- No attack paths reported.
+- **true** · medium confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Found data from an Express or Next web request flowing to `eval`.
+  Both paths are real. One is the SQL injection in the login route (routes/login.ts:34, user input concatenated into a Sequelize query), the challenge Juice Shop is best known for. The other is its server-side template injection challenge: a username written as #{...} is passed to eval (routes/userProfile.ts:65), which runs code in the app and so can use its database connection. The app is reached through the nginx service that publishes port 80 (infrastructure/docker-compose.yml).
+- **true** · medium confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Detected a sequelize statement that is tainted by user-input.
+  Both paths are real. One is the SQL injection in the login route (routes/login.ts:34, user input concatenated into a Sequelize query), the challenge Juice Shop is best known for. The other is its server-side template injection challenge: a username written as #{...} is passed to eval (routes/userProfile.ts:65), which runs code in the app and so can use its database connection. The app is reached through the nginx service that publishes port 80 (infrastructure/docker-compose.yml).
 
 ### online-boutique
 
@@ -118,6 +123,32 @@ Google's Online Boutique is a well-maintained microservices demo (five languages
 
 - No attack paths reported.
 
+## Assumed-breach entry points
+
+Some scenarios start from a position the repository can't show: a leaked access key, or code
+already running inside the cluster. breachgraph models these when asked
+(`attack_graph.entry_points: [internet, credentials, cluster]`). The same scans, with those entry
+points on, add the paths below. They are not hand-labeled and are not part of the precision figure.
+
+| Project | From a leaked access key | From inside the cluster |
+|---|---:|---:|
+| terragoat | 6 | 0 |
+| kubernetes-goat | 0 | 1 |
+| cloudgoat | 26 | 0 |
+| awsgoat | 0 | 0 |
+| azuregoat | 0 | 0 |
+| gcpgoat | 0 | 0 |
+| juice-shop | 0 | 0 |
+| online-boutique | 0 | 0 |
+
+The longest chains:
+
+- terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data`
+- terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data_science`
+- kubernetes-goat: `Internet -> Inside the cluster (assumed breach) -> Deployment default/health-check-deployment -> POST / -> Kubernetes worker nodes`
+- cloudgoat: `Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> AWS account administrator`
+- cloudgoat: `Internet -> Leaked access key of IAM user dev_user (assumed) -> IAM user dev_user -> DynamoDB table secrets_table`
+
 ## Reproduce
 
 ```bash
@@ -126,4 +157,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Run with breachgraph at commit `ed5d0b1`. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `7ba3636`. Scanner versions are recorded per run in `benchmarks/results/`.
