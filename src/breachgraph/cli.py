@@ -475,6 +475,64 @@ def graph_cmd(
     raise typer.Exit(1 if summary.gating_paths else 0)
 
 
+@app.command("fix")
+def fix_cmd(
+    path: Annotated[Path, typer.Argument(help="Repository the report was made from.")] = Path(),
+    report: Annotated[
+        Path | None, typer.Option("--report", "-r", help="breachgraph.json (default: from the last scan).")
+    ] = None,
+    top: Annotated[int, typer.Option("--top", help="Fix at most this many choke points.")] = 3,
+    apply: Annotated[bool, typer.Option("--apply", help="Write the fixes to the working tree.")] = False,
+    pr: Annotated[
+        bool, typer.Option("--pr", help="Commit each fix to its own branch and open a pull request.")
+    ] = False,
+) -> None:
+    """Fix the findings that break the most attack paths: dependency upgrades and the GitHub Actions
+    script-injection fix. Shows a diff unless --apply or --pr is given."""
+    import difflib
+
+    from breachgraph import fix as fixer
+
+    target = path.resolve()
+    report = report or target / "breachgraph-report" / "breachgraph.json"
+    try:
+        result = ScanResult.model_validate_json(report.read_text(encoding="utf-8"))
+    except (OSError, ValidationError) as exc:
+        console.print(f"[red]error:[/] cannot read {report}; run `breachgraph scan` first ({exc})")
+        raise typer.Exit(2) from exc
+    fixes = fixer.plan(result, target, top)
+    if not fixes:
+        console.print("No attack paths, so nothing to fix first.")
+        raise typer.Exit(0)
+    for f in fixes:
+        cut = f" (breaks {f.paths_cut} path(s))" if f.paths_cut else ""
+        if not f.files:
+            console.print(f"[yellow]skip[/] {f.finding.title}{cut}: {f.reason}")
+            continue
+        console.print(f"[green]fix[/]  {f.summary}{cut}")
+        for rel, new in f.files.items():
+            if not (apply or pr):
+                old = (target / rel).read_text(encoding="utf-8")
+                diff = difflib.unified_diff(
+                    old.splitlines(True), new.splitlines(True), f"a/{rel}", f"b/{rel}"
+                )
+                console.print("".join(diff), markup=False, highlight=False)
+            elif apply and not pr:
+                (target / rel).write_text(new, encoding="utf-8")
+        for note in f.notes:
+            console.print(f"     [dim]{note}[/]")
+    if pr:
+        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+        try:
+            for url in fixer.open_pull_requests(fixes, result, target, token):
+                console.print(f"  [dim]pull request[/] {url}")
+        except fixer.FixError as exc:
+            console.print(f"[red]error:[/] {exc}")
+            raise typer.Exit(2) from exc
+    elif not apply and any(f.files for f in fixes):
+        console.print("[dim]Dry run. --apply writes these changes; --pr opens one pull request per fix.[/]")
+
+
 @app.command("doctor")
 def doctor_cmd() -> None:
     """Show which scanners are installed and their versions."""

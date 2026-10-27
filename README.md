@@ -130,8 +130,10 @@ turn the gate on in a legacy repository on day one. If a pull request edits the 
 - **CI is part of the attack surface.** A script injection in an `issue_comment` workflow reaches
   whatever that job can reach: its OIDC deploy role (checked against the trust policy's `sub`
   claim), its secrets, a token that can push code. See [docs/cicd.md](docs/cicd.md).
-- **The cheapest fix is named.** Each path lists the findings it needs, and the report ranks the
-  fixes that break the most paths.
+- **The cheapest fix is named, and often written for you.** Each path lists the findings it needs,
+  and the report ranks the fixes that break the most paths. `breachgraph fix` writes the safe ones
+  (a dependency upgrade to its fixed version, the `env:` fix for a GitHub Actions script injection)
+  and with `--pr` opens one pull request per fix. Anything it can't fix safely gets a reason.
 - **It says what it couldn't see.** Every report has a coverage line: how many routes, workloads,
   cloud resources, Kubernetes objects and CI jobs were modeled, and why a clean result might be
   incomplete (a scanner that didn't run, Helm charts that weren't rendered, no deployment

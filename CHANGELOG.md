@@ -34,6 +34,12 @@ All notable changes to this project are documented here. The format follows
   analyzed like plain manifests, with evidence pointing at the template file. The image includes
   Helm, pinned and checksum-verified, and the weekly refresh keeps it current within its major
   version. A chart that fails to render is one blind spot with Helm's error.
+- `breachgraph fix`: fixes for the choke points, most paths broken first. It upgrades a vulnerable
+  dependency declared in requirements*.txt, package.json or go.mod to its fixed version, and moves
+  untrusted `${{ }}` expressions in a workflow's `run:` script into `env:`, quoting them for the
+  shell they land in. It shows a diff by default; `--apply` writes the changes and `--pr` commits
+  each fix to its own branch and opens a pull request that lists the paths it breaks. Code
+  vulnerabilities, transitive dependencies and hash-pinned locks get a reason, not a guess.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 
