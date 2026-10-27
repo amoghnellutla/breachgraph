@@ -133,9 +133,15 @@ def project_name(target: Path, explicit: str | None = None) -> str:
 
     url = git("config", "--get", "remote.origin.url")
     name = re.sub(r"\.git$", "", url.rstrip("/")).rsplit("/", 1)[-1].rsplit(":", 1)[-1] if url else ""
-    if not name and (repo := os.environ.get("GITHUB_REPOSITORY")):
-        name = repo.rsplit("/", 1)[-1]
+    if not name and (repo := os.environ.get("GITHUB_REPOSITORY")) and _in_workspace(target):
+        name = repo.rsplit("/", 1)[-1]  # the Actions checkout, when git can't say
     if not name:
         return target.resolve().name or str(target)
     sub = git("rev-parse", "--show-prefix").rstrip("/")
     return f"{name}/{sub}" if sub else name
+
+
+def _in_workspace(target: Path) -> bool:
+    """Whether ``target`` is the GitHub Actions checkout (or inside it)."""
+    workspace = os.environ.get("GITHUB_WORKSPACE")
+    return workspace is not None and target.resolve().is_relative_to(Path(workspace).resolve())

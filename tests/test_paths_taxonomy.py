@@ -93,9 +93,13 @@ def test_symlinks_out_of_the_tree_are_not_read(tmp_path: Path) -> None:
 
 def test_project_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+    monkeypatch.delenv("GITHUB_WORKSPACE", raising=False)
     assert project_name(tmp_path, "shop") == "shop"
     assert project_name(tmp_path) == tmp_path.name  # not a git repository
     monkeypatch.setenv("GITHUB_REPOSITORY", "acme/payments")
+    monkeypatch.delenv("GITHUB_WORKSPACE", raising=False)
+    assert project_name(tmp_path) == tmp_path.name  # not the Actions checkout
+    monkeypatch.setenv("GITHUB_WORKSPACE", str(tmp_path))
     assert project_name(tmp_path) == "payments"
     if shutil.which("git"):
         subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
