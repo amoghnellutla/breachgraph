@@ -65,7 +65,7 @@ def build_attack_graph(
     routes = RouteSource().collect(ctx)
 
     name = repo_name or PurePosixPath(target.resolve().as_posix()).name
-    units = code_units(graph, list(images.dockerfile_dirs), name)
+    units = code_units(graph, list(images.dockerfile_dirs), name, target)
     attach(graph, findings, routes, units)
     mark_crown_jewels(graph, config)
 

@@ -21,6 +21,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
+
+- Terraform files with a heredoc terminator followed by a space (`EOF `) silently lost every
+  block after it (python-hcl2). Trailing whitespace is now ignored, a file that fails to parse is
+  parsed block by block, and any block that still can't be read is reported as a blind spot.
+- Serverless code now maps to the function that deploys it (`data "archive_file"`, `filename`,
+  S3/Blob/GCS objects), so a code vulnerability in a Lambda, Azure Function or Cloud Function
+  reaches that function's identity.
+- Azure: `azurerm_function_app` / `azurerm_app_service` (azurerm 3.x), Automation accounts,
+  `identity.0.principal_id` references, resource groups named by a variable, and privilege
+  escalation by running code on a VM, app or runbook in scope (Contributor -> Owner identity).
+- Kubernetes worker nodes are crown jewels, so container-escape paths have a target.
+- IAM policies read from files (`file("policies/x.json")`), and `jsonencode` policies with
+  function calls or reference lists, are now evaluated instead of reported as blind spots.
 - Reachability no longer calls a package "unused" when another dependency that the code imports
   needs it (Jinja2 under Flask). Without a dependency graph, a package the code doesn't import is
   now `unknown`, not `unused`, so it is no longer deprioritized on a guess.

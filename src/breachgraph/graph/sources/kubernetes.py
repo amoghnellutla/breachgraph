@@ -67,6 +67,8 @@ INTERNAL_INGRESS_ANNOTATIONS = {
 }
 IRSA_ANNOTATION = "eks.amazonaws.com/role-arn"
 GKE_WI_ANNOTATION = "iam.gke.io/gcp-service-account"
+# Root on a worker node: every Secret mounted on it, the kubelet's credentials, its cloud identity.
+HOST_VALUE = 9
 ROLE_ARN_RE = re.compile(r"arn:aws[\w-]*:iam::[^:]*:role/(?:.*/)?([\w+=,.@-]+)$")
 
 
@@ -314,7 +316,13 @@ class KubernetesSource:
             # unless Pod Security Admission blocks it (not visible from manifests alone).
             host_id = "k8s:host:nodes"
             graph.add_node(
-                Node(id=host_id, kind=NodeKind.HOST, name="Kubernetes worker nodes", evidence=[ev])
+                Node(
+                    id=host_id,
+                    kind=NodeKind.HOST,
+                    name="Kubernetes worker nodes",
+                    value=HOST_VALUE,
+                    evidence=[ev],
+                )
             )
             graph.add_edge(
                 Edge(
@@ -415,7 +423,13 @@ class KubernetesSource:
         if reasons:
             host_id = "k8s:host:nodes"
             graph.add_node(
-                Node(id=host_id, kind=NodeKind.HOST, name="Kubernetes worker nodes", evidence=[ev])
+                Node(
+                    id=host_id,
+                    kind=NodeKind.HOST,
+                    name="Kubernetes worker nodes",
+                    value=HOST_VALUE,
+                    evidence=[ev],
+                )
             )
             graph.add_edge(
                 Edge(

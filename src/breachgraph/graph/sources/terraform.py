@@ -10,8 +10,10 @@ being guessed silently.
 from __future__ import annotations
 
 import fnmatch
+import posixpath
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from breachgraph.graph.model import (
@@ -32,7 +34,7 @@ from breachgraph.graph.sources.azure import AzureTerraform
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.gcp import GcpTerraform
 from breachgraph.graph.sources.hcl import decode_policy, literal, refs, truthy
-from breachgraph.graph.sources.tfload import Res, module_views
+from breachgraph.graph.sources.tfload import Res, code_paths, module_views
 from breachgraph.graph.sources.tfload import list_blocks as _list_blocks
 from breachgraph.graph.sources.tfload import list_of as _list
 
@@ -134,6 +136,10 @@ class _State:
     docs: dict[str, list[Stmt]] = field(default_factory=dict)  # "data.aws_iam_policy_document.x"
     role_stmts: dict[str, list[Stmt]] = field(default_factory=dict)  # role node id -> statements
     unresolved: list[str] = field(default_factory=list)
+    root: Path | None = None  # repository root, to read policies kept in files
+
+
+_FILE_CALL = re.compile(r'^\$\{(?:file|templatefile)\(\s*"([^"]+)"')
 
 
 def _actions_match(pattern: str, action: str) -> bool:
@@ -146,7 +152,7 @@ class TerraformSource:
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
         skipped: list[str] = []
         for view in module_views(ctx):
-            st = _State(res=view)
+            st = _State(res=view, root=ctx.root)
             for key, r in st.res.items():
                 if r.rtype == "aws_iam_policy_document" and key.startswith("data."):
                     st.docs[key] = self._doc_statements(r)
@@ -182,12 +188,28 @@ class TerraformSource:
             )
         return out
 
+    def _policy_file(self, st: _State, value: Any, ev: Evidence) -> str | None:
+        """Text of a policy kept in a file: `policy = file("policies/v1.json")` (or templatefile)."""
+        m = _FILE_CALL.match(value) if isinstance(value, str) else None
+        if m is None or st.root is None:
+            return None
+        tf_dir = posixpath.dirname(ev.path)
+        rel = m.group(1).replace("${path.module}", tf_dir or ".")
+        for cand in (posixpath.join(tf_dir, rel), rel):
+            path = (st.root / cand).resolve()
+            try:
+                path.relative_to(st.root.resolve())  # never read outside the scanned tree
+                return path.read_text(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                continue
+        return None
+
     def _policy(self, st: _State, value: Any, ev: Evidence) -> list[Stmt]:
         """Statements from an inline JSON/jsonencode policy or a policy_document reference."""
         for ref in refs(value):
             if ref.startswith("data.aws_iam_policy_document."):
                 return st.docs.get(ref, [])
-        doc = decode_policy(value)
+        doc = decode_policy(self._policy_file(st, value, ev) or value)
         if doc is None:
             st.unresolved.append(f"{ev.label()}: IAM policy could not be evaluated statically")
             return []
@@ -685,6 +707,7 @@ class TerraformSource:
                         attrs={
                             "platform": "lambda",
                             "handler": r.body.get("handler"),
+                            "code_paths": code_paths(st.res, r),
                             "tf_range": [r.ev.path, r.ev.line, r.end_line],
                         },
                         evidence=[r.ev],

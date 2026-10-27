@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import fnmatch
 import re
+from collections.abc import Callable
 from typing import Any
 
 from breachgraph.graph.model import (
@@ -28,7 +29,7 @@ from breachgraph.graph.model import (
     internet,
 )
 from breachgraph.graph.sources.hcl import literal, refs, truthy
-from breachgraph.graph.sources.tfload import Res, attr_refs, first_block, list_blocks, list_of
+from breachgraph.graph.sources.tfload import Res, attr_refs, code_paths, first_block, list_blocks, list_of
 
 SUBSCRIPTION_OWNER_ID = "azure:subscription-owner"
 K8S_NODES_ID = "k8s:host:nodes"
@@ -144,6 +145,18 @@ COMPUTE: dict[str, tuple[str, str]] = {
     "azurerm_linux_function_app": ("Function app", "app-service"),
     "azurerm_windows_function_app": ("Function app", "app-service"),
     "azurerm_container_app": ("Container app", "container-app"),
+    # azurerm 2.x/3.x names, still common
+    "azurerm_function_app": ("Function app", "app-service"),
+    "azurerm_app_service": ("App Service app", "app-service"),
+    # Runs runbooks as its managed identity; reachable by whoever can start jobs on it.
+    "azurerm_automation_account": ("Automation account", "automation"),
+}
+# Who can run code on a compute resource, and so act as its managed identities.
+CODE_EXEC: dict[str, str] = {
+    "azure-vm": "Microsoft.Compute/virtualMachines/runCommand/action",
+    "app-service": "Microsoft.Web/sites/write",
+    "container-app": "Microsoft.App/containerApps/write",
+    "automation": "Microsoft.Automation/automationAccounts/jobs/write",
 }
 _OPEN_SOURCES = {"*", "internet", "0.0.0.0/0", "any"}
 _SUBJECT_RE = re.compile(r"system:serviceaccount:([\w.-]+):([\w.-]+)")
@@ -173,10 +186,12 @@ class _Role:
 
 class AzureTerraform:
     def __init__(self, res: dict[str, Res]) -> None:
+        self.all_res = res  # every block, for provider-neutral ones such as data.archive_file
         self.res = {k: v for k, v in res.items() if v.rtype.startswith("azurerm_")}
         self.system_ids: dict[str, str] = {}  # compute key -> system-assigned identity node
         self.kubelet_ids: dict[str, str] = {}  # AKS cluster key -> kubelet identity node
         self.stores: dict[str, Res] = {}  # node id -> data store resource
+        self.compute_identities: dict[str, list[str]] = {}  # compute node id -> its identity nodes
         self.skipped: list[str] = []
 
     def collect(self, graph: Graph, skipped: list[str]) -> None:
@@ -217,7 +232,11 @@ class AzureTerraform:
         if rg:
             return self._name(rg).lower()
         lit = literal(value)
-        return lit.lower() if lit else None
+        if lit:
+            return lit.lower()
+        # The same variable names the same group, whatever its value: "var.resource_group".
+        m = re.fullmatch(r"\$\{((?:var|local)\.[\w-]+)\}", str(value))
+        return m.group(1) if m else None
 
     # ------------------------------------------------------------------ data stores
 
@@ -284,7 +303,12 @@ class AzureTerraform:
                     id=r.node_id,
                     kind=NodeKind.WORKLOAD,
                     name=f"{label} {name}",
-                    attrs={"platform": platform, "tf_range": r.tf_range, "images": self._images(r)},
+                    attrs={
+                        "platform": platform,
+                        "tf_range": r.tf_range,
+                        "images": self._images(r),
+                        "code_paths": code_paths(self.all_res, r) if platform == "app-service" else [],
+                    },
                     evidence=[r.ev],
                 )
             )
@@ -312,6 +336,7 @@ class AzureTerraform:
                 uai = self._get(ref, "azurerm_user_assigned_identity")
                 if uai and uai.node_id:
                     targets.append(uai.node_id)
+            self.compute_identities[r.node_id] = targets
             for t in targets:
                 graph.add_edge(
                     Edge(
@@ -330,6 +355,9 @@ class AzureTerraform:
             return [
                 str(c["image"]) for c in list_blocks(template.get("container")) if literal(c.get("image"))
             ]
+        fx = str(first_block(r.body.get("site_config")).get("linux_fx_version", ""))
+        if fx.upper().startswith("DOCKER|"):
+            return [fx.split("|", 1)[1]]
         stack = first_block(first_block(r.body.get("site_config")).get("application_stack"))
         image = literal(stack.get("docker_image_name") or stack.get("docker_image"))
         return [image] if image else []
@@ -410,14 +438,15 @@ class AzureTerraform:
         self.skipped.append(f"{r.ev.label()}: role definition could not be resolved statically")
         return None
 
-    def _scope(self, value: Any) -> tuple[str, list[str]] | None:
-        """(label, data store node ids covered) for a role assignment scope; None if unknown."""
+    def _scope(self, value: Any) -> tuple[str, Callable[[Res], bool]] | None:
+        """(label, which resources it covers) for a role assignment scope; None if unknown."""
         for ref in refs(value):
             r = self.res.get(ref)
             if r is None:
                 continue
-            if r.node_id in self.stores:
-                return f"{DATASTORES[r.rtype][2]} {self._name(r)}", [r.node_id]
+            if r.node_id and (r.node_id in self.stores or r.rtype in COMPUTE):
+                label = DATASTORES[r.rtype][2] if r.rtype in DATASTORES else COMPUTE[r.rtype][0]
+                return f"{label} {self._name(r)}", lambda x, r=r: x is r
             if r.rtype in ("azurerm_storage_container", "azurerm_key_vault_secret"):
                 parent = self._first(
                     [
@@ -429,31 +458,28 @@ class AzureTerraform:
                     "azurerm_key_vault",
                 )
                 if parent and parent.node_id:
-                    return f"{r.rtype.removeprefix('azurerm_')} {self._name(r)}", [parent.node_id]
+                    return f"{r.rtype.removeprefix('azurerm_')} {self._name(r)}", lambda x, p=parent: x is p
         text = value if isinstance(value, str) else str(value)
         if "azurerm_resource_group." in text or "/resourceGroups/" in text:
             m = re.search(r"/providers/Microsoft\.\w+/\w+/([^/${}]+)", text)
             if m:  # a resource ID written out by name
-                hits = [nid for nid, r in self.stores.items() if self._name(r).lower() == m.group(1).lower()]
-                return (f"resource {m.group(1)}", hits) if hits else None
+                target = m.group(1).lower()
+                return f"resource {m.group(1)}", lambda x: self._name(x).lower() == target
             rg = self._first(value, "azurerm_resource_group")
             name = self._name(rg).lower() if rg else None
             if name is None:
-                m = re.search(r"/resourceGroups/([^/${}]+)", text)
-                name = m.group(1).lower() if m else None
+                m = re.search(r"/resourceGroups/(?:([^/${}]+)|\$\{((?:var|local)\.[\w-]+)\})", text)
+                name = (m.group(1).lower() if m.group(1) else m.group(2)) if m else None
             if name is None:
                 return None
-            ids = [
-                nid for nid, r in self.stores.items() if self._rg(r.body.get("resource_group_name")) == name
-            ]
-            return f"resource group {name}", ids
+            return f"resource group {name}", lambda x: self._rg(x.body.get("resource_group_name")) == name
         if (
             "azurerm_subscription" in text
             or "managementGroups" in text
             or "azurerm_management_group" in text
             or re.fullmatch(r"/subscriptions/[^/]+/?", text)
         ):
-            return "subscription", list(self.stores)
+            return "subscription", lambda _x: True
         return None
 
     def _role_assignments(self, graph: Graph) -> None:
@@ -470,9 +496,12 @@ class AzureTerraform:
             if scope is None:
                 self.skipped.append(f"{r.ev.label()}: role assignment scope could not be resolved statically")
                 continue
-            label, store_ids = scope
+            label, covers = scope
+            store_ids = [nid for nid, st in self.stores.items() if covers(st)]
+            computes = [c for c in self.res.values() if c.rtype in COMPUTE and c.node_id and covers(c)]
             cond = Confidence.MEDIUM if r.body.get("condition") else Confidence.HIGH
             for pid in principals:
+                self._lateral(graph, pid, role, label, computes, r, cond)
                 if role.allows("action", ESCALATION):
                     if label == "subscription":
                         self._subscription_owner(graph, pid, r, role, cond)
@@ -504,6 +533,29 @@ class AzureTerraform:
                                 )
                             )
                             break
+
+    def _lateral(
+        self, graph: Graph, pid: str, role: _Role, label: str, computes: list[Res], r: Res, cond: Confidence
+    ) -> None:
+        """Running code on a compute resource (VM run command, app deployment, runbook job) lets
+        the holder act as that resource's managed identities: classic Azure privilege escalation."""
+        for c in computes:
+            action = CODE_EXEC.get(COMPUTE[c.rtype][1])
+            if action is None or not role.allows("action", action):
+                continue
+            for ident in self.compute_identities.get(c.node_id or "", []):
+                if ident != pid:
+                    graph.add_edge(
+                        Edge(
+                            src=pid,
+                            dst=ident,
+                            kind=EdgeKind.USES_IDENTITY,
+                            evidence=[r.ev],
+                            confidence=cond,
+                            note=f"{role.name} on {label}: can run code on {COMPUTE[c.rtype][0]} "
+                            f"{self._name(c)} ({action}) and act as its identity",
+                        )
+                    )
 
     def _subscription_owner(self, graph: Graph, pid: str, r: Res, role: _Role, cond: Confidence) -> None:
         graph.add_node(

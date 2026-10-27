@@ -27,7 +27,7 @@ from breachgraph.graph.model import (
     internet,
 )
 from breachgraph.graph.sources.hcl import literal, refs, truthy
-from breachgraph.graph.sources.tfload import Res, attr_refs, first_block, list_blocks, list_of
+from breachgraph.graph.sources.tfload import Res, attr_refs, code_paths, first_block, list_blocks, list_of
 
 PROJECT_OWNER_ID = "gcp:project-owner"
 K8S_NODES_ID = "k8s:host:nodes"
@@ -150,6 +150,7 @@ def sa_id(email_or_id: str) -> str:
 
 class GcpTerraform:
     def __init__(self, res: dict[str, Res]) -> None:
+        self.all_res = res  # every block, for provider-neutral ones such as data.archive_file
         self.res = {k: v for k, v in res.items() if v.rtype.startswith("google_")}
         self.stores: dict[str, Res] = {}
         self.sas: dict[str, Res] = {}  # node id -> google_service_account
@@ -262,6 +263,7 @@ class GcpTerraform:
                     "platform": platform,
                     "tf_range": r.tf_range,
                     "images": images,
+                    "code_paths": code_paths(self.all_res, r),
                     "metadata_header": METADATA_HEADER,
                 },
                 evidence=[r.ev],

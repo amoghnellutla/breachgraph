@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from breachgraph.graph.model import (
     Confidence,
@@ -78,10 +78,21 @@ def _contains(root: str, path: str) -> bool:
     return root == "" or path == root or path.startswith(root.rstrip("/") + "/")
 
 
-def code_units(graph: Graph, dockerfile_dirs: list[str], repo_name: str) -> list[CodeUnit]:
-    """Map code directories to workloads by image name, with an honest confidence."""
+def code_units(
+    graph: Graph, dockerfile_dirs: list[str], repo_name: str, root: Path | None = None
+) -> list[CodeUnit]:
+    """Map code directories to workloads, with an honest confidence: the source Terraform deploys
+    to a serverless function (exact), then container images matched to Dockerfile directories."""
     workloads = list(graph.of_kind(NodeKind.WORKLOAD))
     units: list[CodeUnit] = []
+    deployed: dict[str, list[str]] = {}
+    for w in workloads:
+        raw = w.attrs.get("code_paths")
+        for cp in raw if isinstance(raw, list) else []:
+            if root is None or (root / str(cp)).exists():
+                deployed.setdefault(str(cp), []).append(w.id)
+    for cp in sorted(deployed, key=len, reverse=True):
+        units.append(CodeUnit(cp, deployed[cp], Confidence.HIGH))
     for d in sorted(set(dockerfile_dirs), key=len, reverse=True):
         dir_name = PurePosixPath(d).name if d else repo_name
         matched: list[str] = []
