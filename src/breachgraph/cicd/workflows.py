@@ -60,6 +60,7 @@ class Workflow:
     permissions: Any
     jobs: list[Job]
     env: dict[str, Any] = field(default_factory=dict)
+    run_after: list[str] = field(default_factory=list)  # workflow_run: names it follows
 
     def job_permissions(self, job: Job) -> Any:
         """Effective GITHUB_TOKEN permissions; None means the repository default applies."""
@@ -152,7 +153,14 @@ def parse_workflow(text: str, rel: str) -> Workflow | None:
         permissions=data.get("permissions"),
         jobs=jobs,
         env=_dict(data.get("env")),
+        run_after=_run_after(data.get("on")),
     )
+
+
+def _run_after(on: Any) -> list[str]:
+    spec = on.get("workflow_run") if isinstance(on, dict) else None
+    names = spec.get("workflows") if isinstance(spec, dict) else None
+    return [str(n) for n in names] if isinstance(names, list) else []
 
 
 def load_workflows(root: Path, exclude: list[str]) -> tuple[list[Workflow], list[str]]:

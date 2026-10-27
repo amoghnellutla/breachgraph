@@ -35,6 +35,11 @@ All notable changes to this project are documented here. The format follows
   (`tmpab12cd/chart/...`), so every scan of a repository with Helm charts made them look new.
   They now point at the template in the repository and keep their identity across runs.
 - A scan walked the repository once per source (about eight times). It now lists it once.
+- CI/CD false positives found by running the checks on the 100 most-starred repositories (1,354
+  workflows; 3 of the 4 findings were not exploitable): a job whose `if:` requires code from this
+  repository (`head.repo.full_name == github.repository`, `head.repo.fork == false`, or the
+  `workflow_run` equivalent, as a required term) is no longer reported, and a `workflow_run`
+  checkout is reported only when a workflow it follows can be started by an outsider.
 
 ## [0.4.0] - 2026-10-27
 

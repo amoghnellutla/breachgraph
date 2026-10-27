@@ -58,6 +58,15 @@ _MAINTAINER_GATE = re.compile(
     re.I,
 )
 _LABEL_GATE = re.compile(r"labels|label\.name", re.I)
+# A required condition that the code comes from this repository, not a fork: forks can't run it.
+_SAME_REPO = re.compile(
+    r"(?:head\.repo\.full_name|head_repository\.full_name)\s*==\s*github\.repository"
+    r"|github\.repository\s*==\s*github\.event\.(?:pull_request\.head\.repo|workflow_run\.head_repository)\.full_name"
+    r"|head\.repo\.fork\s*==\s*false|!\s*github\.event\.pull_request\.head\.repo\.fork",
+    re.I,
+)
+# Triggers an outsider can cause in some workflow (a run of it can then trigger workflow_run).
+_OUTSIDER = PRIVILEGED_TRIGGERS | FORK_TRIGGERS
 _UNTRUSTED_REF = re.compile(
     r"github\.event\.pull_request\.head\.(?:sha|ref)|github\.head_ref|refs/pull/"
     r"|github\.event\.workflow_run\.head_(?:sha|branch)|pull_request\.head\.repo\.full_name"
@@ -69,12 +78,40 @@ def analyze(target: Path, exclude: list[str]) -> tuple[list[Finding], list[str]]
     """All native CI/CD findings for a repository, and anything that could not be parsed."""
     workflows, skipped = load_workflows(target, exclude)
     findings: list[Finding] = []
+    by_name = {wf.name: wf for wf in workflows}
     for wf in workflows:
         for job in wf.jobs:
+            if same_repository_only(job):
+                continue  # forks can't start it; only people who can push branches can
             findings += _script_injection(wf, job)
-            findings += _untrusted_checkout(wf, job)
+            findings += _untrusted_checkout(wf, job, by_name)
     findings += dependency_confusion(target, exclude)
     return findings, skipped
+
+
+def same_repository_only(job: Job) -> bool:
+    """The job's `if:` requires code from this repository: a required (top-level `&&`) term,
+    not one side of an `||`."""
+    return any(_SAME_REPO.search(term) for term in _required_terms(job.if_))
+
+
+def _required_terms(cond: str) -> list[str]:
+    """Top-level `&&` terms of an expression; the whole thing if it has a top-level `||`."""
+    cond = cond.strip().removeprefix("${{").removesuffix("}}")
+    terms, depth, start, i = [], 0, 0, 0
+    while i < len(cond):
+        ch = cond[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0 and cond.startswith("||", i):
+            return []  # an alternative: no term is required
+        elif depth == 0 and cond.startswith("&&", i):
+            terms.append(cond[start:i])
+            start, i = i + 2, i + 1
+        i += 1
+    return [*terms, cond[start:]]
 
 
 def gated(wf: Workflow, job: Job, step: Step | None = None) -> str:
@@ -172,10 +209,15 @@ def _script_injection(wf: Workflow, job: Job) -> list[Finding]:
     return out
 
 
-def _untrusted_checkout(wf: Workflow, job: Job) -> list[Finding]:
+def _untrusted_checkout(wf: Workflow, job: Job, by_name: dict[str, Workflow] | None = None) -> list[Finding]:
     trigger = next((t for t in ("pull_request_target", "workflow_run") if t in wf.triggers), None)
     if trigger is None:
         return []
+    if trigger == "workflow_run" and "pull_request_target" not in wf.triggers and by_name is not None:
+        # head_sha is attacker code only if an outsider can start a workflow this one follows.
+        known = [by_name[n] for n in wf.run_after if n in by_name]
+        if known and len(known) == len(wf.run_after) and not any(w.triggers & _OUTSIDER for w in known):
+            return []
     for i, step in enumerate(job.steps):
         if step.action != "actions/checkout":
             continue
