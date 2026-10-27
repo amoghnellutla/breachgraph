@@ -215,6 +215,7 @@ class ToolStatus(StrEnum):
     FAILED = "failed"
     SKIPPED = "skipped"
     IMPORTED = "imported"
+    REUSED = "reused"  # incremental scan: nothing it reads changed, so the base report's findings stand
 
 
 class ToolRun(BaseModel):

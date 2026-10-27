@@ -16,6 +16,7 @@ _TOOL_STATUS = {
     ToolStatus.IMPORTED: "imported",
     ToolStatus.SKIPPED: "skipped",
     ToolStatus.FAILED: "failed",
+    ToolStatus.REUSED: "reused",
 }
 
 

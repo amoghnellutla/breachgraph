@@ -256,7 +256,9 @@ def scan_cmd(
     )
 
     def on_done(run: ToolRun) -> None:
-        style = {"ok": "green", "imported": "cyan", "skipped": "dim", "failed": "red"}[run.status.value]
+        style = {"ok": "green", "imported": "cyan", "skipped": "dim", "failed": "red", "reused": "cyan"}[
+            run.status.value
+        ]
         extra = f" {run.message}" if run.message and run.status is not ToolStatus.OK else ""
         console.print(
             f"  [{style}]{run.status.value:>8}[/] {run.name:<9} {run.findings:>4} findings"

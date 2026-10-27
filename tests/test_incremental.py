@@ -19,6 +19,7 @@ from breachgraph.models import (
 )
 from breachgraph.normalize import fingerprint_of
 from breachgraph.pipeline import ScanOptions, scan
+from breachgraph.reporters import markdown
 from breachgraph.scanners.base import ScanContext, ScannerOutcome
 from tests.test_entry_points import write
 
@@ -152,7 +153,10 @@ def test_incremental_scan_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyP
         tmp_path / "w4",
     )
     assert Recorder.seen == {} and len(last.findings) == 2
-    assert all("reused" in (t.message or "") for t in last.tools)
+    assert all(t.status is ToolStatus.REUSED for t in last.tools)
+    assert not last.warnings  # reusing findings is normal, not a warning
+    md = markdown.render(last)
+    assert "semgrep (reused, 2)" in md
 
 
 def test_rescanned_member_of_a_carried_cluster_is_not_duplicated(tmp_path: Path) -> None:

@@ -12,6 +12,9 @@ All notable changes to this project are documented here. The format follows
   (`/tmp/breachgraph-cache/trivy`), so a single mount keeps everything between local runs. The
   README's Docker command now mounts it: a repeat scan of the demo's dependencies takes 7 seconds
   instead of 23.
+- In an incremental scan, a scanner that didn't need to run is shown as `reused` (with the number
+  of findings it carried over) in the PR comment, console and HTML report, and no longer adds a
+  warning.
 
 ## [0.5.0] - 2026-10-27
 

@@ -246,12 +246,7 @@ def _scan(
         if n in run:
             continue
         count = sum(1 for f in reused if f.tool == n)
-        tool_run = ToolRun(
-            name=n,
-            status=ToolStatus.OK,
-            findings=count,
-            message=f"no relevant change: {count} finding(s) reused",
-        )
+        tool_run = ToolRun(name=n, status=ToolStatus.REUSED, findings=count, message="no relevant change")
         outcomes.append(ScannerOutcome(tool_run, []))
         if on_done:
             on_done(tool_run)
