@@ -10,6 +10,7 @@ from breachgraph.config import Config
 from breachgraph.models import Category, Confidence, Severity
 from breachgraph.scanners import IMPORTERS, ScanContext
 from breachgraph.scanners.base import load_json
+from breachgraph.scanners.checkov import repo_path
 from tests.conftest import FIXTURES
 
 DEMO = Path(__file__).parent.parent / "examples" / "vulnerable-app"
@@ -203,3 +204,15 @@ def test_parsers_tolerate_garbage(ctx: ScanContext) -> None:
     for name, scanner in IMPORTERS.items():
         assert scanner.parse(None, ctx) == [], name
         assert scanner.parse("not json", ctx) == [], name
+
+
+def test_checkov_helm_paths_map_back_to_the_template(tmp_path: Path) -> None:
+    (tmp_path / "helm-chart" / "templates").mkdir(parents=True)
+    (tmp_path / "helm-chart" / "templates" / "adservice.yaml").write_text("x", encoding="utf-8")
+    assert repo_path("tmprjhwsyok/helm-chart/onlineboutique/templates/adservice.yaml", tmp_path) == (
+        "helm-chart/templates/adservice.yaml"
+    )
+    assert repo_path("/tmp_x9/helm-chart/onlineboutique/templates/adservice.yaml", tmp_path) == (
+        "helm-chart/templates/adservice.yaml"
+    )
+    assert repo_path("k8s/app.yaml", tmp_path) == "k8s/app.yaml"

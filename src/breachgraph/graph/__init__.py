@@ -19,6 +19,7 @@ from breachgraph.graph.sources.kubernetes import KubernetesSource, admits
 from breachgraph.graph.sources.routes import RouteSource
 from breachgraph.graph.sources.terraform import TerraformSource
 from breachgraph.models import Finding
+from breachgraph.paths import listing_cache
 from breachgraph.reachability.imports import collect_imports
 
 __all__ = ["AttackGraphResult", "AttackPath", "ChokePoint", "Graph", "build_attack_graph"]
@@ -118,6 +119,11 @@ def _matches(pattern: str, node: Node) -> bool:
 def build_attack_graph(
     target: Path, findings: list[Finding], config: Config, repo_name: str | None = None
 ) -> AttackGraphResult:
+    with listing_cache():  # every source lists the same tree: walk it once
+        return _build(target, findings, config, repo_name)
+
+
+def _build(target: Path, findings: list[Finding], config: Config, repo_name: str | None) -> AttackGraphResult:
     ctx = SourceContext(root=target, exclude=config.exclude_paths)
     graph = Graph()
 

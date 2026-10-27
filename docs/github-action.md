@@ -69,6 +69,26 @@ The first PR after adding the action has no base report yet. It then falls back 
 file, if any, and to treating everything as new. Push to the default branch once to seed it.
 Locally, the same comparison is `breachgraph scan . --compare base/breachgraph.json`.
 
+## Pull-request speed
+
+With a base report available, pull requests are scanned incrementally (`incremental`, on by
+default): only changed files go through Semgrep and Checkov, Trivy, Gitleaks and zizmor run only
+when a file they read changed, and the default branch's findings are reused for the rest. The
+attack graph is always rebuilt from the whole tree. If anything about the base is in doubt (no
+file digests, another breachgraph version, other scanner settings), the scan is full.
+
+Measured in the release image on a one-line change, scanner caches warm:
+
+| Project | Changed file | Incremental | Full rescan | Cold full scan |
+|---|---|---:|---:|---:|
+| OWASP Juice Shop | `routes/login.ts` | 8 s | 25 s | 73 s |
+| Online Boutique | `src/frontend/handlers.go` | 9 s | 19 s | 47 s |
+| TerraGoat | `terraform/aws/s3.tf` | 10 s | 9 s | 121 s |
+
+In each case the incremental result had exactly the same findings, fingerprints and attack paths
+as the full rescan. A change to infrastructure files reruns the infrastructure scanners, so it
+gains little (TerraGoat).
+
 ## Recipes
 
 **Adopt on a legacy repo.** Accept today's findings, then fail only on new ones:

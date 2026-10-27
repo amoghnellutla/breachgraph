@@ -17,6 +17,7 @@ from breachgraph.models import (
     ToolRun,
     ToolStatus,
 )
+from breachgraph.normalize import fingerprint_of
 from breachgraph.pipeline import ScanOptions, scan
 from breachgraph.scanners.base import ScanContext, ScannerOutcome
 from tests.test_entry_points import write
@@ -152,3 +153,11 @@ def test_incremental_scan_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyP
     )
     assert Recorder.seen == {} and len(last.findings) == 2
     assert all("reused" in (t.message or "") for t in last.tools)
+
+
+def test_rescanned_member_of_a_carried_cluster_is_not_duplicated(tmp_path: Path) -> None:
+    fresh = f("trivy", "main.tf", "AVD")
+    carried = f("checkov", "main.tf", "public-bucket")
+    carried.fingerprints = [carried.fingerprint, fingerprint_of(fresh)]  # as dedupe recorded it
+    result = pipeline.process([fresh], [], Config(), tmp_path, ScanOptions(offline=True), carried=[carried])
+    assert [x.fingerprint for x in result.findings] == ["checkov:main.tf:public-bucket"]

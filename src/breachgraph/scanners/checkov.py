@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import Any, ClassVar, cast
 
 from breachgraph.config import CheckovConfig
@@ -39,10 +41,10 @@ class CheckovScanner(Scanner):
                 continue
             framework = report.get("check_type", "")
             for c in (report.get("results") or {}).get("failed_checks") or []:
-                findings.append(self._finding(c, framework))
+                findings.append(self._finding(c, framework, ctx.target))
         return findings
 
-    def _finding(self, c: dict[str, Any], framework: str) -> Finding:
+    def _finding(self, c: dict[str, Any], framework: str, target: Path) -> Finding:
         check_id = c.get("check_id", "CKV")
         line_range = c.get("file_line_range") or [None, None]
         code = c.get("code_block") or []
@@ -71,7 +73,7 @@ class CheckovScanner(Scanner):
             else Category.IAC,
             confidence=Confidence.HIGH,
             location=Location(
-                path=c.get("repo_file_path") or c.get("file_path") or "",
+                path=repo_path(c.get("repo_file_path") or c.get("file_path") or "", target),
                 start_line=line_range[0] or None,
                 end_line=line_range[1] or None,
                 snippet=snippet,
@@ -80,3 +82,21 @@ class CheckovScanner(Scanner):
             remediation=f"See the fix guide: {guideline}" if guideline else None,
             references=[u for u in as_list(guideline) if u],
         )
+
+
+_RENDERED = re.compile(r"^/?tmp\w+/(.+)$")
+
+
+def repo_path(path: str, target: Path) -> str:
+    """Checkov renders Helm charts into a random temporary directory and reports paths like
+    tmpab12cd/deploy/chart/<chart name>/templates/x.yaml. Map them back to the template in the
+    repository (deploy/chart/templates/x.yaml), so findings keep the same identity on every run."""
+    m = _RENDERED.match(path)
+    if m is None:
+        return path
+    rest = m.group(1)
+    template = re.sub(r"/[^/]+/templates/", "/templates/", rest, count=1)
+    for candidate in (template, rest):
+        if (target / candidate).is_file():
+            return candidate
+    return template

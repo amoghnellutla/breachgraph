@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
@@ -61,7 +62,33 @@ def matches_any(path: str, patterns: list[str]) -> bool:
 _PROBE = "\x00probe"  # a name no real pattern targets: matches only patterns covering a whole directory
 
 
+_LISTING: dict[tuple[str, tuple[str, ...]], list[tuple[Path, str]]] | None = None
+
+
+@contextmanager
+def listing_cache() -> Iterator[None]:
+    """Within this block every walk of the same tree is done once: a scan's sources, scanners and
+    digests all list the repository, and on a slow filesystem each walk costs seconds. Files must
+    not change inside the block."""
+    global _LISTING
+    outer, _LISTING = _LISTING, {} if _LISTING is None else _LISTING
+    try:
+        yield
+    finally:
+        _LISTING = outer
+
+
 def iter_files(root: Path, exclude: list[str]) -> Iterator[tuple[Path, str]]:
+    if _LISTING is None:
+        yield from _walk(root, exclude)
+        return
+    key = (str(root.resolve()), tuple(exclude))
+    if key not in _LISTING:
+        _LISTING[key] = list(_walk(root, exclude))
+    yield from _LISTING[key]
+
+
+def _walk(root: Path, exclude: list[str]) -> Iterator[tuple[Path, str]]:
     """(path, repo-relative POSIX path) of every file under ``root`` that ``exclude`` keeps.
 
     Excluded directories (and .git) are pruned instead of walked, which matters for .venv and

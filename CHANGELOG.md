@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format follows
   Trivy, Gitleaks and zizmor only when a file they read changed) and reuses the default branch's
   findings for the rest. The attack graph is always rebuilt in full. Any doubt (no digests, a
   different version or different scanner settings) means a full scan.
+  On a one-line change: 8 to 10 seconds, with the same findings and paths as a full rescan
+  (docs/github-action.md).
 - Several repositories scanned as one: `breachgraph scan app/ infra/`, and `path: ". infra"` in
   the action. Attack paths that cross an application repository and an infrastructure repository
   are found.
@@ -29,6 +31,10 @@ All notable changes to this project are documented here. The format follows
   coverage line, says the result is infrastructure only, and gives the `breachgraph scan` command;
   a scan with incomplete coverage says "No attack path found, but the result is incomplete".
 - `breachgraph fix` with no report runs the scan itself instead of stopping with an error.
+- Checkov renders Helm charts into a random temporary directory and reported findings there
+  (`tmpab12cd/chart/...`), so every scan of a repository with Helm charts made them look new.
+  They now point at the template in the repository and keep their identity across runs.
+- A scan walked the repository once per source (about eight times). It now lists it once.
 
 ## [0.4.0] - 2026-10-27
 

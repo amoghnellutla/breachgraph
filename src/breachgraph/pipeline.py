@@ -17,6 +17,7 @@ from breachgraph.graph import build_attack_graph
 from breachgraph.graph.summary import coverage, summarize
 from breachgraph.models import Finding, ScanResult, ToolRun, ToolStatus
 from breachgraph.normalize import dedupe, finalize
+from breachgraph.paths import listing_cache
 from breachgraph.policy import (
     apply_baseline,
     apply_suppressions,
@@ -102,6 +103,7 @@ def process(
     opts: ScanOptions,
     artifacts: dict[str, str] | None = None,
     started_at: datetime | None = None,
+    carried: list[Finding] | None = None,
 ) -> ScanResult:
     result = ScanResult(
         breachgraph_version=__version__,
@@ -113,6 +115,16 @@ def process(
         result.started_at = started_at
     items = drop_excluded(finalize(findings), config)
     items = dedupe(items)
+    if carried:
+        # Already normalized and deduplicated in the base run: kept exactly as they were (re-running
+        # dedupe on clusters regroups them, and renumbers duplicate fingerprints). A fresh finding
+        # with the same fingerprint replaces its carried copy.
+        # A fresh finding that was a member of a carried cluster (say Trivy's half of a
+        # Checkov+Trivy pair, rescanned) stays in that cluster, as a full scan would group it.
+        fresh = {fp for f in items for fp in (f.fingerprints or [f.fingerprint])}
+        kept = [c for c in carried if c.fingerprint not in fresh]
+        members = {fp for c in kept for fp in c.fingerprints}
+        items = [f for f in items if f.fingerprint not in members] + kept
     result.warnings += enrich(items, config.enrich, offline=opts.offline)
     if config.reachability.enabled:
         try:
@@ -198,6 +210,17 @@ def scan(
     work_dir: Path,
     on_done: Callable[[ToolRun], None] | None = None,
 ) -> ScanResult:
+    with listing_cache():
+        return _scan(target, config, opts, work_dir, on_done)
+
+
+def _scan(
+    target: Path,
+    config: Config,
+    opts: ScanOptions,
+    work_dir: Path,
+    on_done: Callable[[ToolRun], None] | None = None,
+) -> ScanResult:
     started = datetime.now(UTC)
     target = target.resolve()
     if not target.is_dir():
@@ -243,8 +266,10 @@ def scan(
         if on_done:
             on_done(outcome.run)
 
-    findings = [f for o in outcomes for f in o.findings] + reused
-    result = process(findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started)
+    findings = [f for o in outcomes for f in o.findings]
+    result = process(
+        findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started, carried=reused
+    )
     result.metadata["tree"] = tree
     result.metadata["scanner_fingerprint"] = incremental.scanner_fingerprint(config)
     if plan is not None:
