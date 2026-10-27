@@ -30,6 +30,10 @@ All notable changes to this project are documented here. The format follows
 - NetworkPolicy for the `cluster` entry point. A pod no ingress policy selects stays reachable
   from the foothold; an isolated pod is reachable only from the pods its rules admit, after
   taking control of one; default-deny cuts it off.
+- Helm charts are rendered with `helm template` (default values, offline, empty Helm home) and
+  analyzed like plain manifests, with evidence pointing at the template file. The image includes
+  Helm, pinned and checksum-verified, and the weekly refresh keeps it current within its major
+  version. A chart that fails to render is one blind spot with Helm's error.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 

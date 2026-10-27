@@ -20,6 +20,9 @@ ARG TRIVY_SHA256_ARM64=old2
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_SHA256_AMD64=old3
 ARG GITLEAKS_SHA256_ARM64=old4
+ARG HELM_VERSION=4.3.0
+ARG HELM_SHA256_AMD64=old5
+ARG HELM_SHA256_ARM64=old6
 """
 A, B = "a" * 64, "b" * 64
 
@@ -53,11 +56,18 @@ def test_takes_the_newest_settled_release(monkeypatch: pytest.MonkeyPatch) -> No
                 "https://api.github.com/repos/gitleaks/gitleaks/releases?per_page=30": releases(
                     ("v8.30.1", "2026-01-01T00:00:00Z", False)
                 ),
+                "https://api.github.com/repos/helm/helm/releases?per_page=30": releases(
+                    ("v4.3.1", "2026-10-01T00:00:00Z", False),
+                    ("v3.22.1", "2026-10-02T00:00:00Z", False),  # other major line: ignored
+                ),
+                "https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz.sha256sum": f"{A}  helm-v4.3.1-linux-amd64.tar.gz\n",
+                "https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz.sha256sum": f"{B}  helm-v4.3.1-linux-arm64.tar.gz\n",
             }
         ),
     )
     text, changes = refresh.refresh(DOCKER, NOW)
-    assert changes == ["trivy 0.75.0 -> 0.76.1"]
+    assert changes == ["trivy 0.75.0 -> 0.76.1", "helm 4.3.0 -> 4.3.1"]
+    assert f"ARG HELM_VERSION=4.3.1\nARG HELM_SHA256_AMD64={A}\nARG HELM_SHA256_ARM64={B}" in text
     assert f"ARG TRIVY_VERSION=0.76.1\nARG TRIVY_SHA256_AMD64={A}\nARG TRIVY_SHA256_ARM64={B}" in text
     assert "ARG GITLEAKS_VERSION=8.30.1\nARG GITLEAKS_SHA256_AMD64=old3" in text  # already current
 
@@ -75,6 +85,7 @@ def test_missing_checksums_leave_the_pin_alone(monkeypatch: pytest.MonkeyPatch) 
                     f"{A}  trivy_0.76.1_Linux-64bit.tar.gz\n"
                 ),
                 "https://api.github.com/repos/gitleaks/gitleaks/releases?per_page=30": [],
+                "https://api.github.com/repos/helm/helm/releases?per_page=30": [],
             }
         ),
     )

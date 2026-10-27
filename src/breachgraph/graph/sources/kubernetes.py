@@ -8,7 +8,12 @@ as skipped so the gap is visible.
 
 from __future__ import annotations
 
+import os
+import posixpath
 import re
+import shutil
+import subprocess
+import tempfile
 from typing import Any
 
 import yaml
@@ -29,6 +34,7 @@ from breachgraph.graph.model import (
     internet,
 )
 from breachgraph.graph.sources.common import SourceContext, line_of
+from breachgraph.paths import iter_files
 
 WORKLOAD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job", "CronJob", "Pod"}
 # hostPath mounts that hand over the node: container runtime socket, root fs, kubelet state.
@@ -130,13 +136,15 @@ class KubernetesSource:
         self.namespace_labels: dict[str, dict[str, str]] = {}
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
+        charts = self._render_charts(ctx)
         for path in ctx.files(".yaml", ".yml"):
             text = ctx.read(path)
             if not text or "apiVersion" not in text or "kind" not in text:
                 continue
             rel = ctx.rel(path)
             if "{{" in text:
-                ctx.skipped.append(f"{rel}: unrendered Helm/Go template (run `helm template` first)")
+                if not any(rel.startswith(c + "/") or not c for c in charts):  # a chart reports itself
+                    ctx.skipped.append(f"{rel}: unrendered Helm/Go template (run `helm template` first)")
                 continue
             try:
                 docs = list(yaml.safe_load_all(text))
@@ -151,6 +159,68 @@ class KubernetesSource:
                     if isinstance(item, dict):
                         self._index(item, rel, text)
         self._build(graph)
+
+    def _render_charts(self, ctx: SourceContext) -> list[str]:
+        """Render each Helm chart with its default values and index the manifests; returns every
+        chart directory. Without helm, or when a chart fails to render (missing vendored
+        dependencies, required values), the chart is one blind spot with the reason."""
+        chart_dirs = sorted(
+            posixpath.dirname(rel)
+            for path, rel in iter_files(ctx.root, ctx.exclude)
+            if path.name == "Chart.yaml" and "/charts/" not in f"/{rel}"  # subcharts render with their parent
+        )
+        if not chart_dirs:
+            return []
+        helm = os.environ.get("BREACHGRAPH_HELM_BIN") or shutil.which("helm")
+        if helm is None:
+            for c in chart_dirs:
+                ctx.skipped.append(f"{c or '.'}: Helm chart not rendered (install helm to analyze it)")
+            return chart_dirs
+        with tempfile.TemporaryDirectory(prefix="breachgraph-helm-") as home:
+            env = {
+                **os.environ,
+                "HELM_CONFIG_HOME": home,
+                "HELM_CACHE_HOME": home,
+                "HELM_DATA_HOME": home,
+                "HELM_PLUGINS": home,
+            }
+            for c in chart_dirs:
+                chart = ctx.root / c if c else ctx.root
+                try:
+                    proc = subprocess.run(
+                        [helm, "template", "breachgraph", str(chart)],
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        timeout=120,
+                        env=env,
+                        check=False,
+                    )
+                except (OSError, subprocess.TimeoutExpired) as exc:
+                    ctx.skipped.append(f"{c or '.'}: helm template failed ({type(exc).__name__})")
+                    continue
+                if proc.returncode != 0:
+                    lines = proc.stderr.strip().splitlines() or ["unknown error"]
+                    reason = next((ln for ln in lines if ln.startswith("Error:")), lines[-1])
+                    reason = reason.removeprefix("Error: ")[:200]
+                    ctx.skipped.append(f"{c or '.'}: helm template failed: {reason}")
+                    continue
+                self._index_rendered(proc.stdout, c, ctx)
+        return chart_dirs
+
+    def _index_rendered(self, output: str, chart_dir: str, ctx: SourceContext) -> None:
+        """Index `helm template` output; evidence points at the template each document came from."""
+        for chunk in re.split(r"^---\s*$", output, flags=re.M):
+            m = re.search(r"^# Source: [^/\n]+/(.+)$", chunk, re.M)
+            rel = posixpath.join(chart_dir, m.group(1)) if m else chart_dir or "."
+            try:
+                doc = yaml.safe_load(chunk)
+            except yaml.YAMLError:
+                ctx.skipped.append(f"{rel}: rendered output is not valid YAML")
+                continue
+            if isinstance(doc, dict) and doc.get("kind"):
+                self._index(doc, rel, "")
 
     def _index(self, doc: dict[str, Any], rel: str, text: str) -> None:
         kind = str(doc.get("kind", ""))

@@ -198,8 +198,8 @@ in [docs/architecture.md](docs/architecture.md#threat-model).
 ## Limits
 
 Dependency reachability is import-level: it knows a package is imported, not that the vulnerable
-function is called. Azure and GCP are read from Terraform only. Unrendered Helm charts are listed as
-blind spots.
+function is called. Azure and GCP are read from Terraform only. Helm charts are rendered with their
+default values only, and Kustomize overlays are not built yet.
 
 ## Contributing
 

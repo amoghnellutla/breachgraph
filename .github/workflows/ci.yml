@@ -49,6 +49,15 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: pip install --require-hashes -r requirements/dev.txt && pip install --no-deps -e .
+      - name: Install Helm (same pinned version and checksum as the Dockerfile)
+        if: runner.os == 'Linux'
+        run: |
+          version=$(sed -n 's/^ARG HELM_VERSION=//p' Dockerfile)
+          sha=$(sed -n 's/^ARG HELM_SHA256_AMD64=//p' Dockerfile)
+          curl -fsSLo "$RUNNER_TEMP/helm.tgz" "https://get.helm.sh/helm-v${version}-linux-amd64.tar.gz"
+          echo "${sha}  $RUNNER_TEMP/helm.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/helm.tgz" -C "$RUNNER_TEMP" linux-amd64/helm
+          echo "BREACHGRAPH_HELM_BIN=$RUNNER_TEMP/linux-amd64/helm" >> "$GITHUB_ENV"
       - run: pytest --cov=breachgraph --cov-report=term-missing --cov-fail-under=80
 
   docker:

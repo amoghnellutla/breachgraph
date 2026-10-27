@@ -12,13 +12,16 @@ ARG TRIVY_SHA256_ARM64=a1ee9f6ffb7d112b64ff726a2a0717c21175c1114361391f4a1329567
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_SHA256_AMD64=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
 ARG GITLEAKS_SHA256_ARM64=e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080
+ARG HELM_VERSION=4.3.0
+ARG HELM_SHA256_AMD64=86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb
+ARG HELM_SHA256_ARM64=31c5794dd55c66a51e6b7d2e2ac7a114ae8b1de41ff1d9ba51748ac973b06a08
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /dl
 RUN set -eux; \
     case "${TARGETARCH}" in \
-      amd64) T_ARCH=64bit; G_ARCH=x64;   T_SHA=${TRIVY_SHA256_AMD64}; G_SHA=${GITLEAKS_SHA256_AMD64} ;; \
-      arm64) T_ARCH=ARM64; G_ARCH=arm64; T_SHA=${TRIVY_SHA256_ARM64}; G_SHA=${GITLEAKS_SHA256_ARM64} ;; \
+      amd64) T_ARCH=64bit; G_ARCH=x64;   T_SHA=${TRIVY_SHA256_AMD64}; G_SHA=${GITLEAKS_SHA256_AMD64}; H_SHA=${HELM_SHA256_AMD64} ;; \
+      arm64) T_ARCH=ARM64; G_ARCH=arm64; T_SHA=${TRIVY_SHA256_ARM64}; G_SHA=${GITLEAKS_SHA256_ARM64}; H_SHA=${HELM_SHA256_ARM64} ;; \
       *) echo "unsupported arch ${TARGETARCH}"; exit 1 ;; \
     esac; \
     curl -fsSLo trivy.tgz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-${T_ARCH}.tar.gz"; \
@@ -27,7 +30,10 @@ RUN set -eux; \
     curl -fsSLo gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${G_ARCH}.tar.gz"; \
     echo "${G_SHA}  gitleaks.tgz" | sha256sum -c -; \
     tar -xzf gitleaks.tgz gitleaks; \
-    chmod 0755 trivy gitleaks
+    curl -fsSLo helm.tgz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${TARGETARCH}.tar.gz"; \
+    echo "${H_SHA}  helm.tgz" | sha256sum -c -; \
+    tar -xzf helm.tgz --strip-components=1 "linux-${TARGETARCH}/helm"; \
+    chmod 0755 trivy gitleaks helm
 
 FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70 AS python-tools
 # Every Python package is installed from a hash-pinned lock (requirements/, see scripts/lock.py).
@@ -54,7 +60,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
     && rm -rf /var/lib/apt/lists/* \
     && git config --system --add safe.directory '*' \
     && useradd --uid 10001 --create-home breachgraph
-COPY --from=binaries /dl/trivy /dl/gitleaks /usr/local/bin/
+COPY --from=binaries /dl/trivy /dl/gitleaks /dl/helm /usr/local/bin/
 COPY --from=python-tools /opt /opt
 RUN ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep \
     && ln -s /opt/checkov/bin/checkov /usr/local/bin/checkov \

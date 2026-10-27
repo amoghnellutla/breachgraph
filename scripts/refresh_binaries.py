@@ -1,4 +1,4 @@
-"""Move the Trivy and Gitleaks pins in the Dockerfile to their newest settled release.
+"""Move the Trivy, Gitleaks and Helm pins in the Dockerfile to their newest settled release.
 
     python scripts/refresh_binaries.py          # update the Dockerfile in place
     python scripts/refresh_binaries.py --check  # only print what would change
@@ -23,7 +23,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "Dockerfile"
 COOLDOWN_DAYS = 14
-# ARG prefix -> (repository, checksums file, {arch: release file}); {v} is the version.
+# ARG prefix -> (repository, checksums: a release file name, or a URL per file ending in
+# .sha256sum, {arch: release file}); {v} is the version.
 TOOLS: dict[str, tuple[str, str, dict[str, str]]] = {
     "TRIVY": (
         "aquasecurity/trivy",
@@ -34,6 +35,11 @@ TOOLS: dict[str, tuple[str, str, dict[str, str]]] = {
         "gitleaks/gitleaks",
         "gitleaks_{v}_checksums.txt",
         {"AMD64": "gitleaks_{v}_linux_x64.tar.gz", "ARM64": "gitleaks_{v}_linux_arm64.tar.gz"},
+    ),
+    "HELM": (
+        "helm/helm",
+        "https://get.helm.sh/{file}.sha256sum",  # Helm publishes binaries and sums on get.helm.sh
+        {"AMD64": "helm-v{v}-linux-amd64.tar.gz", "ARM64": "helm-v{v}-linux-arm64.tar.gz"},
     ),
 }
 
@@ -48,8 +54,9 @@ def _get(url: str) -> bytes:
         return data
 
 
-def settled_release(repo: str, now: datetime) -> str | None:
-    """Newest non-draft, non-prerelease version published at least COOLDOWN_DAYS ago."""
+def settled_release(repo: str, now: datetime, major: str | None = None) -> str | None:
+    """Newest non-draft, non-prerelease version published at least COOLDOWN_DAYS ago, within
+    the given major version (a major upgrade is a decision, not a refresh)."""
     releases: list[dict[str, Any]] = json.loads(
         _get(f"https://api.github.com/repos/{repo}/releases?per_page=30")
     )
@@ -57,15 +64,21 @@ def settled_release(repo: str, now: datetime) -> str | None:
     for rel in releases:  # newest first
         if rel.get("draft") or rel.get("prerelease") or not rel.get("published_at"):
             continue
+        version = str(rel["tag_name"]).removeprefix("v")
+        if major is not None and version.split(".")[0] != major:
+            continue
         if datetime.fromisoformat(rel["published_at"].replace("Z", "+00:00")) <= cutoff:
-            return str(rel["tag_name"]).removeprefix("v")
+            return version
     return None
 
 
-def checksums(repo: str, version: str, sums_file: str) -> dict[str, str]:
-    url = f"https://github.com/{repo}/releases/download/v{version}/{sums_file.format(v=version)}"
+def checksums(repo: str, version: str, sums_file: str, files: list[str]) -> dict[str, str]:
+    if sums_file.startswith("https://"):
+        urls = [sums_file.format(file=f) for f in files]
+    else:
+        urls = [f"https://github.com/{repo}/releases/download/v{version}/{sums_file.format(v=version)}"]
     out: dict[str, str] = {}
-    for line in _get(url).decode().splitlines():
+    for line in (ln for url in urls for ln in _get(url).decode().splitlines()):
         parts = line.split()
         if len(parts) == 2 and re.fullmatch(r"[0-9a-f]{64}", parts[0]):
             out[parts[1].lstrip("*")] = parts[0]
@@ -76,10 +89,12 @@ def refresh(text: str, now: datetime) -> tuple[str, list[str]]:
     changes: list[str] = []
     for prefix, (repo, sums_file, files) in TOOLS.items():
         current = re.search(rf"^ARG {prefix}_VERSION=(\S+)$", text, re.M)
-        version = settled_release(repo, now)
-        if current is None or version is None or version == current.group(1):
+        if current is None:
             continue
-        sums = checksums(repo, version, sums_file)
+        version = settled_release(repo, now, current.group(1).split(".")[0])
+        if version is None or version == current.group(1):
+            continue
+        sums = checksums(repo, version, sums_file, [name.format(v=version) for name in files.values()])
         new = {arch: sums.get(name.format(v=version)) for arch, name in files.items()}
         if not all(new.values()):
             changes.append(f"{prefix.lower()} {version}: checksums missing, not updated")

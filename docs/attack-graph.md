@@ -55,8 +55,11 @@ every path through it, so they are the recommended fixes, cheapest first.
 **Kubernetes** (`sources/kubernetes.py`): Ingress / LoadBalancer / NodePort exposure (internal
 annotations respected), container escape (privileged, host mounts, capabilities, hostPID),
 `hostNetwork` → metadata, mounted secrets, RBAC (a token that can read secrets / exec pods /
-create workloads), and IRSA service-account-to-role mapping. Unrendered Helm/Kustomize is reported
-as a blind spot, not guessed.
+create workloads), and IRSA service-account-to-role mapping. Helm charts are rendered with
+`helm template` and their default values (the Docker image includes Helm), offline and with an
+empty Helm home, and analyzed like plain manifests; evidence points at the template each object
+came from. A chart that does not render (dependencies not vendored, required values missing) is
+one blind spot with Helm's error. Kustomize overlays are not built yet.
 
 **Terraform / AWS** (`sources/terraform.py`): IAM policies are actually evaluated: action/resource
 matching with wildcards, scoping to specific resources, AWS-managed policies, **explicit Deny
