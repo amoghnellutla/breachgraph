@@ -487,13 +487,15 @@ ul.warn { margin: 0; padding-left: 18px; }
       c.forEach(function (id, i) { row[id] = i; });
     });
   }
-  var NW = 196, NH = 56, CW = 340, RH = 84, PAD = 28; // CW - NW leaves room for edge labels
+  // Layers run top to bottom: attack paths are deep and narrow, so the page scroll carries the
+  // depth and the width fits the screen. LH - NH leaves room for the edge labels.
+  var NW = 196, NH = 56, CW = 228, LH = 116, PAD = 28;
   var maxRows = Math.max.apply(null, cols.map(function (c) { return c.length; }));
-  var W = PAD * 2 + (cols.length - 1) * CW + NW, H = PAD * 2 + (maxRows - 1) * RH + NH + 14;
+  var W = PAD * 2 + (maxRows - 1) * CW + NW + 40, H = PAD * 2 + (cols.length - 1) * LH + NH;
   var pos = {};
   cols.forEach(function (c, ci) {
-    var off = (maxRows - c.length) * RH / 2;
-    c.forEach(function (id, ri) { pos[id] = { x: PAD + ci * CW, y: PAD + off + ri * RH }; });
+    var off = (maxRows - c.length) * CW / 2;
+    c.forEach(function (id, ri) { pos[id] = { x: PAD + off + ri * CW, y: PAD + ci * LH }; });
   });
 
   var canvas = document.getElementById("canvas"), tip = document.getElementById("tip");
@@ -527,13 +529,13 @@ ul.warn { margin: 0; padding-left: 18px; }
   edgeList.forEach(function (e) {
     var a = pos[e.src], b = pos[e.dst];
     if (!a || !b) return;
-    var x1 = a.x + NW, y1 = a.y + NH / 2, x2 = b.x, y2 = b.y + NH / 2, d;
-    if (x2 > x1) {
-      var mx = (x1 + x2) / 2;
-      d = "M" + x1 + "," + y1 + " C" + mx + "," + y1 + " " + mx + "," + y2 + " " + x2 + "," + y2;
-    } else { // same or earlier column: loop below the cards
-      var low = Math.max(a.y, b.y) + NH + 26;
-      d = "M" + (a.x + NW / 2) + "," + (a.y + NH) + " C" + (a.x + NW / 2) + "," + low + " " + (b.x + NW / 2) + "," + low + " " + (b.x + NW / 2) + "," + (b.y + NH);
+    var x1 = a.x + NW / 2, y1 = a.y + NH, x2 = b.x + NW / 2, y2 = b.y, d;
+    if (y2 > y1) {
+      var my = (y1 + y2) / 2;
+      d = "M" + x1 + "," + y1 + " C" + x1 + "," + my + " " + x2 + "," + my + " " + x2 + "," + y2;
+    } else { // same or earlier layer: loop out to the right of the cards
+      var side = Math.max(a.x, b.x) + NW + 30;
+      d = "M" + (a.x + NW) + "," + (a.y + NH / 2) + " C" + side + "," + (a.y + NH / 2) + " " + side + "," + (b.y + NH / 2) + " " + (b.x + NW) + "," + (b.y + NH / 2);
     }
     var key = e.src + "\u0000" + e.dst, via = stepVia[key];
     var g = el("g", {}, gEdges);
@@ -622,7 +624,11 @@ ul.warn { margin: 0; padding-left: 18px; }
       btn.appendChild(t);
       btn.appendChild(text("div", p.confidence + " confidence · risk " + p.score + (alive(p) ? "" : " · broken by your fixes"), "r"));
       btn.appendChild(text("div", p.nodes.map(function (id) { return (nodes[id] || { name: id }).name; }).join(" → "), "r"));
-      btn.addEventListener("click", function () { selPath = selPath === p.id ? null : p.id; render(); });
+      btn.addEventListener("click", function () {
+        selPath = selPath === p.id ? null : p.id;
+        render();
+        if (selPath) reveal(p.nodes);
+      });
       side.appendChild(btn);
     });
     if (data.fixes.length) {
@@ -691,6 +697,14 @@ ul.warn { margin: 0; padding-left: 18px; }
     side.appendChild(box);
   }
   function selectNode(id) { selNode = selNode === id ? null : id; render(); }
+  // Bring a selected path into view: its end (the crown jewel) matters most when it doesn't fit.
+  function reveal(ids) {
+    var xs = ids.map(function (id) { return pos[id] ? pos[id].x : 0; });
+    var lo = Math.min.apply(null, xs) - PAD, hi = Math.max.apply(null, xs) + NW + PAD;
+    var left = lo - Math.max(0, (canvas.clientWidth - (hi - lo)) / 2);
+    var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    canvas.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });
+  }
 
   /* drag to pan; fade the right edge while there is more graph to see */
   var wrap = document.getElementById("canvas-wrap"), drag = null;

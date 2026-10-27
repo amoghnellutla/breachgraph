@@ -37,7 +37,7 @@ breachgraph reports **no path** to your data even if the pod is public and its r
 — you can [see that guarantee as a test](tests/test_graph_paths.py). Fix the one cheapest link
 (the "choke point") and the whole path disappears.
 
-<p align="center"><img src="docs/img/attack-paths.png" alt="breachgraph attack paths" width="860"></p>
+<p align="center"><img src="docs/img/attack-paths.png" alt="breachgraph attack-graph explorer: a selected path from the internet through an injectable CI job and its OIDC deploy role to the customer-data bucket" width="860"></p>
 
 ## What you get
 
@@ -55,7 +55,7 @@ breachgraph reports **no path** to your data even if the pod is public and its r
 | 🤖 **Optional AI triage** | Bring your own Anthropic key: a real / likely-false-positive / needs-review verdict and a concrete fix per top finding, judged from the enclosing function, its HTTP route, its attack path, and how a vulnerable package is actually called. Advisory only, secrets redacted, spend cap. See [docs/ai-triage.md](docs/ai-triage.md) |
 | 🔒 **Trustworthy itself** | Scanner binaries pinned and SHA-256 verified · actions pinned to commit SHAs · signed images with SBOM + provenance · secrets always redacted · untrusted scanner output escaped |
 
-<p align="center"><img src="docs/img/html-report.png" alt="breachgraph findings report" width="820"></p>
+<p align="center"><img src="docs/img/html-report.png" alt="breachgraph HTML report header" width="820"></p>
 
 ## Quick start
 
