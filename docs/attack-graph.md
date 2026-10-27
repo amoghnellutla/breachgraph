@@ -117,6 +117,14 @@ code in that context. A service that publishes a port on a public interface, or 
 nginx, Traefik, Caddy, HAProxy or Envoy service that does (`depends_on` or `links`), is exposed at
 medium confidence: a compose file may only be used for local development.
 
+**Hosting platforms** (`sources/hosting.py`): `vercel.json`, `netlify.toml`, `render.yaml`,
+`fly.toml`, a Procfile with a `web` process, and App Engine's `app.yaml`. Each service becomes a
+workload running the code in the directory the platform builds from (Netlify's `base`, Render's
+`rootDir`). It is exposed to the internet when the platform serves it publicly: Vercel and Netlify
+sites, Render `web` services, Fly apps with an HTTP service, App Engine services, and (at medium
+confidence, since several platforms read Procfiles) Procfile web processes. Render private
+services and workers, and Fly apps with no public service, are workloads with no way in.
+
 **Applications without infrastructure code** (`sources/app.py`): most application repositories
 have no Terraform or Kubernetes, yet the database the code talks to is the crown jewel. It is
 added as "Application database" when the code imports a database driver or ORM (SQLAlchemy,

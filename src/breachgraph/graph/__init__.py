@@ -13,6 +13,7 @@ from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_p
 from breachgraph.graph.sources.actions import ActionsSource
 from breachgraph.graph.sources.app import application_assets
 from breachgraph.graph.sources.common import SourceContext
+from breachgraph.graph.sources.hosting import HostingSource
 from breachgraph.graph.sources.images import ImageSource
 from breachgraph.graph.sources.kubernetes import KubernetesSource
 from breachgraph.graph.sources.routes import RouteSource
@@ -114,6 +115,7 @@ def build_attack_graph(
     KubernetesSource().collect(ctx, graph)
     TerraformSource().collect(ctx, graph)
     ActionsSource().collect(ctx, graph)  # after cloud sources: links jobs to their identities
+    HostingSource().collect(ctx, graph)
     routes = RouteSource().collect(ctx)
     application_assets(ctx, graph, collect_imports(ctx), len(routes))
 

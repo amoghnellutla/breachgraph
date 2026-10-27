@@ -24,6 +24,9 @@ All notable changes to this project are documented here. The format follows
   commonly used for), and a manifest with the SHA-256 of every file.
 - A scan stops before running any scanner when its output directory isn't writable, with the
   `docker run --user` fix in the message, instead of failing with a traceback at the end.
+- Hosting platforms as entry points: Vercel, Netlify, Render, Fly.io, Procfile web processes and
+  App Engine. The platform's config says what is public, so application repositories get a real,
+  evidenced way in instead of the assumed internet-facing application.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 
