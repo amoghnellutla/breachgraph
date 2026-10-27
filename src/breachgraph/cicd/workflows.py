@@ -31,6 +31,7 @@ class Step:
     with_: dict[str, Any] = field(default_factory=dict)
     env: dict[str, Any] = field(default_factory=dict)
     if_: str = ""
+    working_directory: str = ""
 
     @property
     def action(self) -> str:
@@ -139,6 +140,7 @@ def parse_workflow(text: str, rel: str) -> Workflow | None:
                             name=_str(s.get("name")),
                             uses=_str(s.get("uses")),
                             run=_str(s.get("run")),
+                            working_directory=_str(s.get("working-directory")),
                             run_line=(run_node.start_mark.line + 1) if run_node is not None else 0,
                             with_=_dict(s.get("with")),
                             env=_dict(s.get("env")),

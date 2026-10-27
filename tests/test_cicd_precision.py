@@ -81,3 +81,70 @@ def test_workflow_run_after_a_push_only_workflow_is_trusted(tmp_path: Path) -> N
     assert rules(tmp_path) == []
     write(tmp_path, ".github/workflows/publish.yml", PUBLISH.format(after="Unknown", cond=""))
     assert rules(tmp_path) == ["cicd/untrusted-checkout"]  # can't tell what triggers it: still reported
+
+
+PWN = """on: pull_request_target
+jobs:
+{extra}  test:
+    {opts}runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{{{ github.event.pull_request.head.sha }}}}
+{path}      - run: {run}
+"""
+CHECK_JOB = """  check-actor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+"""
+
+
+def found(tmp: Path, **kw: str) -> list[tuple[str, str]]:
+    args = {"extra": "", "opts": "", "path": "", "run": "npm test", **kw}
+    write(tmp, ".github/workflows/t.yml", PWN.format(**args))
+    return [(f.rule_id, f.severity.value) for f in analyze(tmp, [])[0]]
+
+
+def test_pwn_request_baseline(tmp_path: Path) -> None:
+    assert found(tmp_path) == [("cicd/untrusted-checkout", "critical")]
+
+
+def test_permission_check_job_is_a_gate(tmp_path: Path) -> None:
+    assert found(tmp_path, extra=CHECK_JOB, opts="needs: [check-actor]\n    ") == [
+        ("cicd/untrusted-checkout", "medium")
+    ]
+
+
+def test_environment_is_named_as_a_possible_approval_gate(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        ".github/workflows/t.yml",
+        PWN.format(extra="", opts="environment: external\n    ", path="", run="npm test"),
+    )
+    (f,) = analyze(tmp_path, [])[0]
+    assert f.severity.value == "medium" and "environment `external`" in f.description
+
+
+def test_side_checkout_read_as_data_is_not_reported(tmp_path: Path) -> None:
+    side = "          path: pr\n"
+    assert found(tmp_path, path=side, run="python3 tools/check.py --head pr") == []
+    assert found(tmp_path, path=side, run="cd pr && npm test") == [("cicd/untrusted-checkout", "critical")]
+    assert found(tmp_path, path=side, run="bash pr/build.sh") == [("cicd/untrusted-checkout", "critical")]
+
+
+def test_no_secrets_and_read_only_is_medium(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        ".github/workflows/t.yml",
+        PWN.format(extra="", opts="", path="", run="cargo fmt --check").replace(
+            "contents: write", "contents: read"
+        ),
+    )
+    assert [(f.rule_id, f.severity.value) for f in analyze(tmp_path, [])[0]] == [
+        ("cicd/untrusted-checkout", "medium")
+    ]

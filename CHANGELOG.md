@@ -40,6 +40,11 @@ All notable changes to this project are documented here. The format follows
   repository (`head.repo.full_name == github.repository`, `head.repo.fork == false`, or the
   `workflow_run` equivalent, as a required term) is no longer reported, and a `workflow_run`
   checkout is reported only when a workflow it follows can be started by an outsider.
+- More precision from a second survey (70 popular repositories that use `pull_request_target`,
+  1,117 workflows; no finding was an open hole, several were overrated): a job that `needs` a
+  permission-check job, or runs in an `environment` (which may require reviewers), is reported as
+  gated at medium; a pull request checked out into a side directory and only read as data is not
+  reported; a job with no secrets and a read-only token is medium, not high.
 
 ## [0.4.0] - 2026-10-27
 

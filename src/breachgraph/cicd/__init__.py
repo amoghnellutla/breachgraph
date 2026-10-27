@@ -65,6 +65,12 @@ _SAME_REPO = re.compile(
     r"|head\.repo\.fork\s*==\s*false|!\s*github\.event\.pull_request\.head\.repo\.fork",
     re.I,
 )
+# Actions and API calls that fail a job unless the actor has write access to the repository.
+_PERMISSION_CHECK = re.compile(
+    r"check-user-permission|check-actor-permission|actor-permission|repository-permission|"
+    r"team-membership|permission-check|collaborators/[^\s/]+/permission",
+    re.I,
+)
 # Triggers an outsider can cause in some workflow (a run of it can then trigger workflow_run).
 _OUTSIDER = PRIVILEGED_TRIGGERS | FORK_TRIGGERS
 _UNTRUSTED_REF = re.compile(
@@ -121,7 +127,46 @@ def gated(wf: Workflow, job: Job, step: Step | None = None) -> str:
         return "only runs for users with write access (if: condition)"
     if _LABEL_GATE.search(conds) and "pull_request_target" in wf.triggers:
         return "runs once a maintainer adds a label (anyone can push new code after that)"
+    if checker := _permission_job(wf, job):
+        return f"needs job `{checker}`, which fails unless the actor has write access"
+    if job.environment:
+        return (
+            f"runs in environment `{job.environment}`; if that environment requires reviewers "
+            "(a repository setting breachgraph can't see), a maintainer approves each run"
+        )
     return ""
+
+
+def _permission_job(wf: Workflow, job: Job) -> str:
+    """A job this one needs that checks the actor's permission, so this one is skipped for outsiders."""
+    needs = job.raw.get("needs")
+    names = [needs] if isinstance(needs, str) else [str(n) for n in needs or []]
+    by_id = {j.id: j for j in wf.jobs}
+    for name in names:
+        dep = by_id.get(name)
+        if dep and any(_PERMISSION_CHECK.search(f"{s.uses} {s.run}") for s in dep.steps):
+            return name
+    return ""
+
+
+def _executes_from(path: str, steps: list[Step]) -> bool:
+    """Whether any step runs code from a checkout placed at ``path`` (not just reads it as data)."""
+    p = re.escape(path.strip().removeprefix("./").rstrip("/"))
+    pattern = re.compile(
+        rf"(?:^|[\s;&|(\"'])(?:\./)?{p}/\S+\.(?:sh|bash|py|js|mjs|cjs|ts|rb|pl|ps1)\b"
+        rf"|(?:cd|pushd)\s+[\"']?(?:\./)?{p}\b|-C\s+(?:\./)?{p}\b|--prefix[ =](?:\./)?{p}\b"
+        rf"|(?:pip|uv pip|npm|pnpm|yarn)\s+(?:install|ci)\b[^\n]*(?:\./)?{p}\b",
+        re.M,
+    )
+    for s in steps:
+        wd = s.working_directory.strip().removeprefix("./")
+        if wd and re.match(rf"{p}(?:/|$)", wd):
+            return True
+        if s.uses.startswith(f"./{path.strip().removeprefix('./')}"):
+            return True
+        if pattern.search(s.run):
+            return True
+    return False
 
 
 def _finding(
@@ -227,12 +272,17 @@ def _untrusted_checkout(wf: Workflow, job: Job, by_name: dict[str, Workflow] | N
         runs = [s for s in job.steps[i + 1 :] if s.run or s.uses.startswith("./")]
         if not runs:
             continue  # checked out but never executed (e.g. only read by a linter action)
+        path = str(step.with_.get("path") or "").strip()
+        if path not in ("", ".", "./") and not _executes_from(path, job.steps[i + 1 :]):
+            continue  # checked out to a side directory and only read as data
         secrets = sorted(job_secrets(wf, job))
         perms = wf.job_permissions(job)
         write = perms == "write-all" or (isinstance(perms, dict) and "write" in perms.values())
         gate = gated(wf, job, step)
         severity = Severity.CRITICAL if (secrets or write) and not gate else Severity.HIGH
-        if gate:
+        if gate or not (secrets or write):
+            # Gated, or the job holds nothing worth stealing: what remains for an attacker is
+            # mostly writing to the Actions cache that privileged workflows restore.
             severity = Severity.MEDIUM
         held_parts = [f"secrets {', '.join(secrets)}"] if secrets else []
         if write:
