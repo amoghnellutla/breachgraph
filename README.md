@@ -26,17 +26,17 @@ healthy control. Every path it reported was checked by hand.
 <!-- benchmark-table:start -->
 | Project | Findings after dedupe | Attack paths | Real |
 |---|---:|---:|---:|
-| [terragoat](https://github.com/bridgecrewio/terragoat) | 1,088 | 2 | 2 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 838 | 0 | 0 |
+| [terragoat](https://github.com/bridgecrewio/terragoat) | 1,089 | 2 | 2 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 840 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 1,446 | 1 | 1 |
-| [awsgoat](https://github.com/ine-labs/AWSGoat) | 785 | 3 | 3 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | 504 | 2 | 2 |
-| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 411 | 5 | 4 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | 786 | 3 | 3 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | 506 | 2 | 2 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 413 | 5 | 4 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | 411 | 2 | 2 |
-| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 990 | 0 | 0 |
-| **Total** | **6,473** | **15** | **14** |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 991 | 0 | 0 |
+| **Total** | **6,482** | **15** | **14** |
 
-6,473 findings come down to 15 attack paths, and 14 of them are real chains an
+6,482 findings come down to 15 attack paths, and 14 of them are real chains an
 attacker could use (93% precision). The control project gets none.
 <!-- benchmark-table:end -->
 

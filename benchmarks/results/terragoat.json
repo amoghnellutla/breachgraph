@@ -3,16 +3,16 @@
   "repo": "https://github.com/bridgecrewio/terragoat",
   "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
   "kind": "vulnerable",
-  "breachgraph_version": "0.3.0",
-  "breachgraph_commit": "c50e602",
-  "wall_time_s": 34.8,
+  "breachgraph_version": "0.4.0",
+  "breachgraph_commit": "eaa0d77",
+  "wall_time_s": 111.9,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 34,
-      "duration_s": 18.32,
+      "duration_s": 34.48,
       "message": null
     },
     {
@@ -20,15 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 4,
-      "duration_s": 1.09,
+      "duration_s": 1.15,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 684,
-      "duration_s": 28.97,
+      "findings": 685,
+      "duration_s": 85.04,
       "message": "package registry unavailable (rate limited); retried with --offline-scan, transitive Java dependencies were not resolved"
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 469,
-      "duration_s": 14.69,
+      "duration_s": 25.46,
       "message": null
     },
     {
@@ -44,25 +44,25 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 13,
-      "duration_s": 0.51,
+      "duration_s": 1.28,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "findings": 0,
-      "duration_s": 0.65,
+      "duration_s": 0.15,
       "message": null
     }
   ],
-  "raw_findings": 1204,
-  "findings": 1088,
+  "raw_findings": 1205,
+  "findings": 1089,
   "multi_tool_findings": 78,
   "by_priority": {
     "P1": 51,
     "P2": 298,
-    "P3": 670,
+    "P3": 671,
     "P4": 69
   },
   "gating_findings": 52,

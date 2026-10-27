@@ -3,16 +3,16 @@
   "repo": "https://github.com/ine-labs/AWSGoat",
   "sha": "b24869ad455ed8d1393d00ecdc15ee638d1c1332",
   "kind": "vulnerable",
-  "breachgraph_version": "0.3.0",
-  "breachgraph_commit": "c50e602",
-  "wall_time_s": 93.2,
+  "breachgraph_version": "0.4.0",
+  "breachgraph_commit": "eaa0d77",
+  "wall_time_s": 106.0,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
-      "findings": 147,
-      "duration_s": 56.39,
+      "findings": 146,
+      "duration_s": 81.82,
       "message": null
     },
     {
@@ -20,15 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 16,
-      "duration_s": 3.58,
+      "duration_s": 10.61,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 511,
-      "duration_s": 43.37,
+      "findings": 513,
+      "duration_s": 86.08,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 219,
-      "duration_s": 14.32,
+      "duration_s": 18.48,
       "message": null
     },
     {
@@ -44,26 +44,26 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 19,
-      "duration_s": 1.92,
+      "duration_s": 0.94,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "findings": 0,
-      "duration_s": 5.9,
+      "duration_s": 0.06,
       "message": null
     }
   ],
-  "raw_findings": 912,
-  "findings": 785,
+  "raw_findings": 913,
+  "findings": 786,
   "multi_tool_findings": 60,
   "by_priority": {
     "P1": 37,
     "P2": 177,
-    "P3": 415,
-    "P4": 156
+    "P3": 414,
+    "P4": 158
   },
   "gating_findings": 38,
   "graph_stats": {

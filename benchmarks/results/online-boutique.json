@@ -3,16 +3,16 @@
   "repo": "https://github.com/GoogleCloudPlatform/microservices-demo",
   "sha": "38e7348eb289eb5b87c0c6e8cb19ced0449dc389",
   "kind": "control",
-  "breachgraph_version": "0.3.0",
-  "breachgraph_commit": "c50e602",
-  "wall_time_s": 101.5,
+  "breachgraph_version": "0.4.0",
+  "breachgraph_commit": "eaa0d77",
+  "wall_time_s": 60.2,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 66,
-      "duration_s": 73.98,
+      "duration_s": 48.3,
       "message": null
     },
     {
@@ -27,8 +27,8 @@
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 548,
-      "duration_s": 76.55,
+      "findings": 549,
+      "duration_s": 50.1,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 486,
-      "duration_s": 18.45,
+      "duration_s": 13.19,
       "message": null
     },
     {
@@ -44,28 +44,28 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 59,
-      "duration_s": 1.7,
+      "duration_s": 0.99,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "findings": 1,
-      "duration_s": 11.22,
+      "duration_s": 0.65,
       "message": null
     }
   ],
-  "raw_findings": 1160,
-  "findings": 990,
+  "raw_findings": 1161,
+  "findings": 991,
   "multi_tool_findings": 164,
   "by_priority": {
-    "P1": 10,
-    "P2": 121,
-    "P3": 659,
-    "P4": 200
+    "P1": 9,
+    "P2": 122,
+    "P3": 663,
+    "P4": 197
   },
-  "gating_findings": 10,
+  "gating_findings": 9,
   "graph_stats": {
     "nodes": 63,
     "edges": 53,
@@ -75,9 +75,9 @@
     "paths": 0
   },
   "blind_spots": [
-    ".github/workflows/ci-main.yaml: unrendered Helm/Go template (run `helm template` first)",
-    ".github/workflows/deploy-pr.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "kustomize/components/google-cloud-operations/otel-collector.yaml: unrendered Helm/Go template (run `helm template` first)",
+    ".github/workflows/ci-main.yaml: template syntax ({{ }}) outside a Helm chart, not analyzed",
+    ".github/workflows/deploy-pr.yaml: template syntax ({{ }}) outside a Helm chart, not analyzed",
+    "kustomize/components/google-cloud-operations/otel-collector.yaml: template syntax ({{ }}) outside a Helm chart, not analyzed",
     ".github/terraform/main.tf:98: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform",
     "terraform/main.tf:40: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform",
     ".github/terraform/main.tf:70: GCP role 'roles/monitoring.metricWriter' is not modeled, binding ignored",

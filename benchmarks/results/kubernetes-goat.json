@@ -3,16 +3,16 @@
   "repo": "https://github.com/madhuakula/kubernetes-goat",
   "sha": "723a0db478f050d173d23b4ce5044b65bce0bdd0",
   "kind": "vulnerable",
-  "breachgraph_version": "0.3.0",
-  "breachgraph_commit": "c50e602",
-  "wall_time_s": 56.3,
+  "breachgraph_version": "0.4.0",
+  "breachgraph_commit": "eaa0d77",
+  "wall_time_s": 124.3,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 67,
-      "duration_s": 36.13,
+      "duration_s": 85.68,
       "message": null
     },
     {
@@ -20,15 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 13,
-      "duration_s": 1.51,
+      "duration_s": 1.72,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 531,
-      "duration_s": 38.93,
+      "findings": 533,
+      "duration_s": 100.86,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 334,
-      "duration_s": 10.96,
+      "duration_s": 11.13,
       "message": null
     },
     {
@@ -50,19 +50,19 @@
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "findings": 0,
-      "duration_s": 5.31,
+      "duration_s": 0.1,
       "message": null
     }
   ],
-  "raw_findings": 945,
-  "findings": 838,
+  "raw_findings": 947,
+  "findings": 840,
   "multi_tool_findings": 95,
   "by_priority": {
     "P1": 8,
     "P2": 176,
-    "P3": 467,
+    "P3": 469,
     "P4": 187
   },
   "gating_findings": 21,
@@ -75,7 +75,7 @@
     "paths": 0
   },
   "blind_spots": [
-    "scenarios/kyverno-namespace-exec-block/kyverno-block-pod-exec-by-namespace.yaml: unrendered Helm/Go template (run `helm template` first)"
+    "scenarios/kyverno-namespace-exec-block/kyverno-block-pod-exec-by-namespace.yaml: template syntax ({{ }}) outside a Helm chart, not analyzed"
   ],
   "attack_paths": [],
   "choke_points": [],

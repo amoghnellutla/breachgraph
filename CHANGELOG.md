@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-27
+
 ### Added
 
 - Incremental pull-request scans (`--incremental` with `--compare`, on by default in the action
@@ -22,6 +24,9 @@ All notable changes to this project are documented here. The format follows
 - GitLab merge-request notes (`--gitlab-comment`): one note per merge request, updated on every
   pipeline, with the attack-path diagram. The GitLab template compares each merge request with the
   default branch's last report and scans incrementally. Needs `BREACHGRAPH_GITLAB_TOKEN`.
+- docs/ci-survey.md: the CI/CD checks run on 2,471 workflows from popular projects, with what
+  that changed in breachgraph.
+- Issue templates for wrong findings, bugs, and "I ran it on my repository".
 - docs/comparison.md: breachgraph against running the scanners yourself and against commercial
   platforms, including when to pick something else.
 
@@ -296,7 +301,8 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.1.0...v0.2.0

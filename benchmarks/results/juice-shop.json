@@ -3,16 +3,16 @@
   "repo": "https://github.com/juice-shop/juice-shop",
   "sha": "717f5efa886b0417eeecb52378b03cf10567b7e2",
   "kind": "vulnerable",
-  "breachgraph_version": "0.3.0",
-  "breachgraph_commit": "c50e602",
-  "wall_time_s": 348.9,
+  "breachgraph_version": "0.4.0",
+  "breachgraph_commit": "eaa0d77",
+  "wall_time_s": 229.7,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 68,
-      "duration_s": 229.73,
+      "duration_s": 183.24,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 69,
-      "duration_s": 4.15,
+      "duration_s": 3.68,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 89,
-      "duration_s": 119.99,
+      "duration_s": 109.78,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 120,
-      "duration_s": 23.6,
+      "duration_s": 20.63,
       "message": null
     },
     {
@@ -44,15 +44,15 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 101,
-      "duration_s": 8.2,
+      "duration_s": 8.68,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "findings": 0,
-      "duration_s": 19.31,
+      "duration_s": 0.45,
       "message": null
     }
   ],
