@@ -48,16 +48,16 @@ def main() -> int:
     opts = ap.parse_args()
 
     if opts.fix:
-        run(["ruff", "format", "src", "tests", "scripts"])
-        run(["ruff", "check", "--fix", "--quiet", "src", "tests", "scripts"])
+        run(["ruff", "format", "src", "tests", "scripts", "benchmarks"])
+        run(["ruff", "check", "--fix", "--quiet", "src", "tests", "scripts", "benchmarks"])
 
     # pyproject's addopts already has -q; a second -q would hide the "N passed" line.
     pytest = ["pytest", "--no-header", "-p", "no:cacheprovider", "--tb=short", "-rfE"]
     if opts.k:
         pytest += ["-k", opts.k]
     steps: list[tuple[str, list[str]]] = [
-        ("format", ["ruff", "format", "--check", "--quiet", "src", "tests", "scripts"]),
-        ("lint", ["ruff", "check", "--quiet", "src", "tests", "scripts"]),
+        ("format", ["ruff", "format", "--check", "--quiet", "src", "tests", "scripts", "benchmarks"]),
+        ("lint", ["ruff", "check", "--quiet", "src", "tests", "scripts", "benchmarks"]),
     ]
     if not opts.fast:
         steps.append(("types", ["mypy"]))

@@ -86,6 +86,7 @@ ignore = ["S603", "S607"]  # subprocess use is the whole point; args are lists, 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "S314", "E501"]
 "src/breachgraph/reporters/html.py" = ["E501"]  # nosemgrep comment must stay on one line
+"benchmarks/report.py" = ["E501"]  # generated Markdown prose and table rows
 
 [tool.mypy]
 python_version = "3.11"

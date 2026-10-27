@@ -146,7 +146,8 @@ def main() -> int:
         result = summarize(target, report, elapsed)
         (RESULTS / f"{target['name']}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(
-            f"ok    {target['name']:<16} {result['raw_findings']:>5} raw -> {result['findings']:>5} findings, "
+            f"ok    {target['name']:<16} {result['raw_findings']:>5} raw -> "
+            f"{result['findings']:>5} findings, "
             f"{len(result['attack_paths'])} paths, {result['wall_time_s']}s"
         )
     return 1 if failed else 0
