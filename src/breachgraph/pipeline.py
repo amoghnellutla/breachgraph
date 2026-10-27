@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from breachgraph import __version__
-from breachgraph.compare import base_fingerprints, base_path_ids, compare, load_report
+from breachgraph.compare import base_fingerprints, base_path_ids, compare, load_report, policy_snapshot
 from breachgraph.config import Config
 from breachgraph.enrich import enrich
 from breachgraph.graph import build_attack_graph
@@ -154,6 +154,7 @@ def process(
             result.warnings.append(f"{run.name} failed: {run.message}")
         elif run.status is ToolStatus.OK and run.message:
             result.warnings.append(f"{run.name}: {run.message}")
+    result.metadata["policy"] = policy_snapshot(config)
     if base is not None:
         result.comparison = compare(result, base)
     result.gate = evaluate_gate(result, config)

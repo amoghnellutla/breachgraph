@@ -140,6 +140,10 @@ def _change_md(result: ScanResult) -> list[str]:
         out += [f"- ~~{_route(p)}~~" for p in closed[:5]] + [""]
     if not opened and not closed:
         out += ["> No change to attack paths compared with the base branch.", ""]
+    if policy := result.comparison.policy_changes if result.comparison else []:
+        out += ["### This change edits the security policy", ""]
+        out += ["Settings that decide what fails this check differ from the base branch:", ""]
+        out += [f"- {_plain(c, 300)}" for c in policy[:15]] + [""]
     return out
 
 

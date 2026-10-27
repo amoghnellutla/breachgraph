@@ -1,7 +1,9 @@
 """Stable attack-path ids, comparison with a base report, and the "this change opens a path" headline."""
 
+from datetime import date
 from pathlib import Path
 
+from breachgraph.compare import policy_changes, policy_snapshot
 from breachgraph.config import Config
 from breachgraph.models import AttackGraphSummary, AttackPathView, AttackStep, Comparison, ScanResult
 from breachgraph.pipeline import ScanOptions, process
@@ -105,3 +107,31 @@ def test_html_shows_the_change(tmp_path: Path) -> None:
     head = run([SSRF, CMDI], tmp_path, run([CMDI]))
     page = html.render(head)
     assert "This change opens 1 new attack path(s)" in page
+
+
+def test_a_change_that_loosens_the_policy_is_called_out(tmp_path: Path) -> None:
+    base = run([SSRF, CMDI])
+    assert base.metadata["policy"]["fail_on"]["priority"] == "P1"
+    assert policy_changes(base.metadata["policy"], base.metadata["policy"]) == []
+    loose = Config.model_validate(
+        {
+            "fail_on": {"priority": None, "kev": False},
+            "scanners": {"semgrep": {"enabled": False}},
+            "suppressions": [{"rule": "ssrf", "reason": "later", "expires": date(2027, 1, 1)}],
+            "attack_graph": {"fail_on_new_path": False},
+        }
+    )
+    changes = policy_changes(base.metadata["policy"], policy_snapshot(loose))
+    assert "fail_on.priority changed from P1 to none" in changes
+    assert "fail_on.kev changed from True to False" in changes
+    assert "attack_graph.fail_on_new_path changed from True to False" in changes
+    assert "scanner semgrep turned off" in changes
+    assert "suppression added: ssrf (later, until 2027-01-01)" in changes
+
+    head = run([SSRF, CMDI], tmp_path, base)
+    assert head.comparison is not None and head.comparison.policy_changes == []
+    head.comparison.policy_changes = changes
+    md = markdown.render(head)
+    assert "### This change edits the security policy" in md
+    assert "scanner semgrep turned off" in md
+    assert policy_changes(None, policy_snapshot(loose)) == []  # base from an older version

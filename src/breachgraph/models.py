@@ -349,6 +349,7 @@ class Comparison(BaseModel):
     resolved_paths: list[AttackPathView] = Field(default_factory=list)  # in the base, gone now
     new_findings: int = 0
     resolved_findings: int = 0
+    policy_changes: list[str] = Field(default_factory=list)  # gate settings that differ from the base
 
 
 class ScanResult(BaseModel):

@@ -42,7 +42,7 @@ On each PR you get:
 | `imports` | | Reports from earlier steps to merge, as `TOOL=PATH` (e.g. `zap=report_json.json,sarif=codeql.sarif`) |
 | `images` | | Comma-separated container images for Trivy |
 | `comment` | `true` | Sticky PR comment |
-| `compare` | `true` | Compare each PR with the default branch's last report (kept in the Actions cache): findings and attack paths that already exist there don't fail the PR, and the comment leads with the attack paths the PR **opens** (drawn as a diagram) or **closes**. Runs on the default branch save the report; nothing to commit |
+| `compare` | `true` | Compare each PR with the default branch's last report (kept in the Actions cache): findings and attack paths that already exist there don't fail the PR, and the comment leads with the attack paths the PR **opens** (drawn as a diagram) or **closes**, and lists any change the PR makes to the gate's own settings (a lowered threshold, a new suppression, a scanner turned off). Runs on the default branch save the report; nothing to commit |
 | `issues` | | Open an issue per finding at this priority or above (e.g. `P1`). Issues are closed automatically when the finding disappears from the default branch |
 | `upload-sarif` | `true` | Upload to code scanning |
 | `output-dir` | `breachgraph-report` | Report directory |

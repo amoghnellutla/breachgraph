@@ -31,6 +31,9 @@ All notable changes to this project are documented here. The format follows
   checks and zizmor, shown next to the OWASP Top 10 category and tagged in SARIF.
 - An OpenSSF Scorecard workflow.
 - A threat model of breachgraph itself in docs/architecture.md.
+- Policy changes in the PR comment: every report records the settings that decide what fails, and
+  a PR compared with the base branch is told which ones it changed (a lowered `fail_on`, a new
+  suppression, a scanner turned off, an excluded path), so a PR can't quietly loosen its own gate.
 - `ai.prices`: set or override a model's price per million tokens, so a price change or a new
   model doesn't need a release.
 - Compose services that publish ports, or sit behind an nginx, Traefik, Caddy, HAProxy or Envoy
