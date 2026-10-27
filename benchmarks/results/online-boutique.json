@@ -3,16 +3,16 @@
   "repo": "https://github.com/GoogleCloudPlatform/microservices-demo",
   "sha": "38e7348eb289eb5b87c0c6e8cb19ced0449dc389",
   "kind": "control",
-  "breachgraph_version": "0.2.0",
-  "breachgraph_commit": "7ba3636",
-  "wall_time_s": 58.3,
+  "breachgraph_version": "0.3.0",
+  "breachgraph_commit": "c50e602",
+  "wall_time_s": 101.5,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 66,
-      "duration_s": 41.82,
+      "duration_s": 73.98,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 0,
-      "duration_s": 2.27,
+      "duration_s": 2.06,
       "message": null
     },
     {
@@ -28,15 +28,15 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 548,
-      "duration_s": 42.19,
+      "duration_s": 76.55,
       "message": null
     },
     {
       "name": "checkov",
       "status": "ok",
       "version": "3.3.26",
-      "findings": 374,
-      "duration_s": 12.11,
+      "findings": 486,
+      "duration_s": 18.45,
       "message": null
     },
     {
@@ -44,31 +44,31 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 59,
-      "duration_s": 0.93,
+      "duration_s": 1.7,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "findings": 1,
-      "duration_s": 6.16,
+      "duration_s": 11.22,
       "message": null
     }
   ],
-  "raw_findings": 1048,
-  "findings": 878,
+  "raw_findings": 1160,
+  "findings": 990,
   "multi_tool_findings": 164,
   "by_priority": {
     "P1": 10,
     "P2": 121,
-    "P3": 547,
+    "P3": 659,
     "P4": 200
   },
   "gating_findings": 10,
   "graph_stats": {
-    "nodes": 61,
-    "edges": 51,
+    "nodes": 63,
+    "edges": 53,
     "routes": 1,
     "workloads": 15,
     "crown_jewels": 1,
@@ -77,19 +77,6 @@
   "blind_spots": [
     ".github/workflows/ci-main.yaml: unrendered Helm/Go template (run `helm template` first)",
     ".github/workflows/deploy-pr.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/adservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/cartservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/checkoutservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/common.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/currencyservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/emailservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/frontend.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/loadgenerator.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/opentelemetry-collector.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/paymentservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/productcatalogservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/recommendationservice.yaml: unrendered Helm/Go template (run `helm template` first)",
-    "helm-chart/templates/shippingservice.yaml: unrendered Helm/Go template (run `helm template` first)",
     "kustomize/components/google-cloud-operations/otel-collector.yaml: unrendered Helm/Go template (run `helm template` first)",
     ".github/terraform/main.tf:98: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform",
     "terraform/main.tf:40: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform",

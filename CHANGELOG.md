@@ -6,34 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-27
+
 ### Added
 
-- A live demo on GitHub Pages: the HTML report for examples/vulnerable-platform, rebuilt from
-  `main` on every change, linked first in the README.
-- A weekly refresh workflow for what Dependabot can't update: the hash-pinned Python locks and
-  the Trivy and Gitleaks binaries (version and SHA-256 from the release's checksums file). It
-  takes only releases at least 14 days old, runs the tests, builds the image and checks the demo's
-  attack paths, then pushes a branch and opens an issue to review. It never merges on its own.
-- Slack and Microsoft Teams alerts when a change opens an attack path (or when the gate fails, or
-  always: `notify.on`). Webhook URLs come only from the environment (`BREACHGRAPH_SLACK_WEBHOOK`,
-  `BREACHGRAPH_TEAMS_WEBHOOK`, or the action's `slack-webhook` and `teams-webhook` inputs), and
-  repository text in the message is escaped so it can't mention a channel or add links.
-- `-f evidence`: an audit evidence pack. One zip with the JSON, SARIF and HTML reports, the SBOM
-  and OpenVEX, the policy the gate ran with and every accepted risk, a plain summary (scan
-  identity, gate decision, scanners and versions, attack paths, the controls this evidence is
-  commonly used for), and a manifest with the SHA-256 of every file.
-- A scan stops before running any scanner when its output directory isn't writable, with the
-  `docker run --user` fix in the message, instead of failing with a traceback at the end.
-- Hosting platforms as entry points: Vercel, Netlify, Render, Fly.io, Procfile web processes and
-  App Engine. The platform's config says what is public, so application repositories get a real,
-  evidenced way in instead of the assumed internet-facing application.
-- NetworkPolicy for the `cluster` entry point. A pod no ingress policy selects stays reachable
-  from the foothold; an isolated pod is reachable only from the pods its rules admit, after
-  taking control of one; default-deny cuts it off.
-- Helm charts are rendered with `helm template` (default values, offline, empty Helm home) and
-  analyzed like plain manifests, with evidence pointing at the template file. The image includes
-  Helm, pinned and checksum-verified, and the weekly refresh keeps it current within its major
-  version. A chart that fails to render is one blind spot with Helm's error.
 - `breachgraph fix`: fixes for the choke points, most paths broken first. It upgrades a vulnerable
   dependency declared in requirements*.txt, package.json or go.mod to its fixed version, and moves
   untrusted `${{ }}` expressions in a workflow's `run:` script into `env:`, quoting them for the
@@ -45,8 +21,38 @@ All notable changes to this project are documented here. The format follows
   them are evidence with file and line. No direct call lowers the priority a little but keeps the
   finding a weapon, since a dependency may still call the function; when the vulnerable package
   isn't imported directly, the report says so instead of guessing.
+- Helm charts are rendered with `helm template` (default values, offline, empty Helm home) and
+  analyzed like plain manifests, with evidence pointing at the template file. The image includes
+  Helm, pinned and checksum-verified, and the weekly refresh keeps it current within its major
+  version. A chart that fails to render is one blind spot with Helm's error.
+- NetworkPolicy for the `cluster` entry point. A pod no ingress policy selects stays reachable
+  from the foothold; an isolated pod is reachable only from the pods its rules admit, after
+  taking control of one; default-deny cuts it off.
+- Hosting platforms as entry points: Vercel, Netlify, Render, Fly.io, Procfile web processes and
+  App Engine. The platform's config says what is public, so application repositories get a real,
+  evidenced way in instead of the assumed internet-facing application.
+- Slack and Microsoft Teams alerts when a change opens an attack path (or when the gate fails, or
+  always: `notify.on`). Webhook URLs come only from the environment (`BREACHGRAPH_SLACK_WEBHOOK`,
+  `BREACHGRAPH_TEAMS_WEBHOOK`, or the action's `slack-webhook` and `teams-webhook` inputs), and
+  repository text in the message is escaped so it can't mention a channel or add links.
+- `-f evidence`: an audit evidence pack. One zip with the JSON, SARIF and HTML reports, the SBOM
+  and OpenVEX, the policy the gate ran with and every accepted risk, a plain summary (scan
+  identity, gate decision, scanners and versions, attack paths, the controls this evidence is
+  commonly used for), and a manifest with the SHA-256 of every file.
+- A live demo on GitHub Pages: the HTML report for examples/vulnerable-platform, rebuilt from
+  `main` on every change, linked first in the README.
+- A weekly refresh workflow for what Dependabot can't update: the hash-pinned Python locks and
+  the Trivy and Gitleaks binaries (version and SHA-256 from the release's checksums file). It
+  takes only releases at least 14 days old, runs the tests, builds the image and checks the demo's
+  attack paths, then pushes a branch and opens an issue to review. It never merges on its own.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
+
+### Changed
+
+- A scan stops before running any scanner when its output directory isn't writable, with the
+  `docker run --user` fix in the message, instead of failing with a traceback at the end.
+- The benchmark was rerun with this version: same 15 paths, 14 real.
 
 ## [0.3.0] - 2026-10-27
 
@@ -250,7 +256,8 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/amoghnellutla/breachgraph/releases/tag/v0.1.0

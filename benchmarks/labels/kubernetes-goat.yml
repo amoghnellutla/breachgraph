@@ -12,4 +12,7 @@ misses:
       Not internet-exposed in the manifests (port-forward lab), so it is not a path from the internet.
       With the cluster entry point turned on it is found; see the assumed-breach section below.
   - scenario: Helm-based scenarios (metadata-db, helm-tiller).
-    why: Unrendered Helm templates are listed as blind spots, not analyzed.
+    why: >
+      Rendered with helm template and analyzed. Like the rest of the lab they are reached with
+      kubectl port-forward, so there is no path from the internet, and from inside the cluster
+      neither has a code weakness to take control of.

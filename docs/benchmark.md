@@ -12,16 +12,16 @@ listed as misses.
 | Project | Kind | Scanner findings | After dedupe | Blocking findings | Attack paths | True | False | Unclear |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
 | [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 1,204 | 1,088 | 52 | 2 | 2 | 0 | 0 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 899 | 795 | 21 | 0 | 0 | 0 | 0 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 945 | 838 | 21 | 0 | 0 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 1,667 | 1,446 | 59 | 1 | 1 | 0 | 0 |
 | [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 912 | 785 | 38 | 3 | 3 | 0 | 0 |
 | [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 605 | 504 | 42 | 2 | 2 | 0 | 0 |
 | [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 507 | 411 | 28 | 5 | 4 | 1 | 0 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 447 | 411 | 100 | 2 | 2 | 0 | 0 |
-| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 1,048 | 878 | 10 | 0 | 0 | 0 | 0 |
-| **Total** | | **7,289** | **6,318** | **350** | **15** | **14** | **1** | **0** |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 1,160 | 990 | 10 | 0 | 0 | 0 | 0 |
+| **Total** | | **7,447** | **6,473** | **350** | **15** | **14** | **1** | **0** |
 
-**Path precision: 93%** (14 of 15 decided paths are real attack chains). 6,318 deduplicated findings reduce to **15 attack paths** to review first.
+**Path precision: 93%** (14 of 15 decided paths are real attack chains). 6,473 deduplicated findings reduce to **15 attack paths** to review first.
 
 Of the 14 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 4 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
 
@@ -48,7 +48,7 @@ Kubernetes Goat is a lab cluster reached with `kubectl port-forward`: its manife
 
 - No attack paths reported.
 - **miss**: Health-check command injection -> privileged pod / docker.sock -> worker node (scenarios/health-check). Not internet-exposed in the manifests (port-forward lab), so it is not a path from the internet. With the cluster entry point turned on it is found; see the assumed-breach section below.
-- **miss**: Helm-based scenarios (metadata-db, helm-tiller). Unrendered Helm templates are listed as blind spots, not analyzed.
+- **miss**: Helm-based scenarios (metadata-db, helm-tiller). Rendered with helm template and analyzed. Like the rest of the lab they are reached with kubectl port-forward, so there is no path from the internet, and from inside the cluster neither has a code weakness to take control of.
 
 ### cloudgoat
 
@@ -157,4 +157,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Run with breachgraph at commit `7ba3636`. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `c50e602`. Scanner versions are recorded per run in `benchmarks/results/`.

@@ -144,7 +144,9 @@ class KubernetesSource:
             rel = ctx.rel(path)
             if "{{" in text:
                 if not any(rel.startswith(c + "/") or not c for c in charts):  # a chart reports itself
-                    ctx.skipped.append(f"{rel}: unrendered Helm/Go template (run `helm template` first)")
+                    ctx.skipped.append(
+                        f"{rel}: template syntax ({{{{ }}}}) outside a Helm chart, not analyzed"
+                    )
                 continue
             try:
                 docs = list(yaml.safe_load_all(text))

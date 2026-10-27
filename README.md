@@ -23,22 +23,26 @@ breachgraph was run with default settings on eight public projects: deliberately
 training projects, where the real attack chains are documented, and Google's Online Boutique as a
 healthy control. Every path it reported was checked by hand.
 
+<!-- benchmark-table:start -->
 | Project | Findings after dedupe | Attack paths | Real |
 |---|---:|---:|---:|
 | [terragoat](https://github.com/bridgecrewio/terragoat) | 1,088 | 2 | 2 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 795 | 0 | 0 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 838 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 1,446 | 1 | 1 |
 | [awsgoat](https://github.com/ine-labs/AWSGoat) | 785 | 3 | 3 |
 | [azuregoat](https://github.com/ine-labs/AzureGoat) | 504 | 2 | 2 |
 | [gcpgoat](https://github.com/ine-labs/GCPGoat) | 411 | 5 | 4 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | 411 | 2 | 2 |
-| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 878 | 0 | 0 |
-| **Total** | **6,318** | **15** | **14** |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 990 | 0 | 0 |
+| **Total** | **6,473** | **15** | **14** |
 
-6,318 findings come down to 15 attack paths, and 14 of them are real chains an attacker could use
-(93% precision). The control project gets none. The method, every path with the reason it is or
-isn't real, the scenarios breachgraph missed, and what it finds from a leaked key or a foothold
-inside the cluster are in [docs/benchmark.md](docs/benchmark.md). Anyone can rerun it.
+6,473 findings come down to 15 attack paths, and 14 of them are real chains an
+attacker could use (93% precision). The control project gets none.
+<!-- benchmark-table:end -->
+
+The method, every path with the reason it is or isn't real, the scenarios breachgraph missed, and
+what it finds from a leaked key or a foothold inside the cluster are in
+[docs/benchmark.md](docs/benchmark.md). Anyone can rerun it.
 
 <p align="center"><img src="docs/img/attack-paths.png" alt="The HTML report's attack-graph explorer with one path selected, from the internet through an injectable CI job and its deploy role to a customer-data bucket" width="860"></p>
 

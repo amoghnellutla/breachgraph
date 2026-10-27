@@ -21,6 +21,8 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 BENCH = ROOT / "benchmarks"
 DOC = ROOT / "docs" / "benchmark.md"
+README = ROOT / "README.md"
+START, END = "<!-- benchmark-table:start -->", "<!-- benchmark-table:end -->"
 VERDICTS = ("true", "false", "unclear")
 
 
@@ -162,6 +164,34 @@ def _assumed(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) 
     return [*out, "", "The longest chains:", "", *examples, ""]
 
 
+def readme_table(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) -> str:
+    """The README's results table and headline, generated so they can't drift from the data."""
+    lines = ["| Project | Findings after dedupe | Attack paths | Real |", "|---|---:|---:|---:|"]
+    findings = paths = real = 0
+    for target, result, labels in rows:
+        v, _ = verdicts(result, labels)
+        n_real = sum(1 for p in result["attack_paths"] if v[p["key"]] == "true")
+        name = f"[{target['name']}]({target['repo']})" + (" (control)" if target["kind"] == "control" else "")
+        lines.append(f"| {name} | {result['findings']:,} | {len(result['attack_paths'])} | {n_real} |")
+        findings, paths, real = (
+            findings + result["findings"],
+            paths + len(result["attack_paths"]),
+            real + n_real,
+        )
+    lines += [
+        f"| **Total** | **{findings:,}** | **{paths}** | **{real}** |",
+        "",
+        f"{findings:,} findings come down to {paths} attack paths, and {real} of them are real chains an",
+        f"attacker could use ({_pct(real, paths)} precision). The control project gets none.",
+    ]
+    return "\n".join(lines)
+
+
+def with_readme_table(readme: str, table: str) -> str:
+    start, end = readme.index(START) + len(START), readme.index(END)
+    return readme[:start] + "\n" + table + "\n" + readme[end:]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true")
@@ -171,15 +201,18 @@ def main() -> int:
     for name, key in missing:
         print(f"unlabeled path in {name}: {key}")
     text = render(rows)
+    readme = README.read_text(encoding="utf-8")
+    new_readme = with_readme_table(readme, readme_table(rows))
     if opts.check:
-        stale = not DOC.is_file() or DOC.read_text(encoding="utf-8") != text
+        stale = not DOC.is_file() or DOC.read_text(encoding="utf-8") != text or readme != new_readme
         if stale:
-            print("docs/benchmark.md is stale: run python benchmarks/report.py")
+            print("docs/benchmark.md or the README table is stale: run python benchmarks/report.py")
         return 1 if missing or stale else 0
     if missing:
         return 1
     DOC.write_text(text, encoding="utf-8")
-    print(f"wrote {DOC.relative_to(ROOT)}")
+    README.write_text(new_readme, encoding="utf-8")
+    print(f"wrote {DOC.relative_to(ROOT)} and the README table")
     return 0
 
 

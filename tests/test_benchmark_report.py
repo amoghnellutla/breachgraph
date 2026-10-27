@@ -20,6 +20,10 @@ def test_published_benchmark_is_current_and_fully_labeled() -> None:
     assert (ROOT / "docs" / "benchmark.md").read_text(encoding="utf-8") == report.render(rows), (
         "docs/benchmark.md is stale: run python benchmarks/report.py"
     )
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert report.with_readme_table(readme, report.readme_table(rows)) == readme, (
+        "the README's benchmark table is stale: run python benchmarks/report.py"
+    )
 
 
 def test_precision_counts_only_decided_paths() -> None:
