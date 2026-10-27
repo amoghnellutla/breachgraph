@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from breachgraph.models import Finding, Priority, ScanResult, Status, ToolStatus
+from breachgraph.compare import path_changes
+from breachgraph.models import AttackPathView, Finding, Priority, ScanResult, Status, ToolStatus
 
 MARKER = "<!-- breachgraph-report -->"
 _MAX_CHARS = 60_000  # GitHub comments are capped at 65,536 characters
@@ -109,6 +110,52 @@ _WEAPON_ICON = {
 }
 
 
+_MERMAID_SAFE = re.compile(r"[^\w .,:/()+*='-]")
+
+
+def _mermaid_label(text: str) -> str:
+    """Node names come from the scanned repo: keep a conservative character set so a label can't
+    close its quotes, start a directive or carry markup."""
+    text = _MERMAID_SAFE.sub("", " ".join(text.split()))
+    return text if len(text) <= 48 else text[:47] + "…"
+
+
+def _mermaid(path: AttackPathView) -> list[str]:
+    out = ["```mermaid", "flowchart LR", '  n0["Internet"]']
+    for i, s in enumerate(path.steps, 1):
+        out.append(f'  n{i}["{_mermaid_label(s.dst)}"]')
+        arrow = f'-- "{_mermaid_label(s.via.replace("_", " "))}" -->' if s.via else "-->"
+        out.append(f"  n{i - 1} {arrow} n{i}")
+    out.append(f"  style n{len(path.steps)} stroke-width:3px")
+    out.append("```")
+    return out
+
+
+def _route(path: AttackPathView) -> str:
+    return " → ".join(["Internet", *(_cell(s.dst, 40) for s in path.steps)])
+
+
+def _change_md(result: ScanResult) -> list[str]:
+    """The headline a reviewer needs: does this change open or close a way in?"""
+    changes = path_changes(result)
+    if changes is None:
+        return []
+    opened, closed = changes
+    out: list[str] = []
+    if opened:
+        out += [f"### 🔴 This change opens {len(opened)} new attack path(s)", ""]
+        for p in opened[:3]:
+            out += [f"**→ {_cell(p.target, 60)}** · {p.confidence} confidence", "", *_mermaid(p), ""]
+        if len(opened) > 3:
+            out += [f"_…and {len(opened) - 3} more below._", ""]
+    if closed:
+        out += [f"### ✅ This change closes {len(closed)} attack path(s)", ""]
+        out += [f"- ~~{_route(p)}~~" for p in closed[:5]] + [""]
+    if not opened and not closed:
+        out += ["> No change to attack paths compared with the base branch.", ""]
+    return out
+
+
 def _attack_paths_md(result: ScanResult) -> list[str]:
     ag = result.attack_graph
     if ag is None or not ag.enabled:
@@ -210,6 +257,7 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
     )
     out += [f"**Scanners:** {tools}", ""]
 
+    out += _change_md(result)
     out += _attack_paths_md(result)
 
     gating = [f for f in result.findings if f.gating]

@@ -237,6 +237,8 @@ class AttackStep(BaseModel):
 
 
 class AttackPathView(BaseModel):
+    id: str = ""  # stable across runs: entry, target and the findings it needs (see graph.summary)
+    node_ids: list[str] = Field(default_factory=list)
     target: str
     target_kind: str
     score: float
@@ -269,6 +271,17 @@ class AttackGraphSummary(BaseModel):
         return [p for p in self.paths if p.gating]
 
 
+class Comparison(BaseModel):
+    """What changed against a base report (e.g. the default branch), for PR headlines."""
+
+    base_version: str = ""
+    base_started_at: datetime | None = None
+    new_paths: list[str] = Field(default_factory=list)  # ids of paths absent from the base
+    resolved_paths: list[AttackPathView] = Field(default_factory=list)  # in the base, gone now
+    new_findings: int = 0
+    resolved_findings: int = 0
+
+
 class ScanResult(BaseModel):
     breachgraph_version: str
     target: str
@@ -281,6 +294,7 @@ class ScanResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     artifacts: dict[str, str] = Field(default_factory=dict)  # e.g. {"sbom": "path"}
     attack_graph: AttackGraphSummary | None = None
+    comparison: Comparison | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     def counts_by(

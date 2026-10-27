@@ -93,6 +93,17 @@ ul.warn { margin: 0; padding-left: 18px; }
     {% if result.warnings %}<h3>Warnings</h3><ul class="warn">{% for w in result.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
   </div>
 
+  {% if changes %}
+  {% set opened, closed = changes %}
+  <div class="panel change">
+    {% if opened %}<h2 style="margin-top:0">🔴 This change opens {{ opened|length }} new attack path(s)</h2>
+    <ul>{% for p in opened %}<li>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</li>{% endfor %}</ul>{% endif %}
+    {% if closed %}<h2{% if not opened %} style="margin-top:0"{% endif %}>✅ This change closes {{ closed|length }} attack path(s)</h2>
+    <ul>{% for p in closed %}<li><s>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</s></li>{% endfor %}</ul>{% endif %}
+    {% if not opened and not closed %}<p style="margin:0">No change to attack paths compared with the base report.</p>{% endif %}
+  </div>
+  {% endif %}
+
   {% set ag = result.attack_graph %}
   {% if ag and ag.enabled %}
   <div class="panel">

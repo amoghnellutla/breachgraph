@@ -21,6 +21,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from breachgraph import __version__
+from breachgraph.compare import path_changes
 from breachgraph.config import CONFIG_FILENAMES, ConfigError, find_config, load_config
 from breachgraph.integrations.github import GitHubClient, GitHubContext, write_step_summary
 from breachgraph.models import Priority, ScanResult, ToolRun, ToolStatus
@@ -84,6 +85,14 @@ def scan_cmd(
     write_baseline_to: Annotated[
         Path | None,
         typer.Option("--write-baseline", help="Write all current findings to this baseline file and exit 0."),
+    ] = None,
+    compare_to: Annotated[
+        Path | None,
+        typer.Option(
+            "--compare",
+            help="A breachgraph.json from the base branch: findings and attack paths already there are "
+            "treated as pre-existing, and the report says which paths this change opens or closes.",
+        ),
     ] = None,
     output_dir: Annotated[Path, typer.Option("--output-dir", "-o", help="Where reports are written.")] = Path(
         "breachgraph-report"
@@ -208,6 +217,7 @@ def scan_cmd(
         skip=_split(skip),
         imports=parsed_imports,
         baseline=None if write_baseline_to else baseline,
+        compare=compare_to,
         offline=offline,
         max_workers=workers,
     )
@@ -340,6 +350,15 @@ def _print_summary(result: ScanResult) -> None:
         )
     if open_findings:
         console.print(table)
+    changes = path_changes(result)
+    if changes is not None:
+        opened, closed = changes
+        if opened:
+            console.print(f"[bold red]This change opens {len(opened)} new attack path(s)[/]")
+        if closed:
+            console.print(f"[bold green]This change closes {len(closed)} attack path(s)[/]")
+        if not opened and not closed:
+            console.print("[dim]No change to attack paths compared with the base report.[/]")
     _print_attack_paths(result)
     ai_meta = result.metadata.get("ai")
     if isinstance(ai_meta, dict):

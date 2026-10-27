@@ -6,6 +6,7 @@ from pathlib import PurePath
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from breachgraph.compare import path_changes
 from breachgraph.models import ScanResult, Status
 
 # Autoescape is enabled for every template; scanner output is untrusted.
@@ -30,4 +31,5 @@ def render(result: ScanResult) -> str:
         suppressed=sum(1 for f in result.findings if f.status is Status.SUPPRESSED),
         tools=sorted({s for f in result.findings for s in f.sources}),
         categories=sorted({f.category.value for f in result.findings}),
+        changes=path_changes(result),
     )

@@ -43,6 +43,13 @@ def load_baseline(path: Path) -> set[str]:
     return fps
 
 
+def load_baseline_paths(path: Path) -> set[str] | None:
+    """Ids of accepted attack paths, or None for baselines written before paths were recorded."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    paths = data.get("attack_paths") if isinstance(data, dict) else None
+    return {str(p["id"]) for p in paths if isinstance(p, dict) and p.get("id")} if paths is not None else None
+
+
 def write_baseline(result: ScanResult, path: Path) -> int:
     keep = [f for f in result.findings if f.status is not Status.SUPPRESSED]
     payload: dict[str, Any] = {
@@ -60,6 +67,10 @@ def write_baseline(result: ScanResult, path: Path) -> int:
                 "severity": f.severity.value,
             }
             for f in sorted(keep, key=lambda f: (f.location.path, f.rule_id, f.fingerprint))
+        ],
+        "attack_paths": [
+            {"id": p.id, "target": p.target, "route": " -> ".join(s.dst for s in p.steps)}
+            for p in (result.attack_graph.paths if result.attack_graph else [])
         ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)

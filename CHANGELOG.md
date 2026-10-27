@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **"This change opens / closes an attack path"** as the headline of every PR comment, with each
+  new path drawn as a Mermaid diagram. `--compare base/breachgraph.json` treats the base branch's
+  findings and paths as pre-existing, so only what a change adds can fail it. The GitHub Action
+  does this automatically through the Actions cache (`compare: true`). Attack paths now carry a
+  stable `id`, and baselines record accepted paths.
+
 ## [0.1.0] - 2026-10-27
 
 ### Added

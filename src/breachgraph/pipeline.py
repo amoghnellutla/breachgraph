@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from breachgraph import __version__
+from breachgraph.compare import base_fingerprints, base_path_ids, compare, load_report
 from breachgraph.config import Config
 from breachgraph.enrich import enrich
 from breachgraph.graph import build_attack_graph
@@ -22,6 +23,7 @@ from breachgraph.policy import (
     drop_excluded,
     evaluate_gate,
     load_baseline,
+    load_baseline_paths,
 )
 from breachgraph.reachability import annotate_reachability
 from breachgraph.scanners import IMPORTERS, SCANNERS, ScanContext, ScannerOutcome
@@ -36,6 +38,7 @@ class ScanOptions:
     skip: list[str] = field(default_factory=list)
     imports: list[tuple[str, Path]] = field(default_factory=list)  # (tool, report path)
     baseline: Path | None = None
+    compare: Path | None = None  # base report: an implicit baseline of findings and attack paths
     offline: bool = False
     max_workers: int = 4
 
@@ -116,18 +119,32 @@ def process(
             log.exception("reachability analysis failed")
             result.warnings.append(f"reachability analysis skipped: {exc}")
     score_all(items, config)
+    baseline_paths: set[str] | None = None
     if opts.baseline:
         if opts.baseline.exists():
             apply_baseline(items, load_baseline(opts.baseline))
+            baseline_paths = load_baseline_paths(opts.baseline)
             result.baseline_used = True
         else:
             result.warnings.append(f"baseline {opts.baseline} not found; treating all findings as new")
+    base: ScanResult | None = None
+    if opts.compare:
+        try:
+            base = load_report(opts.compare)
+        except (OSError, ValueError) as exc:
+            result.warnings.append(f"comparison skipped: {exc}")
+        else:
+            apply_baseline(items, base_fingerprints(base))
+            baseline_paths = (baseline_paths or set()) | base_path_ids(base)
+            result.baseline_used = True
     result.warnings += apply_suppressions(items, config)
     result.findings = items
     if config.attack_graph.enabled:
         try:
             ag = build_attack_graph(target, items, config)
-            result.attack_graph = summarize(ag, items, config.attack_graph, result.baseline_used)
+            result.attack_graph = summarize(
+                ag, items, config.attack_graph, result.baseline_used, baseline_paths
+            )
         except Exception as exc:  # the attack graph must never break a scan
             log.exception("attack graph failed")
             result.warnings.append(f"attack graph skipped: {exc}")
@@ -136,6 +153,8 @@ def process(
             result.warnings.append(f"{run.name} failed: {run.message}")
         elif run.status is ToolStatus.OK and run.message:
             result.warnings.append(f"{run.name}: {run.message}")
+    if base is not None:
+        result.comparison = compare(result, base)
     result.gate = evaluate_gate(result, config)
     if config.ai.enabled:
         _run_ai(result, config, target)

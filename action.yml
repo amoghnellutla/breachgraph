@@ -1,8 +1,8 @@
 name: breachgraph security gate
 description: >-
-  Run Semgrep, Gitleaks, Trivy, Checkov (and optionally ZAP) in one step. Findings are
-  deduplicated, risk-ranked with CISA KEV + EPSS, gated by policy, and reported to code
-  scanning, the PR and the job summary.
+  Run Semgrep, Gitleaks, Trivy, Checkov, zizmor (and optionally ZAP) in one step, link the
+  findings to code, Kubernetes, cloud IAM and CI into attack paths, and tell each pull request
+  whether it opens or closes a path to your crown jewels.
 author: breachgraph contributors
 branding:
   icon: shield
@@ -54,6 +54,11 @@ inputs:
   extra-args:
     description: Extra arguments passed to `breachgraph scan`.
     default: ""
+  compare:
+    description: >-
+      Compare pull requests with the default branch's last report (kept in the Actions cache), so
+      only what the PR adds can fail it and the comment says which attack paths it opens or closes.
+    default: "true"
   token:
     description: Token for PR comments and issues.
     default: ${{ github.token }}
@@ -82,6 +87,14 @@ runs:
         key: breachgraph-cache-${{ runner.os }}-${{ github.run_id }}
         restore-keys: breachgraph-cache-${{ runner.os }}-
 
+    - name: Restore the default branch's report
+      if: ${{ inputs.compare == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ${{ runner.temp }}/breachgraph-base
+        key: breachgraph-report-${{ github.event.pull_request.base.sha }}
+        restore-keys: breachgraph-report-
+
     - name: Run breachgraph
       id: scan
       shell: bash
@@ -102,6 +115,7 @@ runs:
         SG_EXTRA: ${{ inputs.extra-args }}
         SG_CACHE: ${{ runner.temp }}/breachgraph-cache
         SG_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        SG_BASE_REPORT: ${{ runner.temp }}/breachgraph-base/breachgraph.json
       run: |
         set -uo pipefail
         mkdir -p "$SG_CACHE"
@@ -131,6 +145,10 @@ runs:
             echo "::warning title=breachgraph::ZAP produced no report for $SG_DAST_URL"
           fi
         fi
+        if [[ -f "$SG_BASE_REPORT" ]]; then
+          cp "$SG_BASE_REPORT" "$GITHUB_WORKSPACE/.breachgraph-base.json"
+          args+=(--compare .breachgraph-base.json)
+        fi
         # shellcheck disable=SC2206
         extra=($SG_EXTRA)
 
@@ -146,7 +164,11 @@ runs:
           -e GITHUB_STEP_SUMMARY=/github/summary.md -v "$GITHUB_STEP_SUMMARY:/github/summary.md" \
           "$SG_IMAGE" "${args[@]}" "${extra[@]}"
         code=$?
-        rm -f "$GITHUB_WORKSPACE/.breachgraph-zap.json"
+        rm -f "$GITHUB_WORKSPACE/.breachgraph-zap.json" "$GITHUB_WORKSPACE/.breachgraph-base.json"
+        if [[ -f "$SG_OUT/breachgraph.json" && "${GITHUB_EVENT_NAME:-}" == "push" && "${GITHUB_REF_NAME:-}" == "$SG_DEFAULT_BRANCH" ]]; then
+          mkdir -p "$RUNNER_TEMP/breachgraph-base" && cp "$SG_OUT/breachgraph.json" "$RUNNER_TEMP/breachgraph-base/"
+          echo "base_saved=true" >> "$GITHUB_OUTPUT"
+        fi
 
         if [[ -f "$SG_OUT/breachgraph.json" ]]; then
           python3 - "$SG_OUT/breachgraph.json" >> "$GITHUB_OUTPUT" <<'PY'
@@ -159,6 +181,13 @@ runs:
         PY
         fi
         echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+
+    - name: Keep this report for pull requests to compare against
+      if: ${{ always() && inputs.compare == 'true' && steps.scan.outputs.base_saved == 'true' }}
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ${{ runner.temp }}/breachgraph-base
+        key: breachgraph-report-${{ github.sha }}
 
     - name: Upload SARIF to code scanning
       if: ${{ always() && inputs.upload-sarif == 'true' && hashFiles(format('{0}/breachgraph.sarif', inputs.output-dir)) != '' }}

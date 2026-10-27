@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from breachgraph.config import AttackGraph as AttackGraphConfig
 from breachgraph.graph import AttackGraphResult
 from breachgraph.graph.model import Confidence
@@ -18,8 +20,23 @@ from breachgraph.models import (
 _CONF_RANK = {"high": 3, "medium": 2, "low": 1}
 
 
+def path_id(path: AttackPath) -> str:
+    """Stable identity of a path: where it starts, what it reaches, and the findings it needs.
+
+    Node ids are resource names and finding fingerprints are content-based, so the id survives
+    unrelated edits and reruns. A path that needs no finding (e.g. a publicly assumable role) is
+    identified by its full route instead."""
+    nodes = path.nodes
+    parts = [nodes[0], path.target.id, *sorted(path.weaknesses)] if path.weaknesses else nodes
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+
 def summarize(
-    result: AttackGraphResult, findings: list[Finding], config: AttackGraphConfig, baseline_used: bool
+    result: AttackGraphResult,
+    findings: list[Finding],
+    config: AttackGraphConfig,
+    baseline_used: bool,
+    baseline_paths: set[str] | None = None,
 ) -> AttackGraphSummary:
     node_name = {nid: n.name for nid, n in result.graph.nodes.items()}
     node_kind = {nid: n.kind.value for nid, n in result.graph.nodes.items()}
@@ -29,8 +46,12 @@ def summarize(
 
     views: list[AttackPathView] = []
     for p in result.paths:
-        # A path is "new" if any weapon on it is a new finding, or if there is no baseline.
-        is_new = (not baseline_used) or any(fp in new_fps for fp in p.weaknesses) or not p.weaknesses
+        pid = path_id(p)
+        if baseline_paths is not None:
+            is_new = pid not in baseline_paths
+        else:
+            # Without recorded paths: new if any weapon on it is a new finding, or no baseline.
+            is_new = (not baseline_used) or any(fp in new_fps for fp in p.weaknesses) or not p.weaknesses
         gating = (
             config.fail_on_new_path
             and _CONF_RANK[p.confidence.value] >= min_rank
@@ -38,6 +59,8 @@ def summarize(
         )
         views.append(
             AttackPathView(
+                id=pid,
+                node_ids=p.nodes,
                 target=p.target.name,
                 target_kind=p.target.kind.value,
                 score=p.score,
