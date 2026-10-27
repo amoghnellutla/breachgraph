@@ -14,7 +14,7 @@ Kubernetes service accounts), data stores and secrets, and hosts.
 
 **Edges** are relationships extracted from your repo, each with evidence (`file:line`) and a
 confidence. Some edges are **gated**: they can be crossed only if the source node carries a
-*weakness* of a required class. This is the core idea — reaching a workload over the network is
+*weakness* of a required class. This is the core idea: reaching a workload over the network is
 not the same as controlling it.
 
 | Weakness class | Comes from | Unlocks |
@@ -33,8 +33,8 @@ weakness, so the graph is not flooded by every unreachable CVE.
 
 ## The "no free ride" guarantee
 
-Structural privilege edges — a pod → its service account, a workload → its IAM role, a workload →
-a mounted secret — all carry a `requires` gate. With **no** code vulnerability, an internet-facing
+Structural privilege edges (a pod → its service account, a workload → its IAM role, a workload →
+a mounted secret) all carry a `requires` gate. With **no** code vulnerability, an internet-facing
 pod whose role can read a bucket produces **no path** to that bucket. A route only reaches the
 pod's identity once a real weapon (code execution, SSRF, …) is present on it. This is enforced and
 [tested](../tests/test_graph_paths.py) (`test_no_free_ride_without_a_weapon`).
@@ -43,7 +43,7 @@ pod's identity once a real weapon (code execution, SSRF, …) is present on it. 
 
 The engine enumerates paths from the internet to crown jewels (bounded DFS with a step budget, so
 it always terminates), and keeps the best path **per distinct set of weapons**. That way two
-independent entry points — say command injection and SSRF both reaching the same bucket — surface
+independent entry points (say command injection and SSRF both reaching the same bucket) surface
 as separate vectors, because fixing one does not fix the other.
 
 Each path is scored by the target's value, the difficulty of each step, and the weakest edge's
@@ -58,7 +58,7 @@ annotations respected), container escape (privileged, host mounts, capabilities,
 create workloads), and IRSA service-account-to-role mapping. Unrendered Helm/Kustomize is reported
 as a blind spot, not guessed.
 
-**Terraform / AWS** (`sources/terraform.py`): IAM policies are actually evaluated — action/resource
+**Terraform / AWS** (`sources/terraform.py`): IAM policies are actually evaluated: action/resource
 matching with wildcards, scoping to specific resources, AWS-managed policies, **explicit Deny
 wins**, and **privilege-escalation** primitives (e.g. a role that can `iam:AttachRolePolicy` can
 make itself admin). Exposure from internet-facing load balancers, security groups open to

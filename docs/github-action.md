@@ -55,11 +55,11 @@ Outputs: `passed`, `findings`, `gating`, `sarif`.
 
 With `compare` on (the default), the PR comment starts with the one thing a reviewer needs:
 
-> ### 🔴 This change opens 1 new attack path(s)
+> ### This change opens 1 new attack path(s)
 > **→ S3 bucket shop-customer-data-prod** · high confidence
 > (Mermaid diagram: Internet → Ingress api → Deployment shop/api → GET /fetch → IAM role → bucket)
 
-or `✅ This change closes 2 attack path(s)` when a fix breaks paths, or `No change to attack paths`.
+or `This change closes 2 attack path(s)` when a fix breaks paths, or `No change to attack paths`.
 Attack paths are matched across runs by a stable id (entry point, target and the findings the path
 needs), so moving code around does not make a path look new.
 

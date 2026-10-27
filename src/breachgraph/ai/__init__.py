@@ -1,4 +1,4 @@
-"""Optional AI-assisted triage — bring your own Anthropic API key.
+"""Optional AI-assisted triage with your own Anthropic API key.
 
 breachgraph never spends tokens on your behalf. This runs only when you turn it on *and* a key is
 present (``ANTHROPIC_API_KEY``). For the top findings it asks the model for a real / likely-false-
@@ -94,7 +94,7 @@ def available() -> tuple[bool, str]:
     try:
         import anthropic  # noqa: F401
     except ImportError:
-        return False, "the 'anthropic' package is not installed — run: pip install 'breachgraph[ai]'"
+        return False, "the 'anthropic' package is not installed; run: pip install 'breachgraph[ai]'"
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
         return False, (
             "no Anthropic API key found. Get one at https://console.anthropic.com/ and set it:\n"

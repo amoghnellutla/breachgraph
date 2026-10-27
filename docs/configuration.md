@@ -87,7 +87,7 @@ reachability:                 # does first-party code actually import the vulner
                               # pip-compile `# via` lines; otherwise reachability is `unknown`)
   gate_on_unused: false       # an unused-dependency CVE alone won't fail the gate
 
-ai:                           # optional AI triage — bring your own Anthropic API key
+ai:                           # optional AI triage with your own Anthropic API key
   enabled: false              # off by default; also enable with `--ai`
   model: claude-opus-5-5      # any Anthropic model id; set a cheaper one (e.g. claude-haiku-5-5) to save
   max_findings: 10            # triage at most this many top findings (attack-path steps first)

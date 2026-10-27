@@ -52,7 +52,7 @@ def weakness_class(f: Finding) -> WeaknessClass | None:
     if f.category is Category.SECRETS:
         return WeaknessClass.CREDENTIAL_EXPOSURE
     if f.category in (Category.SCA, Category.CONTAINER):
-        # Only dependency CVEs with real-world exploitation signal open a path — and only when the
+        # Only dependency CVEs with real-world exploitation signal open a path, and only when the
         # package is actually used (reachability analysis didn't rule it out as unused).
         e = f.enrichment
         exploitable = e.kev or (e.epss is not None and e.epss >= 0.1 and (f.cvss or 0) >= 7.0)

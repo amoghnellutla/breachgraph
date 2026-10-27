@@ -1,22 +1,22 @@
-# ⚠️ Intentionally vulnerable platform
+# Intentionally vulnerable platform
 
 **Do not deploy this. Do not copy from it.** Fake credentials, deliberate flaws.
 
-This is a small microservice platform that demonstrates breachgraph's **attack-path analysis** —
+This is a small microservice platform that demonstrates breachgraph's **attack-path analysis**:
 how a code vulnerability, a container setting and an over-broad cloud role combine into a real path
 from the internet to customer data.
 
 ## The setup
 
-- `services/api/app.py` — a Flask API with an **SSRF** route (`/fetch`) and a **command-injection**
+- `services/api/app.py`: a Flask API with an **SSRF** route (`/fetch`) and a **command-injection**
   route (`/thumbnail`).
-- `k8s/api.yaml` — the API behind a public **Ingress**, in a pod with **`hostNetwork: true`** and
+- `k8s/api.yaml`: the API behind a public **Ingress**, in a pod with **`hostNetwork: true`** and
   an **IRSA** service account mapped to an IAM role.
-- `infra/main.tf` — the `customer-data` S3 bucket (tagged PII), an EKS **node role** that can read
+- `infra/main.tf`: the `customer-data` S3 bucket (tagged PII), an EKS **node role** that can read
   it, a **pod role** with `AmazonS3FullAccess`, and a **CI deploy role** that GitHub Actions assumes
   over OIDC, trusted only for the `main` branch.
-- `.github/workflows/triage.yml` — an issue-comment bot that pastes the comment into a shell script.
-- `.github/workflows/preview.yml` — a `pull_request_target` preview build that checks out and runs
+- `.github/workflows/triage.yml`: an issue-comment bot that pastes the comment into a shell script.
+- `.github/workflows/preview.yml`: a `pull_request_target` preview build that checks out and runs
   the pull request's code with a publish token.
 
 ## The paths breachgraph finds
@@ -40,5 +40,5 @@ reported, each with its own cheapest fix.
 docker run --rm -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan examples/vulnerable-platform
 ```
 
-With **no** code findings, breachgraph reports **no path** to the bucket — being internet-facing
+With **no** code findings, breachgraph reports **no path** to the bucket, because being internet-facing
 with an over-broad role is not, by itself, a breach. That's the point.

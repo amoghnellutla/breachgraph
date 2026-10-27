@@ -159,7 +159,7 @@ class AIVerdict(StrEnum):
 
 
 class AIInsight(BaseModel):
-    """AI-assisted triage for one finding. Advisory only — never changes the gate on its own."""
+    """AI-assisted triage for one finding. Advisory only: it never changes the gate on its own."""
 
     verdict: AIVerdict
     confidence: Confidence = Confidence.MEDIUM

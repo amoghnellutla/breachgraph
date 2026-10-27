@@ -1,4 +1,4 @@
-# ⚠️ Intentionally vulnerable demo app
+# Intentionally vulnerable demo app
 
 **Do not deploy this. Do not copy code from it.**
 
