@@ -44,6 +44,9 @@ The method, every path with the reason it is or isn't real, the scenarios breach
 what it finds from a leaked key or a foothold inside the cluster are in
 [docs/benchmark.md](docs/benchmark.md). Anyone can rerun it.
 
+The CI/CD checks were also run on 2,471 workflows from popular, well-maintained projects, where a
+false alarm costs a real team's time: [docs/ci-survey.md](docs/ci-survey.md).
+
 <p align="center"><img src="docs/img/attack-paths.png" alt="The HTML report's attack-graph explorer with one path selected, from the internet through an injectable CI job and its deploy role to a customer-data bucket" width="860"></p>
 
 ## Quick start
