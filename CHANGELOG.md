@@ -24,6 +24,12 @@ All notable changes to this project are documented here. The format follows
   source defines a database. SQL injection and code execution in the application reach it.
 - An application that serves HTTP routes and has no deployment configuration is modeled as one
   workload assumed to be internet-facing, at medium confidence, and the coverage line says so.
+- MITRE ATT&CK techniques on every attack-path step and path (T1190, T1552.005, T1078.004, T1530
+  and others), linked in the PR comment and HTML report and added to SARIF results as
+  `attack.<id>` tags.
+- OWASP Top 10 CI/CD Security Risks labels (CICD-SEC-1 to 10) on CI/CD findings from the built-in
+  checks and zizmor, shown next to the OWASP Top 10 category and tagged in SARIF.
+- An OpenSSF Scorecard workflow.
 - `ai.prices`: set or override a model's price per million tokens, so a price change or a new
   model doesn't need a release.
 - Compose services that publish ports, or sit behind an nginx, Traefik, Caddy, HAProxy or Envoy

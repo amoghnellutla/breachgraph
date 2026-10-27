@@ -6,7 +6,8 @@ import hashlib
 
 from breachgraph.config import AttackGraph as AttackGraphConfig
 from breachgraph.graph import AttackGraphResult
-from breachgraph.graph.model import Confidence
+from breachgraph.graph.attack import step_techniques
+from breachgraph.graph.model import Confidence, Graph
 from breachgraph.graph.paths import AttackPath
 from breachgraph.models import (
     AttackGraphSummary,
@@ -45,8 +46,6 @@ def summarize(
     baseline_used: bool,
     baseline_paths: set[str] | None = None,
 ) -> AttackGraphSummary:
-    node_name = {nid: n.name for nid, n in result.graph.nodes.items()}
-    node_kind = {nid: n.kind.value for nid, n in result.graph.nodes.items()}
     status_by_fp = {f.fingerprint: f.status for f in findings}
     new_fps = {f.fingerprint for f in findings if f.status is Status.NEW}
     min_rank = _CONF_RANK[config.min_confidence]
@@ -75,7 +74,8 @@ def summarize(
                 length=p.length,
                 is_new=is_new,
                 gating=gating,
-                steps=[_step(p, i, node_name, node_kind) for i in range(len(p.steps))],
+                steps=(steps := [_step(p, i, result.graph) for i in range(len(p.steps))]),
+                techniques=list(dict.fromkeys(t for s in steps for t in s.techniques)),
                 weaknesses=[fp for fp in p.weaknesses if status_by_fp.get(fp) is not Status.SUPPRESSED],
             )
         )
@@ -155,13 +155,15 @@ def export_graph(result: AttackGraphResult, views: list[AttackPathView]) -> Grap
     return GraphExport(nodes=nodes, edges=edges, truncated=truncated)
 
 
-def _step(path: AttackPath, i: int, names: dict[str, str], kinds: dict[str, str]) -> AttackStep:
+def _step(path: AttackPath, i: int, graph: Graph) -> AttackStep:
     s = path.steps[i]
     ev = s.edge.evidence[0] if s.edge.evidence else None
+    src, dst = graph.nodes[s.edge.src], graph.nodes[s.edge.dst]
     return AttackStep(
-        src=names.get(s.edge.src, s.edge.src),
-        dst=names.get(s.edge.dst, s.edge.dst),
-        dst_kind=kinds.get(s.edge.dst, ""),
+        src=src.name,
+        dst=dst.name,
+        dst_kind=dst.kind.value,
+        techniques=step_techniques(s.edge, src, dst, s.via),
         kind=s.edge.kind.value,
         via=s.via.value if s.via else None,
         weakness_title=s.weakness_title,

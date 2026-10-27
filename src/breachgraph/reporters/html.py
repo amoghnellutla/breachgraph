@@ -10,6 +10,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 from markupsafe import Markup
 
 from breachgraph.compare import path_changes
+from breachgraph.graph.attack import TECHNIQUES, technique_url
 from breachgraph.models import ScanResult, Status
 
 # Autoescape is enabled for every template; scanner output is untrusted.
@@ -19,6 +20,7 @@ _env = Environment(  # nosemgrep: python.flask.security.xss.audit.direct-use-of-
     trim_blocks=True,
     lstrip_blocks=True,
 )
+_env.globals.update(attack_name=lambda t: TECHNIQUES.get(t, t), attack_url=technique_url)
 
 
 def explorer_payload(result: ScanResult) -> dict[str, Any] | None:

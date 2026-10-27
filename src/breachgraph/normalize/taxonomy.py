@@ -68,6 +68,7 @@ CATEGORY_DEFAULT_OWASP = {
 
 _CWE_RE = re.compile(r"CWE[-_ ]?(\d+)", re.IGNORECASE)
 _OWASP_RE = re.compile(r"A(\d{1,2})[:_ -]?(20\d\d)", re.IGNORECASE)
+_CICD_RE = re.compile(r"CICD-SEC-(\d{1,2})", re.IGNORECASE)
 
 
 def normalize_cwes(values: list[str] | str | None) -> list[str]:
@@ -91,16 +92,19 @@ def normalize_cwes(values: list[str] | str | None) -> list[str]:
 
 
 def normalize_owasp(values: list[str] | str | None) -> list[str]:
-    """'A03:2021 - Injection' -> 'A03:2021'. Non-2021 labels are kept in canonical form."""
+    """'A03:2021 - Injection' -> 'A03:2021', 'cicd-sec-4' -> 'CICD-SEC-4'. Non-2021 labels are
+    kept in canonical form."""
     if values is None:
         return []
     items = [values] if isinstance(values, str) else values
     out: list[str] = []
     for item in items:
-        m = _OWASP_RE.search(str(item))
-        if not m:
+        if m := _OWASP_RE.search(str(item)):
+            label = f"A{int(m.group(1)):02d}:{m.group(2)}"
+        elif c := _CICD_RE.search(str(item)):
+            label = f"CICD-SEC-{int(c.group(1))}"
+        else:
             continue
-        label = f"A{int(m.group(1)):02d}:{m.group(2)}"
         if label not in out:
             out.append(label)
     return out
@@ -115,3 +119,59 @@ def owasp_for(cwes: list[str], category: Category) -> list[str]:
     if not out and category in CATEGORY_DEFAULT_OWASP:
         out.append(CATEGORY_DEFAULT_OWASP[category])
     return out
+
+
+# OWASP Top 10 CI/CD Security Risks (https://owasp.org/www-project-top-10-ci-cd-security-risks/).
+CICD_RISKS: dict[str, str] = {
+    "CICD-SEC-1": "Insufficient Flow Control Mechanisms",
+    "CICD-SEC-2": "Inadequate Identity and Access Management",
+    "CICD-SEC-3": "Dependency Chain Abuse",
+    "CICD-SEC-4": "Poisoned Pipeline Execution",
+    "CICD-SEC-5": "Insufficient PBAC (Pipeline-Based Access Controls)",
+    "CICD-SEC-6": "Insufficient Credential Hygiene",
+    "CICD-SEC-7": "Insecure System Configuration",
+    "CICD-SEC-8": "Ungoverned Usage of 3rd Party Services",
+    "CICD-SEC-9": "Improper Artifact Integrity Validation",
+    "CICD-SEC-10": "Insufficient Logging and Visibility",
+}
+# Rule id (built-in checks and zizmor audits) -> risk.
+_CICD_RULES: dict[str, str] = {
+    "cicd/script-injection": "CICD-SEC-4",
+    "cicd/untrusted-checkout": "CICD-SEC-4",
+    "supply-chain/dependency-confusion": "CICD-SEC-3",
+    "template-injection": "CICD-SEC-4",
+    "dangerous-triggers": "CICD-SEC-4",
+    "github-env": "CICD-SEC-4",
+    "bot-conditions": "CICD-SEC-1",
+    "excessive-permissions": "CICD-SEC-5",
+    "undocumented-permissions": "CICD-SEC-5",
+    "unpinned-uses": "CICD-SEC-3",
+    "unpinned-images": "CICD-SEC-3",
+    "impostor-commit": "CICD-SEC-3",
+    "ref-confusion": "CICD-SEC-3",
+    "ref-version-mismatch": "CICD-SEC-3",
+    "stale-action-refs": "CICD-SEC-3",
+    "known-vulnerable-actions": "CICD-SEC-3",
+    "archived-uses": "CICD-SEC-3",
+    "dependabot-cooldown": "CICD-SEC-3",
+    "dependabot-execution": "CICD-SEC-3",
+    "forbidden-uses": "CICD-SEC-8",
+    "artipacked": "CICD-SEC-6",
+    "secrets-inherit": "CICD-SEC-6",
+    "overprovisioned-secrets": "CICD-SEC-6",
+    "unredacted-secrets": "CICD-SEC-6",
+    "secrets-outside-env": "CICD-SEC-6",
+    "hardcoded-container-credentials": "CICD-SEC-6",
+    "use-trusted-publishing": "CICD-SEC-6",
+    "cache-poisoning": "CICD-SEC-9",
+    "self-hosted-runner": "CICD-SEC-7",
+    "insecure-commands": "CICD-SEC-7",
+    "obfuscation": "CICD-SEC-7",
+    "concurrency-limits": "CICD-SEC-7",
+    "anonymous-definition": "CICD-SEC-10",
+}
+
+
+def cicd_risk(rule_id: str) -> str | None:
+    """The CI/CD risk for a rule id such as "template-injection" or "zizmor/template-injection"."""
+    return _CICD_RULES.get(rule_id) or _CICD_RULES.get(rule_id.rsplit("/", 1)[-1])

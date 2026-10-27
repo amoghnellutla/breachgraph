@@ -22,6 +22,28 @@ added still runs.
 When zizmor and the built-in checks report the same injection, they merge into one finding listing
 both tools.
 
+## OWASP Top 10 CI/CD Security Risks
+
+Each CI/CD finding is labeled with its risk from the
+[OWASP Top 10 CI/CD Security Risks](https://owasp.org/www-project-top-10-ci-cd-security-risks/).
+The label sits next to the OWASP Top 10 category in every report, in GitHub issues, and as a SARIF
+tag (`OWASP-CICD-SEC-4`), so code scanning can filter on it.
+
+| Risk | Findings |
+|---|---|
+| CICD-SEC-1 Insufficient Flow Control Mechanisms | `bot-conditions` |
+| CICD-SEC-3 Dependency Chain Abuse | `supply-chain/dependency-confusion`, `unpinned-uses`, `unpinned-images`, `impostor-commit`, `ref-confusion`, `ref-version-mismatch`, `stale-action-refs`, `known-vulnerable-actions`, `archived-uses`, `dependabot-cooldown`, `dependabot-execution` |
+| CICD-SEC-4 Poisoned Pipeline Execution | `cicd/script-injection`, `cicd/untrusted-checkout`, `template-injection`, `dangerous-triggers`, `github-env` |
+| CICD-SEC-5 Insufficient Pipeline-Based Access Controls | `excessive-permissions`, `undocumented-permissions` |
+| CICD-SEC-6 Insufficient Credential Hygiene | `artipacked`, `secrets-inherit`, `overprovisioned-secrets`, `unredacted-secrets`, `secrets-outside-env`, `hardcoded-container-credentials`, `use-trusted-publishing` |
+| CICD-SEC-7 Insecure System Configuration | `self-hosted-runner`, `insecure-commands`, `obfuscation`, `concurrency-limits` |
+| CICD-SEC-8 Ungoverned Usage of 3rd Party Services | `forbidden-uses` |
+| CICD-SEC-9 Improper Artifact Integrity Validation | `cache-poisoning` |
+| CICD-SEC-10 Insufficient Logging and Visibility | `anonymous-definition` |
+
+CICD-SEC-2 (identity and access management of the CI system itself) is about settings outside the
+repository and has no finding here.
+
 ## CI in the attack graph
 
 A finding in a workflow matters in proportion to what that job can reach. breachgraph models every

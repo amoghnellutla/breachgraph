@@ -153,6 +153,29 @@ rather than facts found in the repository:
 Paths from an assumed entry point carry that name as their first step, so a report never presents
 an assumption as an exposure.
 
+## MITRE ATT&CK
+
+Every step of a path is labeled with the ATT&CK Enterprise technique an attacker uses to cross it,
+and the path lists them in order. Reports link each one to attack.mitre.org, and SARIF results for
+findings on a path carry `attack-path` and `attack.<id>` tags.
+
+| Step | Technique |
+|---|---|
+| Exploiting a weakness in an internet-facing route or service | T1190 Exploit Public-Facing Application |
+| Code execution in a CI job an outsider can start | T1677 Poisoned Pipeline Execution |
+| SSRF to the cloud metadata endpoint | T1552.005 Unsecured Credentials: Cloud Instance Metadata API |
+| Logging in with a password or key committed to the repository | T1552.001 Unsecured Credentials: Credentials In Files |
+| Acting as a cloud role, managed identity or service account | T1078.004 Valid Accounts: Cloud Accounts |
+| Using a Kubernetes service-account token or the CI job token | T1528 Steal Application Access Token |
+| Container escape to the node | T1611 Escape to Host |
+| Privilege escalation through IAM | T1098.003 Account Manipulation: Additional Cloud Roles |
+| Reading a Kubernetes secret | T1552.007 Unsecured Credentials: Container API |
+| Reading a cloud secret store | T1555.006 Credentials from Password Stores: Cloud Secrets Management Stores |
+| Reading a bucket or storage account | T1530 Data from Cloud Storage |
+| Reading a database | T1213 Data from Information Repositories |
+
+The labels describe paths; they never decide which paths exist.
+
 ## Configuration
 
 ```yaml

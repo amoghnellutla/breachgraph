@@ -239,6 +239,7 @@ class AttackStep(BaseModel):
     confidence: str = "high"
     evidence_path: str | None = None
     evidence_line: int | None = None
+    techniques: list[str] = Field(default_factory=list)  # MITRE ATT&CK ids, e.g. "T1190"
 
 
 class AttackPathView(BaseModel):
@@ -253,6 +254,7 @@ class AttackPathView(BaseModel):
     gating: bool = False
     steps: list[AttackStep] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)  # fingerprints of findings on the path
+    techniques: list[str] = Field(default_factory=list)  # MITRE ATT&CK ids along the path, in order
 
 
 class ChokePointView(BaseModel):

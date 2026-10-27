@@ -8,7 +8,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 from breachgraph.models import Category, Confidence, Finding
-from breachgraph.normalize.taxonomy import normalize_cwes, normalize_owasp, owasp_for
+from breachgraph.normalize.taxonomy import cicd_risk, normalize_cwes, normalize_owasp, owasp_for
 from breachgraph.paths import normalize_path
 
 __all__ = ["dedupe", "finalize", "fingerprint_of"]
@@ -115,6 +115,9 @@ def finalize(findings: Iterable[Finding]) -> list[Finding]:
         f.location.path = normalize_path(f.location.path)
         f.cwe = normalize_cwes(f.cwe)
         f.owasp = normalize_owasp(f.owasp) or owasp_for(f.cwe, f.category)
+        risk = cicd_risk(f.rule_id) if f.category is Category.CICD else None
+        if risk and risk not in f.owasp:
+            f.owasp.append(risk)
         f.vuln_ids = sorted({v.strip() for v in f.vuln_ids if v.strip()})
         raw = fingerprint_of(f)
         n = seen[raw]

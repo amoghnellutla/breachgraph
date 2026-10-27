@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from breachgraph.compare import path_changes
+from breachgraph.graph.attack import technique_url
 from breachgraph.models import AttackPathView, Finding, Priority, ScanResult, Status, ToolStatus
 
 MARKER = "<!-- breachgraph-report -->"
@@ -179,6 +180,9 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
             else:
                 chain.append(_cell(s.dst, 40))
         out.append("`Internet` → " + " → ".join(chain))
+        if p.techniques:
+            out.append("")
+            out.append("MITRE ATT&CK: " + ", ".join(f"[{t}]({technique_url(t)})" for t in p.techniques))
         out.append("")
     if ag.choke_points:
         out.append("**Fix these first (each breaks the most paths):**")

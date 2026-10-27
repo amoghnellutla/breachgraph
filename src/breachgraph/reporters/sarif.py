@@ -74,6 +74,12 @@ def build(result: ScanResult) -> dict[str, Any]:
                 rule["properties"]["security-severity"] = f"{f.risk_score:.1f}"
 
     rule_index = {rid: i for i, rid in enumerate(rules)}
+    # MITRE ATT&CK techniques of the attack paths each finding lies on.
+    techniques: dict[str, list[str]] = {}
+    for path in result.attack_graph.paths if result.attack_graph else []:
+        for fp in path.weaknesses:
+            known = techniques.setdefault(fp, [])
+            known.extend(t for t in path.techniques if t not in known)
     results = []
     for f in findings:
         start = f.location.start_line or 1
@@ -105,6 +111,8 @@ def build(result: ScanResult) -> dict[str, Any]:
                 "vuln_ids": f.vuln_ids,
             },
         }
+        if on_path := [t for fp in f.fingerprints for t in techniques.get(fp, [])]:
+            res["properties"]["tags"] = ["attack-path", *(f"attack.{t}" for t in dict.fromkeys(on_path))]
         if result.baseline_used:
             res["baselineState"] = "unchanged" if f.status is Status.BASELINE else "new"
         if f.status is Status.SUPPRESSED:

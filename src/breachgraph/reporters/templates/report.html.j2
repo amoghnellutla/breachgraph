@@ -309,6 +309,11 @@ ul.warn { margin: 0; padding-left: 18px; }
           </div>
           {% endfor %}
         </div>
+        {% if p.techniques %}
+        <p class="techniques muted">MITRE ATT&amp;CK:
+          {% for t in p.techniques %}<a href="{{ attack_url(t) }}" title="{{ attack_name(t) }}" rel="noopener">{{ t }}</a> {{ attack_name(t) }}{% if not loop.last %} · {% endif %}{% endfor %}
+        </p>
+        {% endif %}
       </div>
       {% endfor %}
       {% if ag.choke_points %}
