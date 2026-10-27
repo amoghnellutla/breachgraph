@@ -114,7 +114,7 @@ def process(
     result.warnings += enrich(items, config.enrich, offline=opts.offline)
     if config.reachability.enabled:
         try:
-            annotate_reachability(target, items, config)
+            annotate_reachability(target, items, config, offline=opts.offline)
         except Exception as exc:  # reachability is best-effort; never break a scan
             log.exception("reachability analysis failed")
             result.warnings.append(f"reachability analysis skipped: {exc}")

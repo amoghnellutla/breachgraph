@@ -213,9 +213,14 @@ missed. Set `enabled: false` to turn the whole layer off.
 
 ## Honest limitations
 
-- **Dependency reachability is import-level**: a KEV CVE in a package that first-party code imports
-  is treated as a possible compromise of that workload; whether the vulnerable *function* is
-  called is not yet proven. Packages nothing imports are not weapons.
+- **Dependency reachability is import-level, with function-level evidence for Go**: a KEV CVE in a
+  package that first-party code imports is treated as a possible compromise of that workload.
+  For Go, the Go vulnerability database names the vulnerable symbols, and breachgraph searches
+  first-party code for calls to them: a call is shown as evidence (file:line) and raises the
+  priority; an imported package whose vulnerable function is never called directly lowers it a
+  little. It stays a weapon either way, because a dependency may still call the function; only a
+  whole-program call graph (govulncheck) can rule that out. Other ecosystems have no symbol data
+  in OSV yet. Packages nothing imports are not weapons.
 - **Terraform only for Azure and GCP**: Bicep/ARM templates and Deployment Manager are not
   parsed. Roles and identities created outside Terraform (portal, other repos) are invisible, so a
   role that is not modeled, or a scope that cannot be resolved, is listed as a blind spot.

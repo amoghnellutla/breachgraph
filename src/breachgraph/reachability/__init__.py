@@ -12,10 +12,13 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+import httpx
+
 from breachgraph.config import Config
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.routes import RouteSource
 from breachgraph.models import Category, Finding, Package, Reachability
+from breachgraph.reachability.functions import SymbolDB, go_calls
 from breachgraph.reachability.imports import ImportIndex, collect_imports
 
 # PyPI distribution name -> import name, where they differ (common cases).
@@ -98,8 +101,15 @@ def _reachable_modules(index: ImportIndex, route_files: set[str]) -> set[str]:
     return reachable
 
 
-def annotate_reachability(target: Path, findings: list[Finding], config: Config) -> dict[str, int]:
-    """Set ``finding.package.reachability`` in place. Returns a small stats dict."""
+def annotate_reachability(
+    target: Path,
+    findings: list[Finding],
+    config: Config,
+    offline: bool = False,
+    symbols: SymbolDB | None = None,
+) -> dict[str, int]:
+    """Set ``finding.package.reachability`` in place (and, for Go when online, whether the
+    vulnerable function is called). Returns a small stats dict."""
     deps = [f for f in findings if f.category in (Category.SCA, Category.CONTAINER) and f.package]
     if not deps:
         return {}
@@ -137,9 +147,54 @@ def annotate_reachability(target: Path, findings: list[Finding], config: Config)
             else:
                 pkg.reachability = Reachability.DIRECT
                 pkg.reach_evidence = [f"imported by {p}" for p in sorted(hit_files)[:3]]
+        if (
+            lang == "go"
+            and pkg.reachability in (Reachability.ENTRYPOINT, Reachability.DIRECT)
+            and not offline
+        ):
+            symbols = symbols or SymbolDB()
+            _function_level(target, f, ext_to_files, symbols)
         state = (pkg.reachability or Reachability.UNKNOWN).value
         stats[state] = stats.get(state, 0) + 1
     return stats
+
+
+def _function_level(target: Path, f: Finding, ext_to_files: dict[str, set[str]], db: SymbolDB) -> None:
+    """Refine import-level reachability with the vulnerable symbols from the Go vulnerability
+    database. Only first-party calls are searched, so the claims stay narrow: a call is evidence;
+    no direct call lowers the priority a little but is not proof, since a dependency may still
+    call the function; a vulnerable package first-party code doesn't import says nothing."""
+    pkg = f.package
+    if pkg is None or not pkg.version:
+        return
+    try:
+        found: dict[str, list[str]] = {}
+        for go_id in db.go_ids(pkg.name, pkg.version, f.vuln_ids):
+            for path, syms in db.symbols(go_id, pkg.name).items():
+                found.setdefault(path, []).extend(s for s in syms if s not in found.get(path, []))
+    except (httpx.HTTPError, ValueError, OSError):
+        return  # function level is a refinement; import level still stands
+    if not found:
+        return
+    pkg.vulnerable_functions = sorted(f"{p}.{s}" for p, syms in found.items() for s in syms)
+    imported = {p: syms for p, syms in found.items() if ext_to_files.get(p)}
+    if not imported:
+        pkg.reach_evidence.append(
+            f"the vulnerable code is in {', '.join(sorted(found))}, which first-party code does not import "
+            "directly (a dependency may still call it)"
+        )
+        return
+    files = sorted(set().union(*(ext_to_files[p] for p in imported)))
+    calls = go_calls(target, files, imported)
+    pkg.function_called = bool(calls)
+    if calls:
+        pkg.reach_evidence = [*calls[:3], *pkg.reach_evidence]
+    else:
+        pkg.reach_evidence.append(
+            "imports the vulnerable package but does not call "
+            + ", ".join(f"{p}.{x}" for p, syms in imported.items() for x in syms[:4])
+            + " directly (matched by name; a dependency may still call it)"
+        )
 
 
 def _match(ext_to_files: dict[str, set[str]], candidate: str, lang: str) -> set[str]:

@@ -89,6 +89,12 @@ def score(f: Finding, config: Config) -> None:
             reasons.append("reachable from an HTTP entry point")
         elif reach is Reachability.DIRECT:
             reasons.append("imported by first-party code")
+        if f.package.function_called is False:
+            s -= 1.0
+            reasons.append("first-party code does not call the vulnerable function directly")
+        elif f.package.function_called:
+            s += 0.5
+            reasons.append("first-party code calls the vulnerable function")
 
     f.risk_score = round(max(0.0, min(10.0, s)), 1)
     f.priority = Priority.P1 if e.kev else _priority(f.risk_score)

@@ -136,6 +136,10 @@ class Package(BaseModel):
     root_purl: str | None = None  # the project that declares this dependency, when the manifest names it
     reachability: Reachability | None = None
     reach_evidence: list[str] = Field(default_factory=list)  # "file imports <name>"
+    # Function level (Go, from the Go vulnerability database): the vulnerable symbols, and
+    # whether first-party code calls one. None: not known for this ecosystem or advisory.
+    vulnerable_functions: list[str] = Field(default_factory=list)
+    function_called: bool | None = None
 
 
 class Enrichment(BaseModel):

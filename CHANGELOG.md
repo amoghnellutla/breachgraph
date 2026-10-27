@@ -40,6 +40,11 @@ All notable changes to this project are documented here. The format follows
   shell they land in. It shows a diff by default; `--apply` writes the changes and `--pr` commits
   each fix to its own branch and opens a pull request that lists the paths it breaks. Code
   vulnerabilities, transitive dependencies and hash-pinned locks get a reason, not a guess.
+- Function-level reachability for Go. The vulnerable symbols come from the Go vulnerability
+  database (through OSV, cached for a week, skipped with `--offline`), and first-party calls to
+  them are evidence with file and line. No direct call lowers the priority a little but keeps the
+  finding a weapon, since a dependency may still call the function; when the vulnerable package
+  isn't imported directly, the report says so instead of guessing.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 
