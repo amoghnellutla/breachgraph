@@ -127,6 +127,9 @@ turn the gate on in a legacy repository on day one. If a pull request edits the 
   explicit deny and privilege-escalation primitives; AssumeRole chains where both the caller's
   policy and the role's trust allow it; Azure role definitions by scope and data actions; GCP
   bindings and service-account impersonation; EKS, AKS and GKE workload identity.
+- **It reads how you deploy.** Kubernetes manifests and Helm charts (rendered with `helm
+  template`), Docker Compose, Terraform, and hosting platforms: Vercel, Netlify, Render, Fly.io,
+  Procfile apps and App Engine say for themselves what is public.
 - **CI is part of the attack surface.** A script injection in an `issue_comment` workflow reaches
   whatever that job can reach: its OIDC deploy role (checked against the trust policy's `sub`
   claim), its secrets, a token that can push code. See [docs/cicd.md](docs/cicd.md).
@@ -139,7 +142,8 @@ turn the gate on in a legacy repository on day one. If a pull request edits the 
   incomplete (a scanner that didn't run, Helm charts that weren't rendered, no deployment
   configuration).
 - **Findings are scored by exploitability**: CISA KEV, FIRST EPSS, whether a vulnerable package is
-  imported at all, agreement between tools, and whether the finding sits on a path.
+  imported at all (and for Go, whether the vulnerable function is called), agreement between
+  tools, and whether the finding sits on a path.
 
 The model, its rules and its limits: [docs/attack-graph.md](docs/attack-graph.md).
 
@@ -155,7 +159,8 @@ attack_graph:
 ```
 
 `credentials` treats every access key Terraform manages as leaked; `cluster` assumes code running
-inside the Kubernetes network. Paths that start from an assumption are named that way in every report.
+inside the Kubernetes network, limited by your NetworkPolicies. Paths that start from an assumption
+are named that way in every report.
 
 ## Policy
 
