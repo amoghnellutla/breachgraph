@@ -83,7 +83,7 @@ def render(result: ScanResult) -> str:
     payload = explorer_payload(result)
     return _env.get_template("report.html.j2").render(
         result=result,
-        target_name=PurePath(result.target).name or result.target,
+        target_name=str(result.metadata.get("project") or PurePath(result.target).name or result.target),
         open_by_prio=open_by_prio,
         gating=sum(1 for f in result.findings if f.gating),
         suppressed=sum(1 for f in result.findings if f.status is Status.SUPPRESSED),

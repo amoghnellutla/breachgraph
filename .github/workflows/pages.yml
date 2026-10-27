@@ -1,0 +1,64 @@
+# The live demo: the HTML report for examples/vulnerable-platform, published on GitHub Pages so
+# anyone can explore a real attack graph without installing anything.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "examples/vulnerable-platform/**"
+      - "Dockerfile"
+      - "requirements/**"
+      - ".github/workflows/pages.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: breachgraph:demo
+          cache-from: type=gha
+      - name: Scan the demo platform
+        run: |
+          mkdir -p site
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$PWD/examples/vulnerable-platform:/src:ro" -v "$PWD/site:/out" \
+            breachgraph:demo scan . --output-dir /out --format html,json,sarif \
+            --name "vulnerable-platform (live demo)" --no-fail
+          mv site/breachgraph.html site/index.html
+          touch site/.nojekyll
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # publish the site
+      id-token: write # prove the deployment came from this workflow
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

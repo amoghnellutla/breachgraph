@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 from collections.abc import Iterator
 from functools import lru_cache
 from pathlib import Path
@@ -85,3 +86,29 @@ def iter_files(root: Path, exclude: list[str]) -> Iterator[tuple[Path, str]]:
             if path.is_symlink() and not path.resolve().is_relative_to(real_root):
                 continue
             yield path, rel
+
+
+def project_name(target: Path, explicit: str | None = None) -> str:
+    """What reports call the scanned project: an explicit name, else the git remote's repository
+    name (plus the subdirectory scanned), else the directory name. Inside the Docker image the
+    repository is mounted at /src, so the directory name alone would call every project "src"."""
+    if explicit:
+        return explicit
+
+    def git(*args: str) -> str:
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(target), *args], capture_output=True, text=True, timeout=10, check=False
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+
+    url = git("config", "--get", "remote.origin.url")
+    name = re.sub(r"\.git$", "", url.rstrip("/")).rsplit("/", 1)[-1].rsplit(":", 1)[-1] if url else ""
+    if not name and (repo := os.environ.get("GITHUB_REPOSITORY")):
+        name = repo.rsplit("/", 1)[-1]
+    if not name:
+        return target.resolve().name or str(target)
+    sub = git("rev-parse", "--show-prefix").rstrip("/")
+    return f"{name}/{sub}" if sub else name

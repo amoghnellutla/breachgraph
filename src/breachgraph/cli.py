@@ -25,6 +25,7 @@ from breachgraph.compare import path_changes
 from breachgraph.config import CONFIG_FILENAMES, ConfigError, find_config, load_config
 from breachgraph.integrations.github import GitHubClient, GitHubContext, write_step_summary
 from breachgraph.models import Priority, ScanResult, ToolRun, ToolStatus
+from breachgraph.paths import project_name
 from breachgraph.pipeline import PipelineError, ScanOptions, scan
 from breachgraph.policy import evaluate_gate, write_baseline
 from breachgraph.reporters import FORMATS, markdown, write_reports
@@ -121,6 +122,9 @@ def scan_cmd(
     ] = None,
     no_fail: Annotated[bool, typer.Option("--no-fail", help="Always exit 0 (report-only mode).")] = False,
     offline: Annotated[bool, typer.Option("--offline", help="Skip KEV/EPSS lookups.")] = False,
+    name: Annotated[
+        str | None, typer.Option("--name", help="Project name in reports (default: from the git remote).")
+    ] = None,
     images: Annotated[
         list[str] | None, typer.Option("--image", help="Container image(s) to scan with Trivy.")
     ] = None,
@@ -228,6 +232,7 @@ def scan_cmd(
     work_dir = Path(tempfile.mkdtemp(prefix="breachgraph-"))
     try:
         result = scan(target, config, opts, work_dir, on_done=on_done)
+        result.metadata["project"] = project_name(target, name)
         _keep_artifacts(result, output_dir)
         if keep_raw:
             shutil.copytree(work_dir, output_dir / "raw", dirs_exist_ok=True)

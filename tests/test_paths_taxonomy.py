@@ -1,10 +1,12 @@
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from breachgraph.models import Category, Severity
 from breachgraph.normalize.taxonomy import normalize_cwes, normalize_owasp, owasp_for
-from breachgraph.paths import glob_match, iter_files, normalize_path
+from breachgraph.paths import glob_match, iter_files, normalize_path, project_name
 
 
 @pytest.mark.parametrize(
@@ -87,3 +89,20 @@ def test_symlinks_out_of_the_tree_are_not_read(tmp_path: Path) -> None:
     except OSError:
         pytest.skip("symlinks need extra privileges on this platform")
     assert sorted(rel for _, rel in iter_files(repo, [])) == ["alias.yaml", "real.yaml"]
+
+
+def test_project_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+    assert project_name(tmp_path, "shop") == "shop"
+    assert project_name(tmp_path) == tmp_path.name  # not a git repository
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/payments")
+    assert project_name(tmp_path) == "payments"
+    if shutil.which("git"):
+        subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+        subprocess.run(
+            ["git", "-C", str(tmp_path), "remote", "add", "origin", "git@github.com:acme/web-app.git"],
+            check=True,
+        )
+        (tmp_path / "svc").mkdir()
+        assert project_name(tmp_path) == "web-app"
+        assert project_name(tmp_path / "svc") == "web-app/svc"

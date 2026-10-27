@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A live demo on GitHub Pages: the HTML report for examples/vulnerable-platform, rebuilt from
+  `main` on every change, linked first in the README.
+- `--name` sets the project name in reports. By default it comes from the git remote (plus the
+  subdirectory scanned), so reports from the Docker image no longer call every project "src".
+
 ## [0.3.0] - 2026-10-27
 
 ### Added
