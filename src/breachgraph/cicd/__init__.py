@@ -165,7 +165,8 @@ def _executes_from(path: str, steps: list[Step]) -> str:
     p = re.escape(path.strip().removeprefix("./").rstrip("/"))
     direct = re.compile(
         rf"(?:^|[\s;&|(\"'])(?:\./)?{p}/\S+\.(?:sh|bash|py|js|mjs|cjs|ts|rb|pl|ps1)\b"
-        rf"|(?:^|[;&|(][ \t]*)(?:make|gmake)(?:[ \t]+[^\s;&|]+)*?[ \t]+-C[ \t]+(?:\./)?{p}\b|--prefix[ =](?:\./)?{p}\b"
+        rf"|(?:^|[;&|(][ \t]*)(?:make|gmake)(?:[ \t]+[^\s;&|]+)*?[ \t]+-C[ \t]+(?:\./)?{p}\b"
+        rf"|--prefix[ =](?:\./)?{p}\b"
         rf"|(?:pip3?|uv pip|npm|pnpm|yarn)\s+(?:install|ci)\b[^\n]*(?:\./)?{p}\b",
         re.M,
     )
