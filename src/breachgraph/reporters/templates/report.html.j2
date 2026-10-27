@@ -3,84 +3,335 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>breachgraph report: {{ target_name }}</title>
 <style>
+/* ---------- tokens ---------- */
 :root {
-  --bg: #f7f7f8; --panel: #ffffff; --text: #1d1d22; --muted: #62626e; --border: #e3e3e8;
-  --p1: #c62828; --p2: #e8590c; --p3: #b08800; --p4: #6b7280; --ok: #1a7f37; --code: #f0f0f3;
+  color-scheme: light;
+  --bg: #f4f1ea; --surface: #fcfcfb; --elevated: #ffffff; --sunken: #efebe2;
+  --ink: #1b1a17; --ink-2: #4f4d48; --muted: #7d7a72; --line: #e2ddd2; --line-strong: #cfc8b9;
+  --brand: #136f63; --brand-ink: #0c4f46; --brand-tint: #e2f0ec;
+  --critical: #d03b3b; --critical-tint: #fbe7e5; --serious: #ec835a; --warning: #fab219; --good: #0ca30c;
+  --compute: #2a78d6; --identity: #1baf7a; --data: #eb6834; --entry: #8a877e;
+  --p1: #c3302f; --p2: #c9521f; --p3: #8a6a00; --p4: #6d6a63;
+  --shadow-1: 0 1px 1px rgba(36, 30, 18, .04), 0 2px 6px -2px rgba(36, 30, 18, .08);
+  --shadow-2: 0 1px 2px rgba(36, 30, 18, .05), 0 10px 28px -14px rgba(19, 70, 62, .28);
+  --shadow-3: 0 2px 4px rgba(36, 30, 18, .06), 0 22px 48px -18px rgba(19, 70, 62, .38);
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --radius: 12px; --spring: cubic-bezier(.34, 1.4, .64, 1);
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #111114; --panel: #1a1a1f; --text: #e8e8ee; --muted: #9a9aa8; --border: #2c2c34;
-          --p1: #ff6b6b; --p2: #ff922b; --p3: #fcc419; --p4: #9ca3af; --ok: #51cf66; --code: #24242b; }
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --elevated: #222220; --sunken: #161615;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8d84; --line: #2f2e2a; --line-strong: #3d3c37;
+    --brand: #4cc2ae; --brand-ink: #8fe0d1; --brand-tint: #183330;
+    --critical: #e25a5a; --critical-tint: #3a1d1c;
+    --compute: #3987e5; --identity: #199e70; --data: #d95926; --entry: #8f8d84;
+    --p1: #ef6b6b; --p2: #ef8a55; --p3: #e0b43a; --p4: #a3a097;
+    --shadow-1: 0 1px 1px rgba(0, 0, 0, .3), 0 2px 6px -2px rgba(0, 0, 0, .4);
+    --shadow-2: 0 1px 2px rgba(0, 0, 0, .35), 0 12px 30px -14px rgba(0, 0, 0, .7);
+    --shadow-3: 0 2px 4px rgba(0, 0, 0, .4), 0 24px 52px -18px rgba(0, 0, 0, .8);
+  }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --elevated: #222220; --sunken: #161615;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8d84; --line: #2f2e2a; --line-strong: #3d3c37;
+  --brand: #4cc2ae; --brand-ink: #8fe0d1; --brand-tint: #183330;
+  --critical: #e25a5a; --critical-tint: #3a1d1c;
+  --compute: #3987e5; --identity: #199e70; --data: #d95926; --entry: #8f8d84;
+  --p1: #ef6b6b; --p2: #ef8a55; --p3: #e0b43a; --p4: #a3a097;
+  --shadow-1: 0 1px 1px rgba(0, 0, 0, .3), 0 2px 6px -2px rgba(0, 0, 0, .4);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, .35), 0 12px 30px -14px rgba(0, 0, 0, .7);
+  --shadow-3: 0 2px 4px rgba(0, 0, 0, .4), 0 24px 52px -18px rgba(0, 0, 0, .8);
+}
+
+/* ---------- base ---------- */
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text);
-       font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
-h1 { font-size: 22px; margin: 0 0 4px; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
+body::before { /* paper grain */
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+main { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: -.03em; line-height: 1.15; margin: 0; }
+h2 { font-size: clamp(22px, 3vw, 28px); }
+h3 { font-size: 18px; letter-spacing: -.015em; }
+a { color: var(--brand-ink); text-underline-offset: 2px; }
+a:hover { color: var(--brand); }
+code, pre { font-family: var(--mono); font-size: 12.5px; }
+code { background: var(--sunken); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+pre { background: var(--sunken); padding: var(--s3); border-radius: 8px; overflow-x: auto; white-space: pre-wrap; line-height: 1.5; }
 .muted { color: var(--muted); }
-.verdict { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 600; margin: 12px 0; }
-.verdict.pass { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
-.verdict.fail { background: color-mix(in srgb, var(--p1) 15%, transparent); color: var(--p1); }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
-.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-.card .n { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- surfaces ---------- */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s5); margin: var(--s5) 0; box-shadow: var(--shadow-1); }
+.panel > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s4); margin-bottom: var(--s4); }
+.panel > header p { margin: 0; color: var(--ink-2); max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { position: relative; overflow: hidden; border-radius: calc(var(--radius) + 6px); padding: var(--s6) var(--s5); margin-top: var(--s2);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--brand) 22%, transparent) 0%, transparent 55%),
+    radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--data) 14%, transparent) 0%, transparent 60%),
+    radial-gradient(80% 90% at 70% 120%, color-mix(in srgb, var(--compute) 12%, transparent) 0%, transparent 60%),
+    var(--elevated);
+  border: 1px solid var(--line); box-shadow: var(--shadow-2); }
+.brand { display: inline-flex; align-items: center; gap: var(--s2); font: 600 13px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink); }
+.hero h1 { font-size: clamp(30px, 5vw, 46px); margin: var(--s3) 0 var(--s2); overflow-wrap: anywhere; }
+.hero .meta { color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
+.verdict { display: inline-flex; align-items: center; gap: var(--s2); padding: 6px 14px; border-radius: 999px; font-weight: 600; margin-top: var(--s4); font-size: 14px; }
+.verdict.pass { background: color-mix(in srgb, var(--good) 14%, var(--elevated)); color: color-mix(in srgb, var(--good) 70%, var(--ink)); }
+.verdict.fail { background: var(--critical-tint); color: color-mix(in srgb, var(--critical) 80%, var(--ink)); }
+.verdict-reasons { margin: var(--s2) 0 0; color: var(--ink-2); font-size: 14px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: var(--s3); margin-top: var(--s5); }
+.tile { background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: var(--s3) var(--s4); box-shadow: var(--shadow-1); }
+.tile .n { font: 600 28px/1.1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tile .l { color: var(--muted); font-size: 13px; }
 .P1 { color: var(--p1); } .P2 { color: var(--p2); } .P3 { color: var(--p3); } .P4 { color: var(--p4); }
-.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 16px 0; overflow-x: auto; }
-.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.filters input, .filters select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--bg); color: var(--text); font: inherit; }
-.filters input { flex: 1 1 220px; }
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-tr.finding { cursor: pointer; }
-tr.finding:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
-tr.detail td { background: var(--bg); }
-.pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); margin-right: 4px; white-space: nowrap; }
-.pill.kev { border-color: var(--p1); color: var(--p1); font-weight: 600; }
-.pill.gate { background: var(--p1); border-color: var(--p1); color: #fff; }
-.path { border: 1px solid var(--border); border-left: 4px solid var(--p1); border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: var(--panel); }
-.path.low { border-left-color: var(--p3); }
-.path h4 { margin: 0 0 8px; font-size: 14px; }
-.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+
+/* ---------- pills ---------- */
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; line-height: 1.6; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-2); margin: 2px 4px 2px 0; white-space: nowrap; }
+.pill.kev, .pill.weapon { border-color: var(--critical); color: var(--critical); font-weight: 600; }
+.pill.gate { background: var(--critical); border-color: var(--critical); color: #fff; font-weight: 600; }
+.pill.new { border-color: var(--brand); color: var(--brand-ink); }
+
+/* ---------- change banner ---------- */
+.change h2 { font-size: 22px; }
+.change ul { margin: var(--s2) 0 0; padding-left: 18px; }
+
+/* ---------- explorer ---------- */
+.explorer { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s4); align-items: start; }
+.explorer > * { min-width: 0; }
+.canvas-wrap { position: relative; }
+.canvas-wrap::after { content: ""; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 56px; border-radius: 0 10px 10px 0; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--sunken)); opacity: 0; transition: opacity .2s; }
+.canvas-wrap.more::after { opacity: 1; }
+.canvas { position: relative; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; overflow: auto; min-height: 280px; box-shadow: inset 0 1px 2px rgba(0,0,0,.04); cursor: grab; touch-action: pan-x pan-y; }
+.canvas.panning { cursor: grabbing; user-select: none; }
+.pan-hint { font-size: 12.5px; color: var(--muted); margin: var(--s2) 0 0; }
+.canvas svg { display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); margin-top: var(--s3); font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend i.line { height: 2px; width: 18px; border-radius: 1px; }
+.side { background: var(--elevated); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-2); max-height: 640px; overflow: auto; }
+.side .head { position: sticky; top: 0; background: var(--elevated); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); z-index: 1; }
+.side .body { padding: var(--s3) var(--s4) var(--s4); }
+.counter { font: 600 15px/1.3 var(--sans); }
+.counter b { font-family: var(--display); font-size: 22px; letter-spacing: -.02em; }
+.btn { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; padding: 4px 10px; cursor: pointer; transition: transform .18s var(--spring), opacity .18s; }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.path-card { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--critical); border-radius: 8px; padding: var(--s2) var(--s3); margin: 0 0 var(--s2); cursor: pointer; box-shadow: var(--shadow-1); transition: transform .2s var(--spring), opacity .2s; }
+.path-card:hover { transform: translateY(-2px); }
+.path-card:active { transform: scale(.99); }
+.path-card[aria-pressed="true"] { border-color: var(--brand); border-left-color: var(--brand); box-shadow: var(--shadow-2); }
+.path-card.low { border-left-color: var(--warning); }
+.path-card.fixed { opacity: .45; }
+.path-card .t { font-weight: 600; }
+.path-card .r { font-size: 12.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+.fix-list { list-style: none; margin: var(--s3) 0 0; padding: 0; }
+.fix-list li { display: flex; gap: var(--s2); align-items: flex-start; padding: var(--s2) 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.fix-list input { margin-top: 5px; accent-color: var(--brand); }
+.fix-list label { cursor: pointer; }
+.detail dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px var(--s3); margin: var(--s2) 0; font-size: 13.5px; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; overflow-wrap: anywhere; }
+.detail ul { margin: var(--s1) 0 var(--s2); padding-left: 18px; font-size: 13.5px; }
+.tip { position: absolute; pointer-events: none; z-index: 5; max-width: 280px; background: var(--elevated); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; line-height: 1.45; box-shadow: var(--shadow-3); opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .16s var(--spring); }
+.tip.on { opacity: 1; transform: translateY(0); }
+.tip b { display: block; font-size: 13px; }
+/* svg marks */
+.edge { fill: none; stroke: var(--line-strong); stroke-width: 2; transition: opacity .2s; }
+.edge.weapon { stroke: var(--critical); }
+.edge-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: help; }
+.edge-label rect { fill: var(--elevated); stroke: var(--critical); stroke-width: 1; }
+.edge-label text { fill: var(--ink); font: 600 10.5px var(--sans); }
+.node { cursor: pointer; transition: opacity .2s; }
+.node rect.card { fill: var(--elevated); stroke: var(--line-strong); stroke-width: 1; }
+.node:hover rect.card { stroke: var(--ink-2); }
+.node:focus-visible { outline: none; }
+.node:focus-visible rect.card, .node.sel rect.card { stroke: var(--brand); stroke-width: 2; }
+.node:active rect.card { stroke-width: 2.5; }
+.node text.name { fill: var(--ink); font: 600 12.5px var(--sans); }
+.node text.kind { fill: var(--muted); font: 11px var(--sans); }
+.node text.badge { fill: var(--critical); font: 700 11px var(--sans); }
+.dim { opacity: .14; }
+.gone { opacity: .06; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- static path list (no-JS fallback and text view) ---------- */
+.path { border: 1px solid var(--line); border-left: 3px solid var(--critical); border-radius: 8px; padding: var(--s3) var(--s4); margin: var(--s3) 0; background: var(--surface); }
+.path.low { border-left-color: var(--warning); }
+.path h4 { margin: 0 0 var(--s2); font-size: 14.5px; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; }
 .hop { display: flex; align-items: center; }
-.hop .box { border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 12px; max-width: 220px; }
-.hop .box.weapon { border-color: var(--p1); background: color-mix(in srgb, var(--p1) 12%, transparent); font-weight: 600; }
-.hop .box.start { background: color-mix(in srgb, var(--muted) 15%, transparent); }
-.hop .box.jewel { border-color: var(--p3); background: color-mix(in srgb, var(--p3) 15%, transparent); font-weight: 600; }
-.hop .box small { display: block; color: var(--muted); font-weight: 400; }
-.arrow { padding: 0 8px; color: var(--muted); align-self: center; white-space: nowrap; font-size: 12px; }
-.arrow b { color: var(--p1); }
-.fixes { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--ok) 10%, transparent); }
-.fixes code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
-code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
-pre { background: var(--code); padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+.hop .box { border: 1px solid var(--line-strong); border-radius: 7px; padding: 3px 9px; font-size: 12.5px; max-width: 240px; background: var(--elevated); overflow-wrap: anywhere; }
+.hop .box.weapon { border-color: var(--critical); background: var(--critical-tint); font-weight: 600; }
+.hop .box.start { background: var(--sunken); }
+.hop .box.jewel { border-color: var(--data); font-weight: 600; }
+.hop .box small { display: block; color: var(--ink-2); font-weight: 400; }
+.arrow { padding: 0 8px; color: var(--muted); white-space: nowrap; font-size: 12px; }
+.arrow b { color: var(--critical); }
+.fixes { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 8px; background: var(--brand-tint); }
+details.textview { margin-top: var(--s4); }
+details > summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+tr.finding { cursor: pointer; transition: opacity .15s; }
+tr.finding:hover td { background: color-mix(in srgb, var(--brand) 5%, transparent); }
+tr.finding:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+tr.detail td { background: var(--sunken); }
 .loc { word-break: break-all; }
-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
-dt { color: var(--muted); }
+.filters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s3); }
+.filters input, .filters select { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--elevated); color: var(--ink); font: inherit; font-size: 14px; }
+.filters input:hover, .filters select:hover { border-color: var(--ink-2); }
+.filters input { flex: 1 1 220px; }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--s4); margin: 0; }
+dl.kv dt { color: var(--muted); }
 ul.warn { margin: 0; padding-left: 18px; }
+.ai { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 8px; background: color-mix(in srgb, var(--data) 10%, var(--surface)); }
+
+@media (max-width: 900px) {
+  .explorer { grid-template-columns: minmax(0, 1fr); }
+  .side { max-height: none; }
+}
+@media (max-width: 560px) {
+  main { padding: var(--s4) var(--s4) var(--s6); }
+  .hero { padding: var(--s5) var(--s4); }
+  .panel { padding: var(--s4); }
+  th:nth-child(4), td:nth-child(4), th:nth-child(5), td:nth-child(5) { display: none; }
+}
 </style>
 </head>
 <body>
 <main>
-  <h1>🛡️ breachgraph security report</h1>
-  <div class="muted">{{ result.target }} · {{ result.started_at.strftime("%Y-%m-%d %H:%M UTC") }} · breachgraph {{ result.breachgraph_version }}</div>
-  <div class="verdict {{ 'pass' if result.gate.passed else 'fail' }}">
-    {{ "Gate passed" if result.gate.passed else "Gate failed" }}
-    {%- if result.gate.reasons %}: {{ result.gate.reasons | join("; ") }}{% endif %}
-  </div>
-  <div class="muted">Threshold: {{ result.gate.threshold }}{% if result.baseline_used %} · baseline applied (only new findings gate){% endif %}</div>
+  <section class="hero">
+    <span class="brand">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="3" fill="currentColor"/><circle cx="19" cy="5" r="3" fill="currentColor" opacity=".7"/><circle cx="19" cy="19" r="3" fill="currentColor" opacity=".7"/><path d="M8 11 16 6M8 13l8 5" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      breachgraph
+    </span>
+    <h1>Security report: {{ target_name }}</h1>
+    <div class="meta">{{ result.target }} · {{ result.started_at.strftime("%Y-%m-%d %H:%M UTC") }} · breachgraph {{ result.breachgraph_version }}</div>
+    <div class="verdict {{ 'pass' if result.gate.passed else 'fail' }}" role="status">
+      {{ "✓ Gate passed" if result.gate.passed else "✕ Gate failed" }}
+    </div>
+    {% if result.gate.reasons %}<p class="verdict-reasons">{{ result.gate.reasons | join("; ") }}</p>{% endif %}
+    <p class="verdict-reasons muted">Threshold: {{ result.gate.threshold }}{% if result.baseline_used %} · compared with a baseline: only new findings and paths gate{% endif %}</p>
+    <div class="tiles">
+      {% set ag = result.attack_graph %}
+      <div class="tile"><div class="n" style="color: var(--critical)">{{ ag.paths | length if ag else 0 }}</div><div class="l">attack paths</div></div>
+      {% for p in ["P1", "P2", "P3", "P4"] %}
+      <div class="tile"><div class="n {{ p }}">{{ open_by_prio.get(p, 0) }}</div><div class="l">{{ p }} open</div></div>
+      {% endfor %}
+      <div class="tile"><div class="n">{{ gating }}</div><div class="l">blocking</div></div>
+      <div class="tile"><div class="n">{{ suppressed }}</div><div class="l">suppressed</div></div>
+    </div>
+  </section>
 
-  <div class="cards">
-    {% for p in ["P1", "P2", "P3", "P4"] %}
-    <div class="card"><div class="n {{ p }}">{{ open_by_prio.get(p, 0) }}</div><div class="muted">{{ p }} open</div></div>
-    {% endfor %}
-    <div class="card"><div class="n">{{ gating }}</div><div class="muted">gating</div></div>
-    <div class="card"><div class="n">{{ suppressed }}</div><div class="muted">suppressed</div></div>
-  </div>
+  {% if changes %}
+  {% set opened, closed = changes %}
+  <section class="panel change">
+    {% if opened %}<h2>🔴 This change opens {{ opened|length }} new attack path(s)</h2>
+    <ul>{% for p in opened %}<li>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</li>{% endfor %}</ul>{% endif %}
+    {% if closed %}<h2{% if opened %} style="margin-top: var(--s4)"{% endif %}>✅ This change closes {{ closed|length }} attack path(s)</h2>
+    <ul>{% for p in closed %}<li><s>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</s></li>{% endfor %}</ul>{% endif %}
+    {% if not opened and not closed %}<p style="margin:0">No change to attack paths compared with the base report.</p>{% endif %}
+  </section>
+  {% endif %}
 
-  <div class="panel">
+  {% if ag and ag.enabled %}
+  <section class="panel" id="attack-paths">
+    <header>
+      <div>
+        <h2>Attack paths</h2>
+        <p>{% if ag.paths %}Ways an attacker on the internet can reach a high-value asset by chaining these steps. Red steps need a real vulnerability: fix any one and the path breaks.{% else %}No attack path found from the internet to a crown-jewel asset{% if ag.stats.get("crown_jewels") %} ({{ ag.stats["crown_jewels"] }} crown jewel(s) checked){% endif %}.{% endif %}</p>
+      </div>
+      <span class="muted" style="font-size: 13px">{{ ag.stats.get("nodes", 0) }} assets · {{ ag.stats.get("routes", 0) }} routes · {{ ag.stats.get("workloads", 0) }} workloads</span>
+    </header>
+
+    {% if explorer %}
+    <div class="explorer" id="explorer" hidden>
+      <div>
+        <div class="canvas-wrap" id="canvas-wrap"><div class="canvas" id="canvas"><div class="tip" id="tip" role="tooltip"></div></div></div>
+        <p class="pan-hint" id="pan-hint" hidden>Drag or scroll sideways to see the whole graph.</p>
+        <div class="legend" aria-hidden="true">
+          <span><i style="background: var(--entry)"></i>internet / entry point</span>
+          <span><i style="background: var(--compute)"></i>workload / route / host</span>
+          <span><i style="background: var(--identity)"></i>identity</span>
+          <span><i style="background: var(--data)"></i>data / secret</span>
+          <span><i class="line" style="background: var(--critical)"></i>needs a vulnerability</span>
+        </div>
+      </div>
+      <aside class="side" aria-label="Attack path details">
+        <div class="head">
+          <div class="counter" id="counter" aria-live="polite"></div>
+        </div>
+        <div class="body" id="side"></div>
+      </aside>
+    </div>
+    {% endif %}
+
+    {% if ag.paths %}
+    <details class="textview" id="textview" open>
+      <summary>Paths as text</summary>
+      {% for p in ag.paths %}
+      <div class="path {{ 'low' if p.confidence == 'low' else '' }}">
+        <h4>
+          {% if p.gating %}<span class="pill gate">blocks merge</span> {% endif %}
+          → {{ p.target }}
+          <span class="muted">· risk {{ p.score }} · {{ p.confidence }} confidence{% if result.baseline_used and not p.is_new %} · pre-existing{% endif %}</span>
+        </h4>
+        <div class="flow">
+          <div class="hop"><div class="box start">Internet</div></div>
+          {% for s in p.steps %}
+          <div class="hop">
+            <span class="arrow">{% if s.via %}──<b>{{ s.via.replace("_", " ") }}</b>──▶{% else %}──▶{% endif %}</span>
+            <div class="box {{ 'weapon' if s.via else '' }} {{ 'jewel' if loop.last else '' }}">
+              {{ s.dst }}
+              {% if s.via and s.weakness_title %}<small>{{ s.weakness_title }}</small>{% endif %}
+              {% if s.evidence_path and s.via %}<small>{{ s.evidence_path }}{% if s.evidence_line %}:{{ s.evidence_line }}{% endif %}</small>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if ag.choke_points %}
+      <div class="fixes">
+        <strong>Fix these first: each breaks the most paths</strong>
+        <ul style="margin:6px 0 0">
+          {% for c in ag.choke_points[:6] %}
+          <li>{{ c.title }}{% if c.path %} <code>{{ c.path }}{% if c.line %}:{{ c.line }}{% endif %}</code>{% endif %} · breaks {{ c.paths_cut }} path(s)</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </details>
+    {% endif %}
+    {% if ag.skipped %}
+    <details style="margin-top: var(--s3)"><summary>Blind spots ({{ ag.skipped | length }})</summary>
+      <ul class="warn">{% for s in ag.skipped %}<li>{{ s }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="panel">
+    <header><h2>Scanners</h2></header>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Duration</th><th>Version / message</th></tr></thead>
       <tbody>
@@ -90,75 +341,12 @@ ul.warn { margin: 0; padding-left: 18px; }
       {% endfor %}
       </tbody>
     </table>
-    {% if result.warnings %}<h3>Warnings</h3><ul class="warn">{% for w in result.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
-  </div>
-
-  {% if changes %}
-  {% set opened, closed = changes %}
-  <div class="panel change">
-    {% if opened %}<h2 style="margin-top:0">🔴 This change opens {{ opened|length }} new attack path(s)</h2>
-    <ul>{% for p in opened %}<li>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</li>{% endfor %}</ul>{% endif %}
-    {% if closed %}<h2{% if not opened %} style="margin-top:0"{% endif %}>✅ This change closes {{ closed|length }} attack path(s)</h2>
-    <ul>{% for p in closed %}<li><s>Internet{% for s in p.steps %} → {{ s.dst }}{% endfor %}</s></li>{% endfor %}</ul>{% endif %}
-    {% if not opened and not closed %}<p style="margin:0">No change to attack paths compared with the base report.</p>{% endif %}
-  </div>
-  {% endif %}
-
-  {% set ag = result.attack_graph %}
-  {% if ag and ag.enabled %}
-  <div class="panel">
-    <h2 style="margin-top:0">🎯 Attack paths</h2>
-    {% if ag.paths %}
-    <p class="muted">An attacker on the internet can reach a high-value asset by chaining these steps.
-      Each highlighted step needs a real vulnerability — fix any one to break the path.</p>
-    {% for p in ag.paths %}
-    <div class="path {{ 'low' if p.confidence == 'low' else '' }}">
-      <h4>
-        {% if p.gating %}<span class="pill gate">blocks merge</span> {% endif %}
-        → {{ p.target }}
-        <span class="muted">· risk {{ p.score }} · {{ p.confidence }} confidence{% if result.baseline_used and not p.is_new %} · pre-existing{% endif %}</span>
-      </h4>
-      <div class="flow">
-        <div class="hop"><div class="box start">Internet</div></div>
-        {% for s in p.steps %}
-        <div class="hop">
-          <span class="arrow">{% if s.via %}──<b>{{ s.via.replace("_", " ") }}</b>──▶{% else %}──▶{% endif %}</span>
-          <div class="box {{ 'weapon' if s.via else '' }} {{ 'jewel' if loop.last else '' }}">
-            {{ s.dst }}
-            {% if s.via and s.weakness_title %}<small>{{ s.weakness_title }}</small>{% endif %}
-            {% if s.evidence_path and s.via %}<small>{{ s.evidence_path }}{% if s.evidence_line %}:{{ s.evidence_line }}{% endif %}</small>{% endif %}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
     </div>
-    {% endfor %}
-    {% if ag.choke_points %}
-    <div class="fixes">
-      <strong>Fix these first — each breaks the most paths:</strong>
-      <ul style="margin:6px 0 0">
-        {% for c in ag.choke_points[:6] %}
-        <li>{{ c.title }}{% if c.path %} <code>{{ c.path }}{% if c.line %}:{{ c.line }}{% endif %}</code>{% endif %}
-          — breaks {{ c.paths_cut }} path(s)</li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-    {% else %}
-    <p>🟢 No attack path found from the internet to a crown-jewel asset
-      {% if ag.stats.get("crown_jewels") %}({{ ag.stats["crown_jewels"] }} crown jewel(s) checked){% endif %}.</p>
-    {% endif %}
-    {% if ag.skipped %}
-    <details><summary>Blind spots ({{ ag.skipped | length }})</summary>
-      <ul class="warn">{% for s in ag.skipped %}<li>{{ s }}</li>{% endfor %}</ul>
-    </details>
-    {% endif %}
-    <p class="muted" style="margin-bottom:0">Graph: {{ ag.stats.get("nodes", 0) }} assets,
-      {{ ag.stats.get("routes", 0) }} routes, {{ ag.stats.get("workloads", 0) }} workloads.</p>
-  </div>
-  {% endif %}
+    {% if result.warnings %}<h3 style="margin-top: var(--s4)">Warnings</h3><ul class="warn">{% for w in result.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+  </section>
 
-  <div class="panel">
+  <section class="panel">
+    <header><h2>Findings</h2><span class="muted" style="font-size: 13px">Click a row for details</span></header>
     <div class="filters">
       <input id="q" type="search" placeholder="Filter by text, CVE, CWE, path…" aria-label="Filter">
       <select id="prio" aria-label="Priority"><option value="">All priorities</option>{% for p in ["P1","P2","P3","P4"] %}<option>{{ p }}</option>{% endfor %}</select>
@@ -166,11 +354,12 @@ ul.warn { margin: 0; padding-left: 18px; }
       <select id="cat" aria-label="Category"><option value="">All categories</option>{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select>
       <select id="status" aria-label="Status"><option value="">All statuses</option><option>new</option><option>baseline</option><option>suppressed</option></select>
     </div>
+    <div class="table-wrap">
     <table id="findings">
       <thead><tr><th>Priority</th><th>Finding</th><th>Location</th><th>Category</th><th>Tools</th><th>Status</th></tr></thead>
       <tbody>
       {% for f in result.findings %}
-        <tr class="finding" data-prio="{{ f.priority.value }}" data-tools="{{ f.sources | join(' ') }}"
+        <tr class="finding" tabindex="0" aria-expanded="false" data-prio="{{ f.priority.value }}" data-tools="{{ f.sources | join(' ') }}"
             data-cat="{{ f.category.value }}" data-status="{{ f.status.value }}"
             data-text="{{ (f.title ~ ' ' ~ f.rule_id ~ ' ' ~ f.location.path ~ ' ' ~ (f.cwe | join(' ')) ~ ' ' ~ (f.vuln_ids | join(' '))) | lower }}">
           <td><strong class="{{ f.priority.value }}">{{ f.priority.value }}</strong> <span class="muted">{{ f.risk_score }}</span></td>
@@ -179,7 +368,7 @@ ul.warn { margin: 0; padding-left: 18px; }
             {% if f.enrichment.kev %}<span class="pill kev">KEV</span>{% endif %}
             {% if f.enrichment.epss is not none %}<span class="pill">EPSS {{ "%.1f" | format(f.enrichment.epss * 100) }}%</span>{% endif %}
             <span class="pill">{{ f.severity.value }}</span>
-            {% if f.package and f.package.reachability and f.package.reachability.value == "unused" %}<span class="pill" title="package not imported by first-party code">unused dep</span>{% elif f.package and f.package.reachability and f.package.reachability.value == "entrypoint" %}<span class="pill kev">reachable</span>{% endif %}
+            {% if f.package and f.package.reachability and f.package.reachability.value == "unused" %}<span class="pill" title="nothing that runs uses this package">unused dep</span>{% elif f.package and f.package.reachability and f.package.reachability.value == "entrypoint" %}<span class="pill kev">reachable</span>{% endif %}
             {% for c in f.cwe[:2] %}<span class="pill">{{ c }}</span>{% endfor %}
             {% if f.ai %}<span class="pill" title="AI triage (advisory)">🤖 {{ f.ai.verdict.label }}</span>{% endif %}
           </td>
@@ -189,11 +378,11 @@ ul.warn { margin: 0; padding-left: 18px; }
           <td>{{ f.status.value }}</td>
         </tr>
         <tr class="detail" hidden><td colspan="6">
-          <dl>
+          <dl class="kv">
             <dt>Rule</dt><dd><code>{{ f.tool }}:{{ f.rule_id }}</code>{% for r in f.related_rules %}, <code>{{ r }}</code>{% endfor %}</dd>
             <dt>Why this priority</dt><dd>{{ f.score_reasons | join("; ") }}</dd>
             {% if f.package %}<dt>Package</dt><dd>{{ f.package.name }} {{ f.package.version or "" }}{% if f.package.fixed_version %} → fixed in {{ f.package.fixed_version }}{% endif %}</dd>{% endif %}
-            {% if f.package and f.package.reachability %}<dt>Reachability</dt><dd>{{ f.package.reachability.value }}{% if f.package.reach_evidence %} — {{ f.package.reach_evidence | join("; ") }}{% endif %}</dd>{% endif %}
+            {% if f.package and f.package.reachability %}<dt>Reachability</dt><dd>{{ f.package.reachability.value }}{% if f.package.reach_evidence %} · {{ f.package.reach_evidence | join("; ") }}{% endif %}</dd>{% endif %}
             {% if f.owasp %}<dt>OWASP</dt><dd>{{ f.owasp | join(", ") }}</dd>{% endif %}
             {% if f.suppression_reason %}<dt>Suppressed</dt><dd>{{ f.suppression_reason }}</dd>{% endif %}
             <dt>Fingerprint</dt><dd><code>{{ f.fingerprint }}</code></dd>
@@ -203,28 +392,36 @@ ul.warn { margin: 0; padding-left: 18px; }
           {% if f.remediation %}<p><strong>Fix:</strong> {{ f.remediation }}</p>{% endif %}
           {% if f.references %}<p>{% for r in f.references[:5] if r.startswith(("https://", "http://")) %}<a href="{{ r }}" rel="noopener noreferrer" target="_blank">{{ r }}</a><br>{% endfor %}</p>{% endif %}
           {% if f.ai %}
-          <div class="fixes" style="background: color-mix(in srgb, var(--p2) 10%, transparent)">
+          <div class="ai">
             <strong>🤖 AI triage: {{ f.ai.verdict.label }}</strong> <span class="muted">({{ f.ai.confidence.value }} confidence)</span>
             {% if f.ai.summary %}<p style="margin:4px 0"><em>{{ f.ai.summary }}</em></p>{% endif %}
             <p style="margin:4px 0">{{ f.ai.reasoning }}</p>
             {% if f.ai.remediation %}<p style="margin:4px 0"><strong>Suggested fix:</strong> {{ f.ai.remediation }}</p>{% endif %}
             {% if f.ai.fix_code %}<pre>{{ f.ai.fix_code }}</pre>{% endif %}
-            <p class="muted" style="margin:4px 0 0">Advisory only — does not change the gate. Model: {{ f.ai.model }}</p>
+            <p class="muted" style="margin:4px 0 0">Advisory only: it does not change the gate. Model: {{ f.ai.model }}</p>
           </div>
           {% endif %}
         </td></tr>
       {% else %}
-        <tr><td colspan="6" class="muted">No findings. Nice.</td></tr>
+        <tr><td colspan="6" class="muted">No findings.</td></tr>
       {% endfor %}
       </tbody>
     </table>
-  </div>
+    </div>
+  </section>
 </main>
+{% if explorer %}<script type="application/json" id="bg-data">{{ explorer_json }}</script>{% endif %}
 <script>
 (function () {
+  "use strict";
+  /* ---------- findings table ---------- */
   var rows = Array.prototype.slice.call(document.querySelectorAll("tr.finding"));
+  function toggle(r) {
+    var d = r.nextElementSibling; d.hidden = !d.hidden; r.setAttribute("aria-expanded", String(!d.hidden));
+  }
   rows.forEach(function (r) {
-    r.addEventListener("click", function () { r.nextElementSibling.hidden = !r.nextElementSibling.hidden; });
+    r.addEventListener("click", function () { toggle(r); });
+    r.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(r); } });
   });
   var q = document.getElementById("q"), sel = ["prio", "tool", "cat", "status"].map(function (id) { return document.getElementById(id); });
   function apply() {
@@ -241,6 +438,286 @@ ul.warn { margin: 0; padding-left: 18px; }
   }
   q.addEventListener("input", apply);
   sel.forEach(function (s) { s.addEventListener("change", apply); });
+
+  /* ---------- attack-graph explorer ---------- */
+  var dataEl = document.getElementById("bg-data");
+  if (!dataEl) return;
+  var data = JSON.parse(dataEl.textContent);
+  if (!data || !data.paths || !data.paths.length) return;
+  var SVG = "http://www.w3.org/2000/svg";
+  var GROUP = { internet: "entry", entrypoint: "entry", workload: "compute", route: "compute", host: "compute", image: "compute",
+                identity: "identity", datastore: "data", secret: "data" };
+  var KIND = { internet: "internet", entrypoint: "entry point", workload: "workload", route: "HTTP route", host: "host",
+               image: "image", identity: "identity", datastore: "data store", secret: "secret" };
+  var COLOR = { entry: "var(--entry)", compute: "var(--compute)", identity: "var(--identity)", data: "var(--data)" };
+  var nodes = {}; data.nodes.forEach(function (n) { nodes[n.id] = n; });
+  var targets = {}; data.paths.forEach(function (p) { targets[p.nodes[p.nodes.length - 1]] = true; });
+
+  // Edges by node pair (two edges between the same pair are drawn as one, requirements merged).
+  var edges = {}, edgeList = [];
+  data.edges.forEach(function (e) {
+    var k = e.src + "\u0000" + e.dst;
+    if (!edges[k]) { edges[k] = { src: e.src, dst: e.dst, requires: [], notes: [], evidence: e.evidence }; edgeList.push(edges[k]); }
+    e.requires.forEach(function (r) { if (edges[k].requires.indexOf(r) < 0) edges[k].requires.push(r); });
+    if (e.note) edges[k].notes.push(e.note);
+  });
+  // Each path step's weakness decides how its edge is drawn and labeled.
+  var stepVia = {};
+  data.paths.forEach(function (p) {
+    p.steps.forEach(function (s, i) { if (s.via) stepVia[p.nodes[i] + "\u0000" + p.nodes[i + 1]] = s.via; });
+  });
+
+  // Layout: column = deepest position on any path; rows ordered by barycenter of predecessors.
+  var depth = {};
+  data.paths.forEach(function (p) { p.nodes.forEach(function (id, i) { depth[id] = Math.max(depth[id] || 0, i); }); });
+  var cols = [];
+  Object.keys(depth).forEach(function (id) { (cols[depth[id]] = cols[depth[id]] || []).push(id); });
+  cols = cols.map(function (c) { return c || []; });
+  var row = {};
+  cols.forEach(function (c) { c.forEach(function (id, i) { row[id] = i; }); });
+  for (var sweep = 0; sweep < 4; sweep++) {
+    cols.forEach(function (c, ci) {
+      if (!ci) return;
+      var bary = {};
+      c.forEach(function (id) {
+        var ins = edgeList.filter(function (e) { return e.dst === id && depth[e.src] < ci; });
+        bary[id] = ins.length ? ins.reduce(function (s, e) { return s + row[e.src]; }, 0) / ins.length : row[id];
+      });
+      c.sort(function (a, b) { return bary[a] - bary[b]; });
+      c.forEach(function (id, i) { row[id] = i; });
+    });
+  }
+  var NW = 196, NH = 56, CW = 340, RH = 84, PAD = 28; // CW - NW leaves room for edge labels
+  var maxRows = Math.max.apply(null, cols.map(function (c) { return c.length; }));
+  var W = PAD * 2 + (cols.length - 1) * CW + NW, H = PAD * 2 + (maxRows - 1) * RH + NH + 14;
+  var pos = {};
+  cols.forEach(function (c, ci) {
+    var off = (maxRows - c.length) * RH / 2;
+    c.forEach(function (id, ri) { pos[id] = { x: PAD + ci * CW, y: PAD + off + ri * RH }; });
+  });
+
+  var canvas = document.getElementById("canvas"), tip = document.getElementById("tip");
+  var svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Attack graph: " + data.paths.length + " path(s) from the internet to crown-jewel assets");
+  var gEdges = document.createElementNS(SVG, "g"), gLabels = document.createElementNS(SVG, "g"), gNodes = document.createElementNS(SVG, "g");
+  svg.appendChild(gEdges); svg.appendChild(gLabels); svg.appendChild(gNodes);
+  canvas.appendChild(svg);
+
+  function el(tag, attrs, parent) {
+    var x = document.createElementNS(SVG, tag);
+    Object.keys(attrs).forEach(function (k) { x.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(x);
+    return x;
+  }
+  function trunc(s, n) { return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+  function showTip(evt, title, text) {
+    tip.textContent = "";
+    var b = document.createElement("b"); b.textContent = title; tip.appendChild(b);
+    if (text) tip.appendChild(document.createTextNode(text));
+    var r = canvas.getBoundingClientRect(), x = evt.clientX - r.left + canvas.scrollLeft + 14, y = evt.clientY - r.top + canvas.scrollTop + 14;
+    tip.style.left = Math.min(x, canvas.scrollLeft + canvas.clientWidth - 290) + "px"; tip.style.top = y + "px";
+    tip.classList.add("on");
+  }
+  function hideTip() { tip.classList.remove("on"); }
+
+  var edgeEls = {};
+  edgeList.forEach(function (e) {
+    var a = pos[e.src], b = pos[e.dst];
+    if (!a || !b) return;
+    var x1 = a.x + NW, y1 = a.y + NH / 2, x2 = b.x, y2 = b.y + NH / 2, d;
+    if (x2 > x1) {
+      var mx = (x1 + x2) / 2;
+      d = "M" + x1 + "," + y1 + " C" + mx + "," + y1 + " " + mx + "," + y2 + " " + x2 + "," + y2;
+    } else { // same or earlier column: loop below the cards
+      var low = Math.max(a.y, b.y) + NH + 26;
+      d = "M" + (a.x + NW / 2) + "," + (a.y + NH) + " C" + (a.x + NW / 2) + "," + low + " " + (b.x + NW / 2) + "," + low + " " + (b.x + NW / 2) + "," + (b.y + NH);
+    }
+    var key = e.src + "\u0000" + e.dst, via = stepVia[key];
+    var g = el("g", {}, gEdges);
+    var path = el("path", { d: d, class: "edge" + (via ? " weapon" : "") }, g);
+    var hit = el("path", { d: d, class: "edge-hit", tabindex: "0", role: "img",
+      "aria-label": (nodes[e.src] || {}).name + " to " + (nodes[e.dst] || {}).name + (via ? ", needs " + via.replace(/_/g, " ") : "") }, g);
+    var note = e.notes.join(" · ") + (e.evidence ? " (" + e.evidence + ")" : "");
+    var title = via ? "Needs " + via.replace(/_/g, " ") : "Access";
+    hit.addEventListener("pointermove", function (ev) { showTip(ev, title, note); });
+    hit.addEventListener("pointerleave", hideTip);
+    hit.addEventListener("focus", function () { var r = hit.getBoundingClientRect(); showTip({ clientX: r.left + r.width / 2, clientY: r.top }, title, note); });
+    hit.addEventListener("blur", hideTip);
+    var label = null;
+    if (via) {
+      var len = path.getTotalLength(), mid = path.getPointAtLength(len / 2), text = "⚠ " + via.replace(/_/g, " ");
+      label = el("g", { class: "edge-label" }, gLabels);
+      var w = text.length * 6.2 + 12;
+      el("rect", { x: mid.x - w / 2, y: mid.y - 9, width: w, height: 18, rx: 9 }, label);
+      el("text", { x: mid.x, y: mid.y + 4, "text-anchor": "middle" }, label).textContent = text;
+    }
+    edgeEls[key] = { g: g, label: label };
+  });
+
+  var nodeEls = {};
+  Object.keys(pos).forEach(function (id) {
+    var n = nodes[id] || { id: id, name: id, kind: "", weaknesses: [], evidence: [], value: 0 };
+    var p = pos[id], grp = GROUP[n.kind] || "compute";
+    var g = el("g", { class: "node", transform: "translate(" + p.x + "," + p.y + ")", tabindex: "0", role: "button",
+      "aria-label": (KIND[n.kind] || n.kind) + ": " + n.name + (n.weaknesses.length ? ", " + n.weaknesses.length + " weakness(es)" : "") }, gNodes);
+    el("rect", { class: "card", width: NW, height: NH, rx: 10 }, g);
+    el("rect", { x: 0, y: 8, width: 4, height: NH - 16, rx: 2, fill: COLOR[grp] }, g);
+    el("text", { class: "name", x: 14, y: 23 }, g).textContent = trunc(n.name, n.weaknesses.length ? 21 : 26);
+    var kind = (KIND[n.kind] || n.kind) + (targets[id] ? " · crown jewel" : "");
+    el("text", { class: "kind", x: 14, y: 41 }, g).textContent = kind;
+    if (n.weaknesses.length) {
+      el("text", { class: "badge", x: NW - 12, y: 23, "text-anchor": "end" }, g).textContent = "⚠ " + n.weaknesses.length;
+    }
+    g.addEventListener("pointermove", function (ev) {
+      showTip(ev, n.name, (KIND[n.kind] || n.kind) + (n.weaknesses.length ? " · " + n.weaknesses.length + " weakness(es): " + n.weaknesses.map(function (w) { return w.title; }).slice(0, 2).join("; ") : ""));
+    });
+    g.addEventListener("pointerleave", hideTip);
+    g.addEventListener("click", function () { selectNode(id); });
+    g.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); selectNode(id); } });
+    nodeEls[id] = g;
+  });
+
+  /* ---------- state ---------- */
+  var fixed = {}, selPath = null, selNode = null;
+  function alive(p) { return !p.weaknesses.some(function (fp) { return fixed[fp]; }); }
+  function render() {
+    var live = data.paths.filter(alive);
+    var onLive = {}, edgeLive = {};
+    live.forEach(function (p) {
+      p.nodes.forEach(function (id, i) { onLive[id] = true; if (i) edgeLive[p.nodes[i - 1] + "\u0000" + id] = true; });
+    });
+    var sp = selPath && data.paths.filter(function (p) { return p.id === selPath; })[0];
+    var inSel = {}, edgeSel = {};
+    if (sp) sp.nodes.forEach(function (id, i) { inSel[id] = true; if (i) edgeSel[sp.nodes[i - 1] + "\u0000" + id] = true; });
+    Object.keys(nodeEls).forEach(function (id) {
+      var g = nodeEls[id];
+      g.classList.toggle("gone", !onLive[id]);
+      g.classList.toggle("dim", !!sp && onLive[id] && !inSel[id]);
+      g.classList.toggle("sel", id === selNode);
+    });
+    Object.keys(edgeEls).forEach(function (k) {
+      var e = edgeEls[k], cls = !edgeLive[k] ? "gone" : (sp && !edgeSel[k] ? "dim" : "");
+      [e.g, e.label].forEach(function (x) { if (x) { x.classList.remove("gone", "dim"); if (cls) x.classList.add(cls); } });
+    });
+    var counter = document.getElementById("counter");
+    counter.textContent = "";
+    var b = document.createElement("b"); b.textContent = live.length;
+    counter.appendChild(b);
+    counter.appendChild(document.createTextNode(" of " + data.paths.length + " attack path(s) open" + (Object.keys(fixed).some(function (k) { return fixed[k]; }) ? " with your fixes" : "")));
+    if (selNode) renderNode(selNode); else renderPaths(live);
+  }
+  function text(tag, value, cls) { var x = document.createElement(tag); x.textContent = value; if (cls) x.className = cls; return x; }
+  function renderPaths(live) {
+    var side = document.getElementById("side"); side.textContent = "";
+    data.paths.forEach(function (p) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "path-card" + (p.confidence === "low" ? " low" : "") + (alive(p) ? "" : " fixed");
+      btn.setAttribute("aria-pressed", String(p.id === selPath));
+      var t = text("div", "→ " + p.target, "t");
+      if (p.gating) { t.appendChild(document.createTextNode(" ")); t.appendChild(text("span", "blocks merge", "pill gate")); }
+      btn.appendChild(t);
+      btn.appendChild(text("div", p.confidence + " confidence · risk " + p.score + (alive(p) ? "" : " · broken by your fixes"), "r"));
+      btn.appendChild(text("div", p.nodes.map(function (id) { return (nodes[id] || { name: id }).name; }).join(" → "), "r"));
+      btn.addEventListener("click", function () { selPath = selPath === p.id ? null : p.id; render(); });
+      side.appendChild(btn);
+    });
+    if (data.fixes.length) {
+      side.appendChild(text("h3", "Fix these first"));
+      side.appendChild(text("p", "Tick a fix to see which paths it breaks.", "muted"));
+      var ul = document.createElement("ul"); ul.className = "fix-list";
+      data.fixes.forEach(function (f, i) {
+        var li = document.createElement("li"), cb = document.createElement("input"), lab = document.createElement("label");
+        cb.type = "checkbox"; cb.id = "fix-" + i; cb.checked = !!fixed[f.fingerprint];
+        cb.addEventListener("change", function () { fixed[f.fingerprint] = cb.checked; render(); });
+        lab.htmlFor = cb.id;
+        lab.appendChild(text("span", "Assume fixed: ", "muted"));
+        lab.appendChild(document.createTextNode(f.title));
+        if (f.at) { lab.appendChild(document.createTextNode(" ")); lab.appendChild(text("code", f.at)); }
+        lab.appendChild(text("span", " · breaks " + f.paths_cut + " path(s)", "muted"));
+        li.appendChild(cb); li.appendChild(lab); ul.appendChild(li);
+      });
+      side.appendChild(ul);
+    }
+  }
+  function renderNode(id) {
+    var n = nodes[id] || { name: id, kind: "", evidence: [], weaknesses: [], value: 0 };
+    var side = document.getElementById("side"); side.textContent = "";
+    var back = text("button", "← All paths", "btn"); back.type = "button";
+    back.addEventListener("click", function () { selNode = null; render(); });
+    side.appendChild(back);
+    var box = document.createElement("div"); box.className = "detail";
+    box.appendChild(text("h3", n.name));
+    var dl = document.createElement("dl");
+    function row(k, v) { dl.appendChild(text("dt", k)); dl.appendChild(text("dd", v)); }
+    row("Kind", (KIND[n.kind] || n.kind) + (targets[id] ? " (crown jewel)" : ""));
+    if (n.value) row("Value", n.value + " / 10");
+    if (n.evidence.length) row("Defined in", n.evidence.join(", "));
+    box.appendChild(dl);
+    if (n.weaknesses.length) {
+      box.appendChild(text("strong", "Weaknesses"));
+      var ul = document.createElement("ul");
+      n.weaknesses.forEach(function (w) {
+        var li = document.createElement("li");
+        li.appendChild(text("span", w.cls.replace(/_/g, " ") + ": ", "pill weapon"));
+        li.appendChild(document.createTextNode(w.title + (w.location ? " (" + w.location + ")" : "")));
+        if (w.fingerprint && data.paths.some(function (p) { return p.weaknesses.indexOf(w.fingerprint) >= 0; })) {
+          var cb = document.createElement("input"), lab = document.createElement("label");
+          cb.type = "checkbox"; cb.checked = !!fixed[w.fingerprint];
+          cb.addEventListener("change", function () { fixed[w.fingerprint] = cb.checked; render(); });
+          lab.appendChild(cb); lab.appendChild(document.createTextNode(" assume fixed"));
+          li.appendChild(document.createElement("br")); li.appendChild(lab);
+        }
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
+    var ins = edgeList.filter(function (e) { return e.dst === id; }), outs = edgeList.filter(function (e) { return e.src === id; });
+    [["Reached from", ins, "src"], ["Leads to", outs, "dst"]].forEach(function (spec) {
+      if (!spec[1].length) return;
+      box.appendChild(text("strong", spec[0]));
+      var ul = document.createElement("ul");
+      spec[1].forEach(function (e) {
+        var other = nodes[e[spec[2]]] || { name: e[spec[2]] };
+        var li = text("li", other.name + (e.requires.length ? " · needs " + e.requires.join(" or ").replace(/_/g, " ") : ""));
+        if (e.notes.length) li.appendChild(text("div", e.notes[0], "muted"));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    });
+    side.appendChild(box);
+  }
+  function selectNode(id) { selNode = selNode === id ? null : id; render(); }
+
+  /* drag to pan; fade the right edge while there is more graph to see */
+  var wrap = document.getElementById("canvas-wrap"), drag = null;
+  canvas.addEventListener("pointerdown", function (ev) {
+    if (ev.button !== 0 || ev.target.closest(".node, .edge-hit")) return;
+    drag = { x: ev.clientX, y: ev.clientY, l: canvas.scrollLeft, t: canvas.scrollTop };
+    canvas.classList.add("panning"); canvas.setPointerCapture(ev.pointerId);
+  });
+  canvas.addEventListener("pointermove", function (ev) {
+    if (!drag) return;
+    canvas.scrollLeft = drag.l - (ev.clientX - drag.x); canvas.scrollTop = drag.t - (ev.clientY - drag.y);
+  });
+  function endDrag() { drag = null; canvas.classList.remove("panning"); }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  function edge() {
+    var more = canvas.scrollLeft + canvas.clientWidth < canvas.scrollWidth - 4;
+    wrap.classList.toggle("more", more);
+    document.getElementById("pan-hint").hidden = canvas.scrollWidth <= canvas.clientWidth + 4;
+  }
+  canvas.addEventListener("scroll", edge, { passive: true });
+  window.addEventListener("resize", edge);
+
+  document.getElementById("explorer").hidden = false;
+  var tv = document.getElementById("textview"); if (tv) tv.open = false;
+  render();
+  edge();
 })();
 </script>
 </body>

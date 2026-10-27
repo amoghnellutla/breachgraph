@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Interactive attack-graph explorer** in the HTML report: the graph the paths run through,
+  click any node for its evidence, weaknesses and what each step needs, and tick "assume fixed"
+  on a finding to watch the paths it breaks disappear. Works offline, keyboard accessible, light
+  and dark; the paths stay available as text. The JSON report carries the same graph
+  (`attack_graph.graph`).
 - **OpenVEX output** (`--format openvex`, on by default in the GitHub Action): `not_affected` /
   `affected` / `under_investigation` statements built from reachability, scoped so Trivy and
   Grype can apply them (`trivy fs --vex breachgraph.vex.json`). See docs/vex.md.

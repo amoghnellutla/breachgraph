@@ -14,6 +14,10 @@ from breachgraph.models import (
     AttackStep,
     ChokePointView,
     Finding,
+    GraphEdgeView,
+    GraphExport,
+    GraphNodeView,
+    GraphWeakness,
     Status,
 )
 
@@ -85,8 +89,67 @@ def summarize(
         for c in result.choke_points
     ]
     return AttackGraphSummary(
-        enabled=True, paths=views, choke_points=chokes, skipped=result.skipped, stats=result.stats
+        enabled=True,
+        paths=views,
+        choke_points=chokes,
+        skipped=result.skipped,
+        stats=result.stats,
+        graph=export_graph(result, views),
     )
+
+
+MAX_EXPORT_NODES = 400
+
+
+def export_graph(result: AttackGraphResult, views: list[AttackPathView]) -> GraphExport:
+    """Nodes and edges that the reported paths use (the explorer draws exactly these)."""
+    g = result.graph
+    wanted: list[str] = []
+    for v in views:
+        wanted += [n for n in v.node_ids if n not in wanted]
+    truncated = len(wanted) > MAX_EXPORT_NODES
+    keep = set(wanted[:MAX_EXPORT_NODES])
+    nodes = [
+        GraphNodeView(
+            id=nid,
+            name=g.nodes[nid].name,
+            kind=g.nodes[nid].kind.value,
+            value=g.nodes[nid].value,
+            evidence=[e.label() for e in g.nodes[nid].evidence[:3]],
+            weaknesses=[
+                GraphWeakness(
+                    title=w.title,
+                    cls=w.cls.value,
+                    fingerprint=w.fingerprint,
+                    location=w.evidence.label() if w.evidence else None,
+                )
+                for w in g.nodes[nid].weaknesses[:10]
+            ],
+        )
+        for nid in wanted[:MAX_EXPORT_NODES]
+        if nid in g.nodes
+    ]
+    seen: set[tuple[str, str, str, tuple[str, ...]]] = set()
+    edges: list[GraphEdgeView] = []
+    for path in result.paths:
+        for s in path.steps:
+            e = s.edge
+            key = (e.src, e.dst, e.kind.value, tuple(sorted(r.value for r in e.requires)))
+            if key in seen or e.src not in keep or e.dst not in keep:
+                continue
+            seen.add(key)
+            edges.append(
+                GraphEdgeView(
+                    src=e.src,
+                    dst=e.dst,
+                    kind=e.kind.value,
+                    requires=[r.value for r in e.requires],
+                    confidence=e.confidence.value,
+                    note=e.note,
+                    evidence=e.evidence[0].label() if e.evidence else None,
+                )
+            )
+    return GraphExport(nodes=nodes, edges=edges, truncated=truncated)
 
 
 def _step(path: AttackPath, i: int, names: dict[str, str], kinds: dict[str, str]) -> AttackStep:

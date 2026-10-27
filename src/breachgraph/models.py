@@ -264,12 +264,47 @@ class ChokePointView(BaseModel):
     line: int | None = None
 
 
+class GraphWeakness(BaseModel):
+    title: str
+    cls: str
+    fingerprint: str | None = None
+    location: str | None = None  # "path:line"
+
+
+class GraphNodeView(BaseModel):
+    id: str
+    name: str
+    kind: str
+    value: int = 0
+    evidence: list[str] = Field(default_factory=list)  # "path:line"
+    weaknesses: list[GraphWeakness] = Field(default_factory=list)
+
+
+class GraphEdgeView(BaseModel):
+    src: str
+    dst: str
+    kind: str
+    requires: list[str] = Field(default_factory=list)
+    confidence: str = "high"
+    note: str = ""
+    evidence: str | None = None
+
+
+class GraphExport(BaseModel):
+    """The part of the graph the attack paths run through, for the interactive explorer."""
+
+    nodes: list[GraphNodeView] = Field(default_factory=list)
+    edges: list[GraphEdgeView] = Field(default_factory=list)
+    truncated: bool = False
+
+
 class AttackGraphSummary(BaseModel):
     enabled: bool = True
     paths: list[AttackPathView] = Field(default_factory=list)
     choke_points: list[ChokePointView] = Field(default_factory=list)
     skipped: list[str] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
+    graph: GraphExport | None = None
 
     @property
     def gating_paths(self) -> list[AttackPathView]:
