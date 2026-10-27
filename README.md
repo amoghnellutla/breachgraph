@@ -178,6 +178,11 @@ and GitHub issues per finding if you want them. Also available: JUnit, and OpenV
 reachability for Trivy and Grype ([docs/vex.md](docs/vex.md)). Existing reports from ZAP, CodeQL or
 any SARIF tool merge in with `--import`.
 
+For the rest of the team: a Slack or Teams message when a change opens an attack path (set the
+action's `slack-webhook` or `teams-webhook` input from a secret), and `-f evidence`, one zip with
+the reports, SBOM, the policy and every accepted risk, a plain summary for auditors and a SHA-256
+manifest.
+
 Optional AI triage with your own Anthropic key gives each top finding a verdict and a concrete fix,
 judged from the enclosing function, its route and its attack path. It is advisory, never changes
 the gate, and has a hard spend cap. See [docs/ai-triage.md](docs/ai-triage.md).

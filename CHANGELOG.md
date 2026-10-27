@@ -14,6 +14,16 @@ All notable changes to this project are documented here. The format follows
   the Trivy and Gitleaks binaries (version and SHA-256 from the release's checksums file). It
   takes only releases at least 14 days old, runs the tests, builds the image and checks the demo's
   attack paths, then pushes a branch and opens an issue to review. It never merges on its own.
+- Slack and Microsoft Teams alerts when a change opens an attack path (or when the gate fails, or
+  always: `notify.on`). Webhook URLs come only from the environment (`BREACHGRAPH_SLACK_WEBHOOK`,
+  `BREACHGRAPH_TEAMS_WEBHOOK`, or the action's `slack-webhook` and `teams-webhook` inputs), and
+  repository text in the message is escaped so it can't mention a channel or add links.
+- `-f evidence`: an audit evidence pack. One zip with the JSON, SARIF and HTML reports, the SBOM
+  and OpenVEX, the policy the gate ran with and every accepted risk, a plain summary (scan
+  identity, gate decision, scanners and versions, attack paths, the controls this evidence is
+  commonly used for), and a manifest with the SHA-256 of every file.
+- A scan stops before running any scanner when its output directory isn't writable, with the
+  `docker run --user` fix in the message, instead of failing with a traceback at the end.
 - `--name` sets the project name in reports. By default it comes from the git remote (plus the
   subdirectory scanned), so reports from the Docker image no longer call every project "src".
 

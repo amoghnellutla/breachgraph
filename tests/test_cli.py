@@ -202,3 +202,11 @@ def test_console_output_escapes_untrusted_text(capsys: pytest.CaptureFixture[str
     _print_summary(result)  # Rich would raise MarkupError on "[/admin]" if it were not escaped
     out = capsys.readouterr().err
     assert "[/admin]" in out and "needs review" in out and "[/x]" in out
+
+
+def test_unwritable_output_fails_fast(tmp_path: Path) -> None:
+    blocker = tmp_path / "file"
+    blocker.write_text("", encoding="utf-8")
+    res = runner.invoke(app, ["scan", str(DEMO), "-o", str(blocker / "out"), "--offline"])
+    assert res.exit_code == 2 and "cannot write reports" in res.output
+    assert "scanning" not in res.output  # failed before any scanner ran

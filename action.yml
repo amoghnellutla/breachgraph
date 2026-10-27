@@ -32,6 +32,12 @@ inputs:
       Comma-separated reports from earlier steps to merge, as TOOL=PATH relative to the workspace
       (for example zap=report_json.json,sarif=codeql.sarif).
     default: ""
+  slack-webhook:
+    description: Slack incoming webhook URL (pass a secret). Alerts when a change opens an attack path.
+    default: ""
+  teams-webhook:
+    description: Microsoft Teams Workflows webhook URL (pass a secret). Same alerts as Slack.
+    default: ""
   images:
     description: Comma-separated container images to scan with Trivy.
     default: ""
@@ -109,6 +115,8 @@ runs:
         SG_ONLY: ${{ inputs.only }}
         SG_SKIP: ${{ inputs.skip }}
         SG_IMPORTS: ${{ inputs.imports }}
+        BREACHGRAPH_SLACK_WEBHOOK: ${{ inputs.slack-webhook }}
+        BREACHGRAPH_TEAMS_WEBHOOK: ${{ inputs.teams-webhook }}
         SG_IMAGES: ${{ inputs.images }}
         SG_COMMENT: ${{ inputs.comment }}
         SG_ISSUES: ${{ inputs.issues }}
@@ -152,6 +160,7 @@ runs:
           -e TRIVY_CACHE_DIR=/tmp/breachgraph-cache/trivy \
           -e GITHUB_ACTIONS -e GITHUB_TOKEN -e GITHUB_REPOSITORY -e GITHUB_SHA -e GITHUB_REF_NAME \
           -e GITHUB_RUN_ID -e GITHUB_SERVER_URL -e GITHUB_API_URL \
+          -e BREACHGRAPH_SLACK_WEBHOOK -e BREACHGRAPH_TEAMS_WEBHOOK \
           -e GITHUB_EVENT_PATH=/github/event.json -v "$GITHUB_EVENT_PATH:/github/event.json:ro" \
           -e GITHUB_STEP_SUMMARY=/github/summary.md -v "$GITHUB_STEP_SUMMARY:/github/summary.md" \
           "$SG_IMAGE" "${args[@]}" "${extra[@]}"

@@ -34,6 +34,9 @@ scanners:
   cicd:
     enabled: true                # built-in CI/CD and supply-chain checks (no binary needed)
 
+notify:                          # Slack/Teams alerts; URLs come from BREACHGRAPH_SLACK_WEBHOOK
+  on: new_paths                  # and BREACHGRAPH_TEAMS_WEBHOOK only. new_paths | gate_failed | always
+
 vex:                             # OpenVEX output (--format openvex), see docs/vex.md
   author: breachgraph            # who issues the statements (a team email or IRI is best)
   product: null                  # product purl; default: the manifest's root component

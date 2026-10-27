@@ -39,6 +39,8 @@ On each PR you get:
 | `baseline` | | Baseline file (auto-detected at `<path>/.breachgraph-baseline.json`) |
 | `fail-on` | | `P1`–`P4` or `none`; overrides config |
 | `only` / `skip` | | Comma-separated scanner names |
+| `slack-webhook` | | Slack incoming webhook URL, from a secret. Posts when a change opens an attack path (`notify.on` in the config changes when) |
+| `teams-webhook` | | Microsoft Teams Workflows webhook URL, from a secret. Same alerts as Slack |
 | `imports` | | Reports from earlier steps to merge, as `TOOL=PATH` (e.g. `zap=report_json.json,sarif=codeql.sarif`) |
 | `images` | | Comma-separated container images for Trivy |
 | `comment` | `true` | Sticky PR comment |

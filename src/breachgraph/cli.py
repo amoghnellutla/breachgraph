@@ -23,6 +23,7 @@ from rich.table import Table
 from breachgraph import __version__
 from breachgraph.compare import path_changes
 from breachgraph.config import CONFIG_FILENAMES, ConfigError, find_config, load_config
+from breachgraph.integrations import notify
 from breachgraph.integrations.github import GitHubClient, GitHubContext, write_step_summary
 from breachgraph.models import Priority, ScanResult, ToolRun, ToolStatus
 from breachgraph.paths import project_name
@@ -228,6 +229,7 @@ def scan_cmd(
             f"  {run.duration_s:>6.1f}s{extra[:200]}"
         )
 
+    _check_writable(output_dir)
     console.print(f"[bold]breachgraph {__version__}[/] scanning [cyan]{target}[/]")
     work_dir = Path(tempfile.mkdtemp(prefix="breachgraph-"))
     try:
@@ -253,6 +255,8 @@ def scan_cmd(
         console.print(f"  [dim]{fmt:>6}[/] {p}")
 
     _github(result, github_comment, github_issues, close_fixed)
+    for line in notify.send(result, config.notify.on):
+        console.print(f"  [dim]notify[/] {line}")
 
     if no_fail:
         raise typer.Exit(0)
@@ -268,6 +272,21 @@ def _parse_priority(value: str) -> Priority:
     except ValueError:
         console.print(f"[red]--fail-on must be P1, P2, P3, P4 or none, got[/] {value!r}")
         raise typer.Exit(2) from None
+
+
+def _check_writable(output_dir: Path) -> None:
+    """Fail before a long scan, not after it, when reports can't be written."""
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        probe = output_dir / ".breachgraph-write-test"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink()
+    except OSError as exc:
+        hint = ""
+        if Path("/.dockerenv").exists():  # the image runs as a non-root user
+            hint = ' In Docker, run as your own user: docker run --user "$(id -u):$(id -g)" ...'
+        console.print(f"[red]error:[/] cannot write reports to {output_dir}: {exc.strerror or exc}.{hint}")
+        raise typer.Exit(2) from exc
 
 
 def _keep_artifacts(result: ScanResult, output_dir: Path) -> None:

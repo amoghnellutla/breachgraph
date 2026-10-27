@@ -188,6 +188,13 @@ class AttackGraph(_Strict):
     entry_points: list[EntryPoint] = Field(default_factory=_default_entries)
 
 
+class NotifyConfig(_Strict):
+    """Slack/Teams alerts. The webhook URLs are secrets and come from the environment only
+    (BREACHGRAPH_SLACK_WEBHOOK, BREACHGRAPH_TEAMS_WEBHOOK); this only says when to send."""
+
+    on: Literal["new_paths", "gate_failed", "always"] = "new_paths"
+
+
 class VexConfig(_Strict):
     """OpenVEX output (`--format openvex`), built from dependency reachability."""
 
@@ -212,6 +219,7 @@ class Config(_Strict):
     ai: AIConfig = Field(default_factory=AIConfig)
     attack_graph: AttackGraph = Field(default_factory=AttackGraph)
     vex: VexConfig = Field(default_factory=VexConfig)
+    notify: NotifyConfig = Field(default_factory=NotifyConfig)
     timeout: int = 900
 
     @model_validator(mode="after")

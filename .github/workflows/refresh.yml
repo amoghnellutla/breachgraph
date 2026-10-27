@@ -41,7 +41,8 @@ jobs:
         run: |
           docker build -t breachgraph:refresh .
           docker run --rm breachgraph:refresh doctor
-          docker run --rm -v "$PWD/examples/vulnerable-platform:/src:ro" -v "$RUNNER_TEMP:/out" \
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$PWD/examples/vulnerable-platform:/src:ro" -v "$RUNNER_TEMP:/out" \
             breachgraph:refresh scan . --output-dir /out --format json --no-fail --offline
           python -c "import json,sys; r=json.load(open(sys.argv[1])); n=len(r['attack_graph']['paths']); print(n, 'paths'); sys.exit(n < 4)" "$RUNNER_TEMP/breachgraph.json"
       - name: Push a branch and open an issue
