@@ -41,3 +41,5 @@ def build(roots: list[Path], exclude: list[str], dest: Path) -> dict[str, Path]:
             except OSError:  # another filesystem (separate Docker mounts) or no hard links
                 shutil.copy2(path, target)
     return mapping
+
+# (temporary: checks incremental pull-request scans in CI)
