@@ -20,6 +20,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Templating inside objects the graph doesn't model (Argo CD ApplicationSets, GitHub workflows)
+  is no longer reported as a blind spot. Helm and Kustomize failures keep the tool's explanation
+  ("nil pointer evaluating .namespace", not just a template line number) and drop local paths.
 - The image keeps Trivy's databases under its one cache directory
   (`/tmp/breachgraph-cache/trivy`), so a single mount keeps everything between local runs. The
   README's Docker command now mounts it: a repeat scan of the demo's dependencies takes 7 seconds

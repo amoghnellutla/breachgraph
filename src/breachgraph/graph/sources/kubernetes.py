@@ -160,6 +160,56 @@ def _values_files(ctx: SourceContext, names: list[str]) -> list[str] | str:
     return out
 
 
+MODELED_KINDS = WORKLOAD_KINDS | {
+    "Service",
+    "Ingress",
+    "ServiceAccount",
+    "Role",
+    "ClusterRole",
+    "RoleBinding",
+    "ClusterRoleBinding",
+    "NetworkPolicy",
+    "Namespace",
+    "List",
+}
+
+
+def _may_model(text: str) -> bool:
+    """Whether a templated file might hold objects the graph models. Templating inside something
+    it doesn't (an Argo CD ApplicationSet, a GitHub workflow) is not a blind spot."""
+    try:
+        docs = list(yaml.safe_load_all(text))
+    except yaml.YAMLError:
+        return True  # can't tell
+    return any(isinstance(d, dict) and str(d.get("kind", "")) in MODELED_KINDS for d in docs)
+
+
+def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120, check=False
+        )
+    except OSError as exc:
+        return subprocess.CompletedProcess(cmd, 1, "", f"{exc.strerror or type(exc).__name__} ({cmd[0]})")
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(cmd, 1, "", "timed out")
+
+
+def _tool_error(stderr: str, ctx: SourceContext) -> str:
+    """The useful part of a helm or kustomize error: the error line and, when the tool explains
+    it on a later line, that explanation; paths relative to the scanned directory."""
+    lines = [ln.strip() for ln in stderr.splitlines() if ln.strip() and not ln.startswith("Use --debug")]
+    if not lines:
+        return "unknown error"
+    head = next((ln for ln in lines if ln.lower().startswith("error:")), lines[-1])
+    reason = head[len("error:") :].strip() if head.lower().startswith("error:") else head
+    if lines[-1] != head:
+        reason = f"{reason}: {lines[-1]}"
+    for root in {str(ctx.root.resolve()), str(ctx.root)}:
+        reason = reason.replace(root + os.sep, "").replace(root, ".")
+    return reason[:300]
+
+
 def wid(ns: str, name: str) -> str:
     return f"k8s:workload:{ns}/{name}"
 
@@ -228,7 +278,8 @@ class KubernetesSource:
             if not text or "apiVersion" not in text or "kind" not in text:
                 continue
             if "{{" in text:
-                if not any(rel.startswith(c + "/") or not c for c in charts):  # a chart reports itself
+                in_chart = any(rel.startswith(c + "/") or not c for c in charts)  # a chart reports itself
+                if not in_chart and _may_model(text):
                     ctx.skipped.append(
                         f"{rel}: template syntax ({{{{ }}}}) outside a Helm chart, not analyzed"
                     )
@@ -300,10 +351,7 @@ class KubernetesSource:
                     ctx.skipped.append(f"{c or '.'}: helm template failed ({type(exc).__name__})")
                     continue
                 if proc.returncode != 0:
-                    lines = proc.stderr.strip().splitlines() or ["unknown error"]
-                    reason = next((ln for ln in lines if ln.startswith("Error:")), lines[-1])
-                    reason = reason.removeprefix("Error: ")[:200]
-                    ctx.skipped.append(f"{c or '.'}: helm template failed: {reason}")
+                    ctx.skipped.append(f"{c or '.'}: helm template failed: {_tool_error(proc.stderr, ctx)}")
                     continue
                 self._index_rendered(proc.stdout, c, ctx)
         return chart_dirs
@@ -378,23 +426,13 @@ class KubernetesSource:
                     yaml.safe_dump({"resources": [rel_target], "buildMetadata": ["originAnnotations"]}),
                     encoding="utf-8",
                 )
-            try:
-                proc = subprocess.run(
-                    [*command, wrap if rel_target else str(target)],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=120,
-                    check=False,
-                )
-            except OSError as exc:
-                return f"build failed: {exc.strerror or type(exc).__name__} ({command[0]})"
-            except subprocess.TimeoutExpired:
-                return "build failed (timed out)"
+            proc = _run([*command, wrap if rel_target else str(target)])
+            if proc.returncode != 0 and rel_target:
+                proc = _run([*command, str(target)])  # the error without the wrapper's paths in it
+                if proc.returncode == 0:
+                    rel_target = ""  # (only the wrapper failed: use the direct build)
             if proc.returncode != 0:
-                lines = proc.stderr.strip().splitlines() or ["unknown error"]
-                return "build failed: " + lines[-1].removeprefix("Error: ").removeprefix("error: ")[:200]
+                return f"build failed: {_tool_error(proc.stderr, ctx)}"
             root = ctx.root.resolve()
             for chunk in re.split(r"^---\s*$", proc.stdout, flags=re.M):
                 try:

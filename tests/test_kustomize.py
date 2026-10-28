@@ -133,3 +133,39 @@ def test_without_a_tool_overlays_are_blind_spots(tmp_path: Path, monkeypatch: py
     assert any(s.startswith("k8s/overlays/prod: kustomization not built (install") for s in res.skipped)
     assert not [s for s in res.skipped if s.startswith("k8s/base")]  # included, not a top level
     assert "k8s:workload:default/api" in workloads(res)
+
+
+def test_templating_outside_modeled_objects_is_not_a_blind_spot(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "appsets/list.yaml",
+        "apiVersion: argoproj.io/v1alpha1\nkind: ApplicationSet\nmetadata:\n  name: x\n"
+        "spec:\n  template:\n    metadata:\n      name: '{{cluster}}-guestbook'\n",
+    )
+    write(
+        tmp_path,
+        "raw/deploy.yaml",
+        "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: '{{ name }}'\nspec: {}\n",
+    )
+    res = build_attack_graph(tmp_path, [], Config())
+    assert [s for s in res.skipped if "template syntax" in s] == [
+        "raw/deploy.yaml: template syntax ({{ }}) outside a Helm chart, not analyzed"
+    ]
+
+
+def test_tool_errors_keep_the_explanation_and_drop_local_paths(tmp_path: Path) -> None:
+    from breachgraph.graph.sources.common import SourceContext
+    from breachgraph.graph.sources.kubernetes import _tool_error
+
+    ctx = SourceContext(root=tmp_path, exclude=[])
+    helm = (
+        "Error: template: apps/templates/a.yaml:12:30: executing\n"
+        "  nil pointer evaluating interface {}.namespace\n\nUse --debug flag to render out invalid YAML\n"
+    )
+    assert _tool_error(helm, ctx) == (
+        "template: apps/templates/a.yaml:12:30: executing: nil pointer evaluating interface {}.namespace"
+    )
+    assert _tool_error(f"error: must build at directory: {tmp_path / 'k8s'}", ctx) == (
+        "must build at directory: k8s"
+    )
+    assert _tool_error("", ctx) == "unknown error"
