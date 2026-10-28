@@ -1,7 +1,8 @@
 # Weekly refresh of what Dependabot can't update: the hash-pinned Python locks (scanners and
-# breachgraph's own dependencies) and the Trivy and Gitleaks binaries. Only releases at least
-# 14 days old are taken. The new set is built and tested here, then pushed to a branch, and an
-# issue links the change for review. Nothing lands on main without a person merging it.
+# breachgraph's own dependencies) and the Trivy, Gitleaks, Helm and Kustomize binaries. Only
+# releases at least 14 days old are taken. The new set is built and tested here, then pushed to
+# a branch, and an issue links the change for review. Nothing lands on main without a person
+# merging it.
 name: refresh
 
 on:

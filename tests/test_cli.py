@@ -129,6 +129,17 @@ def test_init_describes_the_repository(tmp_path: Path) -> None:
     assert "add 'cluster' to attack_graph.entry_points" in res.output
 
 
+def test_init_points_at_per_environment_helm_values(tmp_path: Path) -> None:
+    chart = tmp_path / "deploy" / "shop"
+    (chart / "templates").mkdir(parents=True)
+    (chart / "Chart.yaml").write_text("apiVersion: v2\nname: shop\nversion: 0.1.0\n", encoding="utf-8")
+    for name in ("values.yaml", "values-prod.yaml", "values.schema.json"):
+        (chart / name).write_text("{}\n", encoding="utf-8")
+    res = runner.invoke(app, ["init", str(tmp_path), "--no-workflow"], terminal_width=300)
+    assert res.exit_code == 0
+    assert "set attack_graph.helm_values: {deploy/shop: [deploy/shop/values-prod.yaml]}" in res.output
+
+
 def test_version() -> None:
     res = runner.invoke(app, ["--version"])
     assert res.exit_code == 0 and "breachgraph" in res.output

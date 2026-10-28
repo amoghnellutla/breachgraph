@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-27
+
 ### Added
 
 - Kustomize overlays are built (`kustomize build`, or `kubectl kustomize`) and analyzed as
@@ -17,6 +19,8 @@ All notable changes to this project are documented here. The format follows
 - `attack_graph.helm_values` renders a Helm chart with the values files you deploy it with
   (`{chart directory: [values files]}`), not only its defaults. Values files outside the scanned
   directory are refused.
+- `breachgraph init` points out Helm charts that ship a per-environment values file
+  (`values-prod.yaml`) and the setting that renders them as deployed.
 
 ### Changed
 
@@ -331,7 +335,8 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.2.0...v0.3.0

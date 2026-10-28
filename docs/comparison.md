@@ -47,8 +47,8 @@ products. Where they and breachgraph overlap, here is the difference in kind:
 - **You need governance across hundreds of repositories**: dashboards, ownership, SLAs and
   reporting for a security team. breachgraph has no server.
 - **Your infrastructure is described in a form the attack graph isn't built from**: Pulumi, CDK,
-  CloudFormation, Bicep and ARM, Kustomize overlays, or Helm charts that need values beyond their
-  defaults. Checkov and Trivy still report findings in many of these files; they just don't become
+  CloudFormation, Bicep and ARM, Helm charts whose dependencies aren't vendored, or Kustomize
+  overlays that pull remote bases. Checkov and Trivy still report findings in many of these files; they just don't become
   steps on a path.
 
 ## Use breachgraph when

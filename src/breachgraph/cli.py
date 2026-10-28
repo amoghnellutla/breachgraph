@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -747,6 +748,32 @@ def init_cmd(
     _describe_repository(path)
 
 
+def _helm_values_tips(path: Path, exclude: list[str]) -> list[str]:
+    """Charts that ship a per-environment values file next to values.yaml: rendering with the
+    defaults alone may not be what runs in production."""
+    import posixpath
+
+    from breachgraph.paths import iter_files
+
+    rels = [rel for _p, rel in iter_files(path, exclude)]
+    charts = {posixpath.dirname(r) for r in rels if posixpath.basename(r) == "Chart.yaml"}
+    tips = []
+    for chart in sorted(charts):
+        extra = sorted(
+            r
+            for r in rels
+            if posixpath.dirname(r) == chart
+            and re.fullmatch(r"values[-_.].+\.ya?ml", posixpath.basename(r))
+            and "/charts/" not in f"/{r}"
+        )
+        if extra:
+            tips.append(
+                f"Helm chart {chart or '.'} has {', '.join(posixpath.basename(e) for e in extra[:3])}: to "
+                f"analyze it as deployed, set attack_graph.helm_values: {{{chart or '.'}: [{extra[0]}]}}"
+            )
+    return tips[:3]
+
+
 def _describe_repository(path: Path) -> None:
     """What the attack graph will model in this repository, and the settings that fit it."""
     from breachgraph.graph import build_attack_graph
@@ -789,8 +816,10 @@ def _describe_repository(path: Path) -> None:
             "Helm charts or Kustomize overlays were not rendered: install helm and kustomize, or "
             "scan with the Docker image, which has both"
         )
+    if not config.attack_graph.helm_values:
+        tips.extend(_helm_values_tips(path, config.exclude_paths))
     for tip in tips:
-        console.print(f"  - {tip}")
+        console.print(f"  - {escape(tip)}")
     console.print()
     console.print("Next: [bold]breachgraph scan[/] (or commit the workflow and open a pull request).")
 
