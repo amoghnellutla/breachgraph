@@ -17,6 +17,7 @@ class SourceContext:
     exclude: list[str]
     # Things we saw but could not analyze. Reported so users know the graph's blind spots.
     skipped: list[str] = field(default_factory=list)
+    helm_values: dict[str, list[str]] = field(default_factory=dict)  # chart dir -> values files
 
     def rel(self, path: Path) -> str:
         return normalize_path(path.relative_to(self.root).as_posix())

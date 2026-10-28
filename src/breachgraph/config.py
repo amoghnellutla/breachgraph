@@ -186,6 +186,9 @@ class AttackGraph(_Strict):
     # Terraform manages are assumed leaked. "cluster": an attacker already inside the cluster
     # network (a compromised neighbor pod) can reach every workload.
     entry_points: list[EntryPoint] = Field(default_factory=_default_entries)
+    # Values files to render a Helm chart with, as deployed: {chart directory: [values files]},
+    # both relative to the scanned directory, applied in order after the chart's values.yaml.
+    helm_values: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class NotifyConfig(_Strict):

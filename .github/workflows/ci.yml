@@ -58,6 +58,15 @@ jobs:
           echo "${sha}  $RUNNER_TEMP/helm.tgz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/helm.tgz" -C "$RUNNER_TEMP" linux-amd64/helm
           echo "BREACHGRAPH_HELM_BIN=$RUNNER_TEMP/linux-amd64/helm" >> "$GITHUB_ENV"
+      - name: Install Kustomize (same pinned version and checksum as the Dockerfile)
+        if: runner.os == 'Linux'
+        run: |
+          version=$(sed -n 's/^ARG KUSTOMIZE_VERSION=//p' Dockerfile)
+          sha=$(sed -n 's/^ARG KUSTOMIZE_SHA256_AMD64=//p' Dockerfile)
+          curl -fsSLo "$RUNNER_TEMP/kustomize.tgz" "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${version}/kustomize_v${version}_linux_amd64.tar.gz"
+          echo "${sha}  $RUNNER_TEMP/kustomize.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/kustomize.tgz" -C "$RUNNER_TEMP" kustomize
+          echo "BREACHGRAPH_KUSTOMIZE_BIN=$RUNNER_TEMP/kustomize" >> "$GITHUB_ENV"
       - run: pytest --cov=breachgraph --cov-report=term-missing --cov-fail-under=80
 
   docker:

@@ -113,6 +113,8 @@ attack_graph:
                             # or "cluster" (an attacker already inside the Kubernetes network)
   max_depth: 12
   max_paths: 40
+  helm_values:              # render a chart with the values you deploy it with, not only its defaults
+    deploy/shop: [deploy/shop/values-prod.yaml]
 
 timeout: 900
 ```

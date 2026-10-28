@@ -84,3 +84,32 @@ def test_without_helm_charts_are_blind_spots(tmp_path: Path, monkeypatch: pytest
     assert [s for s in res.skipped if "deploy/shop" in s] == [
         "deploy/shop: Helm chart not rendered (install helm to analyze it)"
     ]
+
+
+@pytest.mark.skipif(HELM is None, reason="helm is not installed")
+def test_chart_is_rendered_with_configured_values(tmp_path: Path) -> None:
+    chart(tmp_path)
+    write(tmp_path, "deploy/shop/values.yaml", "image: shop/api:1\nprivileged: false\nport: 8080\n")
+    write(tmp_path, "deploy/values-prod.yaml", "privileged: true\n")
+    plain = build_attack_graph(tmp_path, [], Config())
+    weak = plain.graph.nodes["k8s:workload:default/breachgraph-api"].weaknesses
+    assert not any(w.cls.value == "container_escape" for w in weak)
+
+    config = Config.model_validate(
+        {"attack_graph": {"helm_values": {"./deploy/shop/": ["deploy/values-prod.yaml"], "nope": []}}}
+    )
+    prod = build_attack_graph(tmp_path, [], config)
+    weak = prod.graph.nodes["k8s:workload:default/breachgraph-api"].weaknesses
+    assert any(w.cls.value == "container_escape" for w in weak)
+    assert "nope: attack_graph.helm_values names a directory with no Helm chart" in prod.skipped
+
+
+@pytest.mark.skipif(HELM is None, reason="helm is not installed")
+def test_values_files_must_be_inside_the_tree(tmp_path: Path) -> None:
+    chart(tmp_path)
+    config = Config.model_validate({"attack_graph": {"helm_values": {"deploy/shop": ["../secret.yaml"]}}})
+    res = build_attack_graph(tmp_path, [], config)
+    assert (
+        "deploy/shop: Helm chart not rendered: values file ../secret.yaml is outside the scanned directory"
+        in (res.skipped)
+    )

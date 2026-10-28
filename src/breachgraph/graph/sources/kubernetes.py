@@ -146,6 +146,20 @@ def _kustomize_tree(
     return files, ""
 
 
+def _values_files(ctx: SourceContext, names: list[str]) -> list[str] | str:
+    """Configured Helm values files as paths to pass to helm, or why they can't be used."""
+    root = ctx.root.resolve()
+    out: list[str] = []
+    for name in names:
+        path = (ctx.root / name).resolve()
+        if not path.is_relative_to(root):
+            return f"values file {name} is outside the scanned directory"
+        if not path.is_file():
+            return f"values file {name} not found"
+        out.append(str(path))
+    return out
+
+
 def wid(ns: str, name: str) -> str:
     return f"k8s:workload:{ns}/{name}"
 
@@ -234,14 +248,22 @@ class KubernetesSource:
         self._build(graph)
 
     def _render_charts(self, ctx: SourceContext) -> list[str]:
-        """Render each Helm chart with its default values and index the manifests; returns every
-        chart directory. Without helm, or when a chart fails to render (missing vendored
-        dependencies, required values), the chart is one blind spot with the reason."""
+        """Render each Helm chart with its default values, plus any values files configured in
+        attack_graph.helm_values, and index the manifests; returns every chart directory. Without
+        helm, or when a chart fails to render (missing vendored dependencies, required values),
+        the chart is one blind spot with the reason."""
         chart_dirs = sorted(
             posixpath.dirname(rel)
             for path, rel in iter_files(ctx.root, ctx.exclude)
             if path.name == "Chart.yaml" and "/charts/" not in f"/{rel}"  # subcharts render with their parent
         )
+        values: dict[str, list[str]] = {}
+        for key, names in ctx.helm_values.items():
+            chart_dir = _join("", key)
+            if chart_dir is not None and chart_dir in chart_dirs:
+                values[chart_dir] = names
+            else:
+                ctx.skipped.append(f"{key}: attack_graph.helm_values names a directory with no Helm chart")
         if not chart_dirs:
             return []
         helm = os.environ.get("BREACHGRAPH_HELM_BIN") or shutil.which("helm")
@@ -259,9 +281,13 @@ class KubernetesSource:
             }
             for c in chart_dirs:
                 chart = ctx.root / c if c else ctx.root
+                files = _values_files(ctx, values.get(c, []))
+                if isinstance(files, str):
+                    ctx.skipped.append(f"{c or '.'}: Helm chart not rendered: {files}")
+                    continue
                 try:
                     proc = subprocess.run(
-                        [helm, "template", "breachgraph", str(chart)],
+                        [helm, "template", "breachgraph", str(chart), *(a for f in files for a in ("-f", f))],
                         capture_output=True,
                         text=True,
                         encoding="utf-8",

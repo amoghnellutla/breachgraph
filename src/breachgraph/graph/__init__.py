@@ -124,7 +124,9 @@ def build_attack_graph(
 
 
 def _build(target: Path, findings: list[Finding], config: Config, repo_name: str | None) -> AttackGraphResult:
-    ctx = SourceContext(root=target, exclude=config.exclude_paths)
+    ctx = SourceContext(
+        root=target, exclude=config.exclude_paths, helm_values=config.attack_graph.helm_values
+    )
     graph = Graph()
 
     images = ImageSource()

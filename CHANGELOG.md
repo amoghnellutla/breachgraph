@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows
   at the file each object came from. Kustomizations with remote resources or paths outside the
   scanned directory are not built. The image includes Kustomize, pinned and checksum-verified,
   and the weekly refresh keeps it current.
+- `attack_graph.helm_values` renders a Helm chart with the values files you deploy it with
+  (`{chart directory: [values files]}`), not only its defaults. Values files outside the scanned
+  directory are refused.
 
 ### Changed
 

@@ -56,7 +56,8 @@ every path through it, so they are the recommended fixes, cheapest first.
 annotations respected), container escape (privileged, host mounts, capabilities, hostPID),
 `hostNetwork` → metadata, mounted secrets, RBAC (a token that can read secrets / exec pods /
 create workloads), and IRSA service-account-to-role mapping. Helm charts are rendered with
-`helm template` and their default values (the Docker image includes Helm), offline and with an
+`helm template` and their default values, plus any values files named in
+`attack_graph.helm_values` (the Docker image includes Helm), offline and with an
 empty Helm home, and analyzed like plain manifests; evidence points at the template each object
 came from. A chart that does not render (dependencies not vendored, required values missing) is
 one blind spot with Helm's error. Kustomizations are built with `kustomize build` (or `kubectl
