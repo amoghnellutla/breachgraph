@@ -1,9 +1,9 @@
 """Kubernetes manifests -> workloads, exposure (Ingress / LoadBalancer / NodePort), service
 accounts (incl. EKS IRSA and GKE Workload Identity links), mounted secrets and container-isolation weaknesses.
 
-Helm templates and Kustomize overlays are not rendered here; render them first
-(`helm template`, `kustomize build`) and scan the output. Unrendered templates are reported
-as skipped so the gap is visible.
+Helm charts are rendered with `helm template` and kustomizations built with `kustomize build`
+(or `kubectl kustomize`), so what is indexed is what would be deployed. Without those tools, or
+when a build fails, the gap is reported as skipped.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -78,6 +79,73 @@ HOST_VALUE = 9
 ROLE_ARN_RE = re.compile(r"arn:aws[\w-]*:iam::[^:]*:role/(?:.*/)?([\w+=,.@-]+)$")
 
 
+KUSTOMIZATION_FILES = ("kustomization.yaml", "kustomization.yml", "Kustomization")
+MAX_KUSTOMIZATIONS = 100
+ORIGIN_ANNOTATION = "config.kubernetes.io/origin"
+# A resource kustomize would fetch over the network (a URL, a git remote, go-getter syntax).
+_REMOTE = re.compile(r"://|^git@|^(?:github|gitlab|bitbucket)\.(?:com|org)/|\?ref=")
+
+
+def _kustomize_command() -> list[str] | None:
+    if explicit := os.environ.get("BREACHGRAPH_KUSTOMIZE_BIN"):
+        return [explicit, "build"]
+    if found := shutil.which("kustomize"):
+        return [found, "build"]
+    if found := shutil.which("kubectl"):
+        return [found, "kustomize"]
+    return None
+
+
+def _entries(k: dict[str, Any], keys: tuple[str, ...]) -> list[str]:
+    out: list[str] = []
+    for key in keys:
+        for item in k.get(key) or []:
+            if isinstance(item, str):
+                out.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("path"), str):
+                out.append(item["path"])
+    return out
+
+
+def _join(d: str, entry: str) -> str | None:
+    """A kustomization entry as a repository-relative path; None when it leaves the repository."""
+    target = posixpath.normpath(posixpath.join(d, entry.strip()))
+    if target == ".." or target.startswith("../") or posixpath.isabs(target):
+        return None
+    return "" if target == "." else target
+
+
+def _kustomize_tree(
+    ctx: SourceContext, top: str, found: dict[str, dict[str, Any]], manifests: list[str]
+) -> tuple[set[str], str]:
+    """The files a kustomization and everything it includes are made of, or why it can't be
+    built without leaving the scanned tree (a remote resource, a path or link outside it)."""
+    root = ctx.root.resolve()
+    files: set[str] = set()
+    seen: set[str] = set()
+    stack = [top]
+    while stack:
+        d = stack.pop()
+        if d in seen:
+            continue
+        seen.add(d)
+        files |= {m for m in manifests if posixpath.dirname(m) == d}
+        keys = ("resources", "bases", "components", "patchesStrategicMerge", "patches", "patchesJson6902")
+        for entry in _entries(found[d], keys):
+            if "\n" in entry:
+                continue  # an inline patch
+            if _REMOTE.search(entry):
+                return files, f"not built: remote resource {entry} is not fetched"
+            target = _join(d, entry)
+            if target is None or not (ctx.root / target).resolve().is_relative_to(root):
+                return files, f"not built: {entry} is outside the scanned directory"
+            if target in found:
+                stack.append(target)
+            else:
+                files.add(target)
+    return files, ""
+
+
 def wid(ns: str, name: str) -> str:
     return f"k8s:workload:{ns}/{name}"
 
@@ -137,11 +205,14 @@ class KubernetesSource:
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
         charts = self._render_charts(ctx)
+        built = self._render_kustomizations(ctx)
         for path in ctx.files(".yaml", ".yml"):
+            rel = ctx.rel(path)
+            if rel in built:
+                continue  # indexed from the build, as deployed
             text = ctx.read(path)
             if not text or "apiVersion" not in text or "kind" not in text:
                 continue
-            rel = ctx.rel(path)
             if "{{" in text:
                 if not any(rel.startswith(c + "/") or not c for c in charts):  # a chart reports itself
                     ctx.skipped.append(
@@ -223,6 +294,98 @@ class KubernetesSource:
                 continue
             if isinstance(doc, dict) and doc.get("kind"):
                 self._index(doc, rel, "")
+
+    def _render_kustomizations(self, ctx: SourceContext) -> set[str]:
+        """Build each top-level kustomization (one no other kustomization includes) and index what
+        it deploys; returns the files those builds cover, so their raw copies (bases with the
+        wrong namespace, partial patches) are not indexed again. A kustomization that can't be
+        built safely or fails falls back to reading its files as they are, with the reason."""
+        manifests = [ctx.rel(p) for p in ctx.files(".yaml", ".yml")]
+        found: dict[str, dict[str, Any]] = {}
+        for path, rel in iter_files(ctx.root, ctx.exclude):
+            if path.name not in KUSTOMIZATION_FILES:
+                continue
+            try:
+                doc = yaml.safe_load(ctx.read(path) or "")
+            except yaml.YAMLError:
+                ctx.skipped.append(f"{rel}: invalid YAML")
+                continue
+            if isinstance(doc, dict):
+                found[posixpath.dirname(rel)] = doc
+        if not found:
+            return set()
+        included = {
+            target
+            for d, k in found.items()
+            for entry in _entries(k, ("resources", "bases", "components"))
+            if (target := _join(d, entry)) is not None and target in found
+        }
+        tops = sorted(d for d, k in found.items() if d not in included and k.get("kind") != "Component")
+        command = _kustomize_command()
+        built: set[str] = set()
+        for top in tops[:MAX_KUSTOMIZATIONS]:
+            files, problem = _kustomize_tree(ctx, top, found, manifests)
+            if not problem and command is None:
+                problem = "not built (install kustomize or kubectl to analyze overlays as deployed)"
+            if not problem:
+                problem = self._build_kustomization(ctx, command or [], top)
+            if problem:
+                ctx.skipped.append(f"{top or '.'}: kustomization {problem}")
+            else:
+                built |= files
+        for top in tops[MAX_KUSTOMIZATIONS:]:
+            ctx.skipped.append(f"{top or '.'}: kustomization not built (more than {MAX_KUSTOMIZATIONS})")
+        return built
+
+    def _build_kustomization(self, ctx: SourceContext, command: list[str], top: str) -> str:
+        """Run the build and index its output; returns the reason on failure. The build goes
+        through a wrapper kustomization that turns on origin annotations, so evidence points at
+        the file each object came from."""
+        target = ctx.root / top if top else ctx.root
+        with tempfile.TemporaryDirectory(prefix="breachgraph-kustomize-") as wrap:
+            try:
+                rel_target = os.path.relpath(target, wrap).replace(os.sep, "/")
+            except ValueError:  # another drive (Windows): build directly, evidence at the overlay
+                rel_target = ""
+            if rel_target:
+                Path(wrap, "kustomization.yaml").write_text(
+                    yaml.safe_dump({"resources": [rel_target], "buildMetadata": ["originAnnotations"]}),
+                    encoding="utf-8",
+                )
+            try:
+                proc = subprocess.run(
+                    [*command, wrap if rel_target else str(target)],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=120,
+                    check=False,
+                )
+            except OSError as exc:
+                return f"build failed: {exc.strerror or type(exc).__name__} ({command[0]})"
+            except subprocess.TimeoutExpired:
+                return "build failed (timed out)"
+            if proc.returncode != 0:
+                lines = proc.stderr.strip().splitlines() or ["unknown error"]
+                return "build failed: " + lines[-1].removeprefix("Error: ").removeprefix("error: ")[:200]
+            root = ctx.root.resolve()
+            for chunk in re.split(r"^---\s*$", proc.stdout, flags=re.M):
+                try:
+                    doc = yaml.safe_load(chunk)
+                except yaml.YAMLError:
+                    continue
+                if not isinstance(doc, dict) or not doc.get("kind"):
+                    continue
+                rel = posixpath.join(top, "kustomization.yaml") if top else "kustomization.yaml"
+                origin = ((doc.get("metadata") or {}).get("annotations") or {}).pop(ORIGIN_ANNOTATION, None)
+                m = re.search(r"^path: (.+)$", str(origin or ""), re.M)
+                if m and rel_target:
+                    source = Path(os.path.normpath(Path(wrap) / m.group(1).strip()))
+                    if source.is_relative_to(root):
+                        rel = source.relative_to(root).as_posix()
+                self._index(doc, rel, "")
+        return ""
 
     def _index(self, doc: dict[str, Any], rel: str, text: str) -> None:
         kind = str(doc.get("kind", ""))

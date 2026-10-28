@@ -105,3 +105,28 @@ def test_lock_diff_pairs_old_and_new_versions() -> None:
         "gone 1 -> (removed)",
         "semgrep 1.179.0 -> 1.180.0",
     ]
+
+
+def test_kustomize_releases_are_read_from_their_own_tags(monkeypatch: pytest.MonkeyPatch) -> None:
+    docker = "ARG KUSTOMIZE_VERSION=5.8.3\nARG KUSTOMIZE_SHA256_AMD64=old7\nARG KUSTOMIZE_SHA256_ARM64=old8\n"
+    monkeypatch.setattr(
+        refresh,
+        "_get",
+        fake(
+            {
+                "https://api.github.com/repos/kubernetes-sigs/kustomize/releases?per_page=30": releases(
+                    ("api/v0.21.0", "2026-10-01T00:00:00Z", False),  # a Go module, not the CLI
+                    ("kustomize/v5.8.4", "2026-10-02T00:00:00Z", False),
+                ),
+                "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.8.4/checksums.txt": (
+                    f"{A}  kustomize_v5.8.4_linux_amd64.tar.gz\n{B}  kustomize_v5.8.4_linux_arm64.tar.gz\n"
+                ),
+            }
+        ),
+    )
+    text, changes = refresh.refresh(docker, NOW)
+    assert changes == ["kustomize 5.8.3 -> 5.8.4"]
+    assert (
+        text
+        == f"ARG KUSTOMIZE_VERSION=5.8.4\nARG KUSTOMIZE_SHA256_AMD64={A}\nARG KUSTOMIZE_SHA256_ARM64={B}\n"
+    )

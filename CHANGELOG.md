@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Kustomize overlays are built (`kustomize build`, or `kubectl kustomize`) and analyzed as
+  deployed: the namespace, name prefix and patches an overlay applies are in the graph, and the
+  raw base and patch files are no longer indexed as separate, partial workloads. Evidence points
+  at the file each object came from. Kustomizations with remote resources or paths outside the
+  scanned directory are not built. The image includes Kustomize, pinned and checksum-verified,
+  and the weekly refresh keeps it current.
+
 ### Changed
 
 - The image keeps Trivy's databases under its one cache directory

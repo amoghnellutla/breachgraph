@@ -784,8 +784,11 @@ def _describe_repository(path: Path) -> None:
         )
     if not jewels:
         tips.append("mark your sensitive stores as crown jewels under attack_graph.crown_jewels")
-    if any("helm" in s.lower() for s in summary.skipped):
-        tips.append("Helm charts are not rendered: run `helm template` into a directory and scan it")
+    if any("install helm" in s or "install kustomize" in s for s in summary.skipped):
+        tips.append(
+            "Helm charts or Kustomize overlays were not rendered: install helm and kustomize, or "
+            "scan with the Docker image, which has both"
+        )
     for tip in tips:
         console.print(f"  - {tip}")
     console.print()

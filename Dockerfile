@@ -15,13 +15,16 @@ ARG GITLEAKS_SHA256_ARM64=e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62
 ARG HELM_VERSION=4.3.0
 ARG HELM_SHA256_AMD64=86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb
 ARG HELM_SHA256_ARM64=31c5794dd55c66a51e6b7d2e2ac7a114ae8b1de41ff1d9ba51748ac973b06a08
+ARG KUSTOMIZE_VERSION=5.8.3
+ARG KUSTOMIZE_SHA256_AMD64=cb9e31198d3f63b44848bd0afc4c8efc56e6cfef9c93a4a39a211940e6decd61
+ARG KUSTOMIZE_SHA256_ARM64=9867b76482cfc6d25b546abc1d2b5a32bd137505aba640649b4b378f64f6d68f
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /dl
 RUN set -eux; \
     case "${TARGETARCH}" in \
-      amd64) T_ARCH=64bit; G_ARCH=x64;   T_SHA=${TRIVY_SHA256_AMD64}; G_SHA=${GITLEAKS_SHA256_AMD64}; H_SHA=${HELM_SHA256_AMD64} ;; \
-      arm64) T_ARCH=ARM64; G_ARCH=arm64; T_SHA=${TRIVY_SHA256_ARM64}; G_SHA=${GITLEAKS_SHA256_ARM64}; H_SHA=${HELM_SHA256_ARM64} ;; \
+      amd64) T_ARCH=64bit; G_ARCH=x64;   T_SHA=${TRIVY_SHA256_AMD64}; G_SHA=${GITLEAKS_SHA256_AMD64}; H_SHA=${HELM_SHA256_AMD64}; K_SHA=${KUSTOMIZE_SHA256_AMD64} ;; \
+      arm64) T_ARCH=ARM64; G_ARCH=arm64; T_SHA=${TRIVY_SHA256_ARM64}; G_SHA=${GITLEAKS_SHA256_ARM64}; H_SHA=${HELM_SHA256_ARM64}; K_SHA=${KUSTOMIZE_SHA256_ARM64} ;; \
       *) echo "unsupported arch ${TARGETARCH}"; exit 1 ;; \
     esac; \
     curl -fsSLo trivy.tgz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-${T_ARCH}.tar.gz"; \
@@ -33,7 +36,10 @@ RUN set -eux; \
     curl -fsSLo helm.tgz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${TARGETARCH}.tar.gz"; \
     echo "${H_SHA}  helm.tgz" | sha256sum -c -; \
     tar -xzf helm.tgz --strip-components=1 "linux-${TARGETARCH}/helm"; \
-    chmod 0755 trivy gitleaks helm
+    curl -fsSLo kustomize.tgz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz"; \
+    echo "${K_SHA}  kustomize.tgz" | sha256sum -c -; \
+    tar -xzf kustomize.tgz kustomize; \
+    chmod 0755 trivy gitleaks helm kustomize
 
 FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70 AS python-tools
 # Every Python package is installed from a hash-pinned lock (requirements/, see scripts/lock.py).
@@ -60,7 +66,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
     && rm -rf /var/lib/apt/lists/* \
     && git config --system --add safe.directory '*' \
     && useradd --uid 10001 --create-home breachgraph
-COPY --from=binaries /dl/trivy /dl/gitleaks /dl/helm /usr/local/bin/
+COPY --from=binaries /dl/trivy /dl/gitleaks /dl/helm /dl/kustomize /usr/local/bin/
 COPY --from=python-tools /opt /opt
 RUN ln -s /opt/semgrep/bin/semgrep /usr/local/bin/semgrep \
     && ln -s /opt/checkov/bin/checkov /usr/local/bin/checkov \

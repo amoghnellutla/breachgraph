@@ -148,8 +148,8 @@ Boutique that takes 8 to 9 seconds, with exactly the findings and paths a full s
   explicit deny and privilege-escalation primitives; AssumeRole chains where both the caller's
   policy and the role's trust allow it; Azure role definitions by scope and data actions; GCP
   bindings and service-account impersonation; EKS, AKS and GKE workload identity.
-- **It reads how you deploy.** Kubernetes manifests and Helm charts (rendered with `helm
-  template`), Docker Compose, Terraform, and hosting platforms: Vercel, Netlify, Render, Fly.io,
+- **It reads how you deploy.** Kubernetes manifests, Helm charts (rendered with `helm template`)
+  and Kustomize overlays (built as deployed), Docker Compose, Terraform, and hosting platforms: Vercel, Netlify, Render, Fly.io,
   Procfile apps and App Engine say for themselves what is public.
 - **CI is part of the attack surface.** A script injection in an `issue_comment` workflow reaches
   whatever that job can reach: its OIDC deploy role (checked against the trust policy's `sub`
@@ -228,7 +228,7 @@ in [docs/architecture.md](docs/architecture.md#threat-model).
 Dependency reachability is import-level, plus function-level evidence for Go (calls to the
 vulnerable symbols the Go vulnerability database names); calls made by other dependencies are
 not traced. Azure and GCP are read from Terraform only. Helm charts are rendered with their
-default values only, and Kustomize overlays are not built yet.
+default values only.
 
 ## Contributing
 

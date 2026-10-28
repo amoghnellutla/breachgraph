@@ -59,7 +59,12 @@ create workloads), and IRSA service-account-to-role mapping. Helm charts are ren
 `helm template` and their default values (the Docker image includes Helm), offline and with an
 empty Helm home, and analyzed like plain manifests; evidence points at the template each object
 came from. A chart that does not render (dependencies not vendored, required values missing) is
-one blind spot with Helm's error. Kustomize overlays are not built yet.
+one blind spot with Helm's error. Kustomizations are built with `kustomize build` (or `kubectl
+kustomize`; the image includes Kustomize), starting from each one no other kustomization
+includes, so namespaces, name prefixes and patches apply as deployed; evidence points at the file
+each object came from, and the raw base and patch files are not analyzed a second time. A
+kustomization with a remote resource or a path outside the scanned directory is not built, and
+neither is one that fails: its files are then read as they are, and the reason is a blind spot.
 
 **Terraform / AWS** (`sources/terraform.py`): IAM policies are actually evaluated: action/resource
 matching with wildcards, scoping to specific resources, AWS-managed policies, **explicit Deny

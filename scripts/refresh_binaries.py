@@ -1,4 +1,4 @@
-"""Move the Trivy, Gitleaks and Helm pins in the Dockerfile to their newest settled release.
+"""Move the Trivy, Gitleaks, Helm and Kustomize pins in the Dockerfile to their newest settled release.
 
     python scripts/refresh_binaries.py          # update the Dockerfile in place
     python scripts/refresh_binaries.py --check  # only print what would change
@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -24,22 +25,31 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "Dockerfile"
 COOLDOWN_DAYS = 14
 # ARG prefix -> (repository, checksums: a release file name, or a URL per file ending in
-# .sha256sum, {arch: release file}); {v} is the version.
-TOOLS: dict[str, tuple[str, str, dict[str, str]]] = {
+# .sha256sum, {arch: release file}, release tag); {v} is the version.
+TOOLS: dict[str, tuple[str, str, dict[str, str], str]] = {
     "TRIVY": (
         "aquasecurity/trivy",
         "trivy_{v}_checksums.txt",
         {"AMD64": "trivy_{v}_Linux-64bit.tar.gz", "ARM64": "trivy_{v}_Linux-ARM64.tar.gz"},
+        "v{v}",
     ),
     "GITLEAKS": (
         "gitleaks/gitleaks",
         "gitleaks_{v}_checksums.txt",
         {"AMD64": "gitleaks_{v}_linux_x64.tar.gz", "ARM64": "gitleaks_{v}_linux_arm64.tar.gz"},
+        "v{v}",
     ),
     "HELM": (
         "helm/helm",
         "https://get.helm.sh/{file}.sha256sum",  # Helm publishes binaries and sums on get.helm.sh
         {"AMD64": "helm-v{v}-linux-amd64.tar.gz", "ARM64": "helm-v{v}-linux-arm64.tar.gz"},
+        "v{v}",
+    ),
+    "KUSTOMIZE": (
+        "kubernetes-sigs/kustomize",
+        "checksums.txt",
+        {"AMD64": "kustomize_v{v}_linux_amd64.tar.gz", "ARM64": "kustomize_v{v}_linux_arm64.tar.gz"},
+        "kustomize/v{v}",  # the repository also releases its Go modules (api/, kyaml/)
     ),
 }
 
@@ -54,17 +64,21 @@ def _get(url: str) -> bytes:
         return data
 
 
-def settled_release(repo: str, now: datetime, major: str | None = None) -> str | None:
+def settled_release(repo: str, now: datetime, major: str | None = None, tag: str = "v{v}") -> str | None:
     """Newest non-draft, non-prerelease version published at least COOLDOWN_DAYS ago, within
     the given major version (a major upgrade is a decision, not a refresh)."""
     releases: list[dict[str, Any]] = json.loads(
         _get(f"https://api.github.com/repos/{repo}/releases?per_page=30")
     )
     cutoff = now - timedelta(days=COOLDOWN_DAYS)
+    prefix = tag.removesuffix("{v}")
     for rel in releases:  # newest first
+        name = str(rel["tag_name"])
         if rel.get("draft") or rel.get("prerelease") or not rel.get("published_at"):
             continue
-        version = str(rel["tag_name"]).removeprefix("v")
+        if not name.startswith(prefix):
+            continue
+        version = name.removeprefix(prefix)
         if major is not None and version.split(".")[0] != major:
             continue
         if datetime.fromisoformat(rel["published_at"].replace("Z", "+00:00")) <= cutoff:
@@ -72,11 +86,12 @@ def settled_release(repo: str, now: datetime, major: str | None = None) -> str |
     return None
 
 
-def checksums(repo: str, version: str, sums_file: str, files: list[str]) -> dict[str, str]:
+def checksums(repo: str, version: str, sums_file: str, files: list[str], tag: str = "v{v}") -> dict[str, str]:
     if sums_file.startswith("https://"):
         urls = [sums_file.format(file=f) for f in files]
     else:
-        urls = [f"https://github.com/{repo}/releases/download/v{version}/{sums_file.format(v=version)}"]
+        release = urllib.parse.quote(tag.format(v=version), safe="")
+        urls = [f"https://github.com/{repo}/releases/download/{release}/{sums_file.format(v=version)}"]
     out: dict[str, str] = {}
     for line in (ln for url in urls for ln in _get(url).decode().splitlines()):
         parts = line.split()
@@ -87,14 +102,14 @@ def checksums(repo: str, version: str, sums_file: str, files: list[str]) -> dict
 
 def refresh(text: str, now: datetime) -> tuple[str, list[str]]:
     changes: list[str] = []
-    for prefix, (repo, sums_file, files) in TOOLS.items():
+    for prefix, (repo, sums_file, files, tag) in TOOLS.items():
         current = re.search(rf"^ARG {prefix}_VERSION=(\S+)$", text, re.M)
         if current is None:
             continue
-        version = settled_release(repo, now, current.group(1).split(".")[0])
+        version = settled_release(repo, now, current.group(1).split(".")[0], tag)
         if version is None or version == current.group(1):
             continue
-        sums = checksums(repo, version, sums_file, [name.format(v=version) for name in files.values()])
+        sums = checksums(repo, version, sums_file, [name.format(v=version) for name in files.values()], tag)
         new = {arch: sums.get(name.format(v=version)) for arch, name in files.items()}
         if not all(new.values()):
             changes.append(f"{prefix.lower()} {version}: checksums missing, not updated")
