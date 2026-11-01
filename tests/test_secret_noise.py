@@ -101,3 +101,17 @@ def test_code_that_handles_a_key_is_not_a_key(tmp_path: Path) -> None:
         "private-key",
     )
     assert f.confidence is Confidence.HIGH
+
+
+def test_a_word_and_any_token_is_not_a_provider_format() -> None:
+    assert verdict("airtable-api-key", "src/icons.ts", '"brand-airtable": "abcdefghij1234567"') == "report"
+
+
+def test_a_scanner_ignore_list_holds_false_alarms_on_purpose() -> None:
+    assert verdict("square-access-token", ".secretsignore", "EAAAxxxx") == "drop"
+    assert verdict("aws-access-token", "sub/.gitleaksignore", "AKIA") == "drop"
+
+
+def test_real_provider_formats_still_block() -> None:
+    for rule in ("aws-access-token", "github-pat", "stripe-access-token", "gitlab-pat", "slack-bot-token"):
+        assert verdict(rule, "src/config.py", "value") == "block"

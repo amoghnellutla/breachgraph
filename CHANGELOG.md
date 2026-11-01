@@ -41,6 +41,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A secret rule that matches a provider's name and any token no longer blocks a merge on its own, and
+  a scanner's own ignore list isn't scanned for secrets. Both were real false blocks: an icon name and
+  a `.secretsignore` entry.
 - docs/real-world.md as released in 0.7.0 was wrong: 7 of 51 scans ran on an empty checkout and
   counted as clean passes. The page is corrected, and the corpus now refuses to publish such a scan.
 - `attack_graph.max_paths` could drop a path that blocks a merge in favor of low-confidence leads,

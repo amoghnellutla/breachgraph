@@ -51,7 +51,16 @@ _GUESSES = {
     "kubernetes-secret-yaml",
 }
 # Named for a provider, but matched by a nearby word and any token, not by the provider's format.
-_WEAK_FORMAT = re.compile(r"client-(?:secret|id)|discord|sentry|dropbox|linkedin|twitter|facebook", re.I)
+_WEAK_FORMAT = re.compile(
+    r"client-(?:secret|id)|discord|sentry|dropbox|linkedin|twitter|facebook|adafruit|airtable|algolia"
+    r"|asana|atlassian|beamer|bitbucket|bittrex|cloudflare|codecov|coinbase|confluent|datadog|droneci"
+    r"|etsy|fastly|finicity|finnhub|flickr|freshbooks|gitter|hubspot|intercom|jfrog|kraken|kucoin"
+    r"|launchdarkly|looker|mattermost|messagebird|netlify|nytimes|okta|plaid|rapidapi|sendbird|snyk"
+    r"|sonar|squarespace|sumologic|telegram|travisci|trello|twitch|typeform|yandex|zendesk",
+    re.I,
+)
+# A list of what a scanner should ignore holds its false alarms, on purpose.
+_IGNORE_LIST = re.compile(r"(?:^|/)\.(?:secretsignore|gitleaksignore|secrets\.baseline|trufflehogignore)$")
 _HASH_NAME = re.compile(r"sha-?\d+|checksum|digest|integrity", re.I)
 _LOCK_FILE = re.compile(
     r"(?:^|/)(?:[^/]*\.lock|[^/]*-lock\.(?:json|ya?ml)|go\.sum|npm-shrinkwrap\.json|uv\.lock|Gemfile\.lock)$",
@@ -90,7 +99,7 @@ def _line(target: Path, rel: str, number: int) -> str:
 
 def verdict(rule: str, rel: str, line: str) -> str:
     """ "drop" (not a secret), "report" (a person may want to look) or "block"."""
-    if _LOCK_FILE.search(rel) or _HASH_FILE.search(rel):
+    if _LOCK_FILE.search(rel) or _HASH_FILE.search(rel) or _IGNORE_LIST.search(rel):
         return "drop"
     guess = rule in _GUESSES or rule.startswith("generic")
     if guess and _HASH.search(line) and not _NAMED_SECRET.search(line):
