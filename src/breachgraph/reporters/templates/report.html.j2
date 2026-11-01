@@ -65,7 +65,7 @@ pre { background: var(--sunken); padding: var(--s3); border-radius: var(--r); ov
 h1 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.15; font-weight: 600; letter-spacing: -.03em; max-width: 40ch; }
 h1 em { font-style: normal; color: var(--signal); }
 h1.clear em { color: var(--ok); }
-.sub { margin-top: var(--s2); color: var(--ink-2); max-width: 66ch; }
+.sub { margin-top: var(--s2); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gate { display: flex; flex-wrap: wrap; gap: 2px var(--s3); margin-top: var(--s2); font-size: 12.5px; color: var(--muted); }
 .gate b { font-weight: 600; color: var(--ink); }
 .gate b.failed { color: var(--signal); } .gate b.incomplete { color: var(--amber); } .gate b.passed { color: var(--ok); }
@@ -200,6 +200,58 @@ kbd { font: 11px var(--mono); padding: 0 4px; border: 1px solid var(--line-2); b
 .tip.on { opacity: 1; }
 .tip b { display: block; font-weight: 600; }
 
+/* the magic, kept quiet: it should feel like the tool, not a show */
+.story { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+.story b { font-weight: 500; color: var(--ink); }
+.linkbtn { font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-2); transition: color .12s; }
+.linkbtn:hover { color: var(--ink); }
+.links { display: flex; gap: var(--s3); margin-top: var(--s2); }
+.code { margin: var(--s2) 0 0; padding: var(--s2); background: var(--sunken); font-size: 11.5px; line-height: 1.5; max-height: 132px; overflow: auto; white-space: pre; }
+.patch { margin-top: var(--s2); border: 1px solid var(--line-2); border-radius: var(--r); overflow: hidden; font-size: 12.5px; }
+.patch .ph { display: flex; justify-content: space-between; gap: var(--s2); padding: var(--s1) var(--s2); background: var(--raised); color: var(--ok); font-weight: 500; }
+.diff { margin: 0; padding: var(--s2); border-radius: 0; font-size: 11.5px; line-height: 1.5; white-space: pre; max-height: 220px; overflow: auto; }
+.diff span { display: block; }
+.diff .add { color: var(--ok); }
+.diff .del { color: var(--signal); }
+.diff .meta { color: var(--muted); }
+.advice { margin-top: var(--s2); font-size: 12.5px; color: var(--ink-2); }
+.closeall { display: block; width: calc(100% - var(--s4) * 2); margin: var(--s1) var(--s4) var(--s2); padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--ink); color: var(--pane); font-weight: 500; text-align: left; transition: opacity .15s; }
+.closeall:hover { opacity: .86; }
+.closeall:active { transform: translateY(1px); }
+.closeall:disabled { opacity: .5; cursor: default; }
+.closeall small { display: block; font-weight: 400; font-size: 12px; opacity: .72; }
+.closeall.reset { background: none; color: var(--ink-2); border: 1px solid var(--line-2); }
+.edge { stroke-dasharray: none; }
+.edge.sever { stroke: var(--ok); stroke-dasharray: 2 5; }
+.lbl.sever rect { fill: var(--ok-soft); }
+.lbl.sever text { fill: var(--ok); }
+.edge.blast { stroke: var(--signal); stroke-width: 2.25; }
+.node.blast .card { stroke: var(--signal); stroke-width: 1.5; animation: land .42s var(--ease); }
+.node.origin .card { stroke: var(--signal); stroke-width: 2.5; fill: var(--signal-soft); }
+.node.blast .glyph { stroke: var(--signal); }
+.node { transform-box: fill-box; }
+@keyframes land { from { opacity: .35; } to { opacity: 1; } }
+.breachbtn { display: block; width: 100%; margin-top: var(--s3); padding: var(--s2) var(--s3); border: 1px solid var(--signal); border-radius: var(--r); color: var(--signal); font-weight: 500; text-align: left; transition: background-color .12s; }
+.breachbtn:hover { background: var(--signal-soft); }
+.breachbtn:active { transform: translateY(1px); }
+.plan li { padding: var(--s2) 0; border-bottom: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }
+.plan .s { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.plan .s.ready { color: var(--ok); }
+.plan code { display: block; font-size: 11.5px; color: var(--muted); }
+.runline { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); margin-top: var(--s3); padding: var(--s2) var(--s3); background: var(--sunken); border-radius: var(--r); font: 12.5px var(--mono); }
+.reach { display: flex; justify-content: space-between; gap: var(--s2); padding: var(--s1) 0; font-size: 13px; }
+.reach i { font: 11.5px var(--mono); color: var(--muted); white-space: nowrap; }
+.reach.jewel span { font-weight: 500; color: var(--signal); }
+.palette { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .35); display: flex; justify-content: center; align-items: flex-start; padding: 12vh var(--s4) 0; opacity: 0; transition: opacity .12s; }
+.palette.on { opacity: 1; }
+.palette .box { width: min(560px, 100%); background: var(--raised); border: 1px solid var(--line-2); border-radius: 8px; box-shadow: var(--pop); overflow: hidden; }
+.palette input { width: 100%; height: 44px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: inherit; font-size: 15px; padding: 0 var(--s4); outline: none; }
+.palette ul { max-height: 320px; overflow: auto; padding: var(--s1) 0; }
+.palette li { display: flex; justify-content: space-between; gap: var(--s3); padding: 6px var(--s4); cursor: pointer; }
+.palette li i { font-style: normal; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.palette li[aria-selected="true"] { background: var(--sunken); }
+.palette .none { padding: var(--s3) var(--s4); color: var(--muted); }
+
 /* lower tabs */
 .tabs { display: flex; gap: var(--s5); margin-top: var(--s6); border-bottom: 1px solid var(--line); overflow-x: auto; }
 .tabs button { padding: var(--s2) 0; color: var(--muted); font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .12s; }
@@ -249,6 +301,7 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
 }
 @media (max-width: 760px) {
   .wrap { padding: 0 var(--s4); }
+  .sub { white-space: normal; }
   .bar { padding: 0 var(--s4); }
   .head { grid-template-columns: minmax(0, 1fr); padding-top: var(--s5); }
   .stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }
@@ -275,6 +328,7 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
   </a>
   <span class="crumb">{{ target_name }}</span>
   <span class="spacer"></span>
+  <button class="barbtn" id="find" type="button" hidden>Find <kbd style="margin-left: 6px">/</kbd></button>
   <button class="barbtn" id="theme" type="button" hidden>Theme</button>
   {% if demo %}<a class="barbtn" href="{{ project_url }}" rel="noopener">GitHub</a>{% endif %}
 </div>
@@ -311,7 +365,7 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
 
   {% if demo %}
   <p class="intro">
-    <span>This is a real scan of a small, deliberately vulnerable platform. Pick a path, step through it, then mark a fix and watch what closes.</span>
+    <span>A real scan of a small, deliberately vulnerable platform. Press <b>Close all</b>, or click any node and ask what happens if it's breached.</span>
     <span class="cta"><button class="copy" type="button" id="copy" data-text="pip install breachgraph">pip install breachgraph</button></span>
   </p>
   {% endif %}
@@ -650,13 +704,13 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     applyCam(true);
   }
   // Frame a path. One too long to read whole starts at its first hop and is followed from there.
-  function frame(ids) {
+  function frame(ids, whole) {
     var w = stage.clientWidth, h = stage.clientHeight, M = 56;
     var xs = ids.map(function (id) { return pos[id].x; }), ys = ids.map(function (id) { return pos[id].y; });
     var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
     var bw = Math.max.apply(null, xs) + NW - x0, bh = Math.max.apply(null, ys) + NH - y0;
     var k = Math.min(1, (w - M * 2) / bw, (h - M * 2) / bh);
-    if (k >= .72) {
+    if (k >= .72 || whole) {
       cam.k = k; cam.x = (w - bw * k) / 2 - x0 * k; cam.y = (h - bh * k) / 2 - y0 * k;
     } else {
       cam.k = .85; follow(ids[0], true); return;
@@ -774,7 +828,10 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
   });
 
   /* ---------- state ---------- */
-  var fixed = {}, cur = null, step = 0, inspecting = null, anim = null;
+  var fixed = {}, cur = null, step = 0, inspecting = null, anim = null, blast = null, closing = false;
+  var patchFor = {}; (data.patches || []).forEach(function (x) { patchFor[x.fingerprint] = x; });
+  var fixInfo = {}; data.fixes.forEach(function (f) { fixInfo[f.fingerprint] = f; });
+  function touched() { return Object.keys(fixed).filter(function (k) { return fixed[k]; }); }
   function alive(p) { return !p.weaknesses.some(function (fp) { return fixed[fp]; }); }
   function plural(n, s) { return n + " " + s + (n === 1 ? "" : "s"); }
 
@@ -783,39 +840,50 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     live.forEach(function (p) {
       p.nodes.forEach(function (id, i) { onLive[id] = true; if (i) edgeLive[p.nodes[i - 1] + SEP + id] = true; });
     });
-    var inCur = {}, edgeCur = {};
-    if (cur) cur.nodes.forEach(function (id, i) { inCur[id] = true; if (i) edgeCur[cur.nodes[i - 1] + SEP + id] = true; });
+    var inCur = {}, edgeCur = {}, focus = blast ? null : cur;
+    if (!live.length) { Object.keys(nodeEls).forEach(function (id) { nodeEls[id].classList.remove("on"); }); }
+    if (focus) focus.nodes.forEach(function (id, i) { inCur[id] = true; if (i) edgeCur[focus.nodes[i - 1] + SEP + id] = true; });
     Object.keys(nodeEls).forEach(function (id) {
-      var g = nodeEls[id];
-      g.classList.toggle("gone", !onLive[id] && !inCur[id]);
-      g.classList.toggle("dim", !!cur && !inCur[id] && !!onLive[id]);
+      var g = nodeEls[id], hit = blast && blast.nodes[id] !== undefined;
+      g.classList.toggle("gone", !blast && !onLive[id] && !inCur[id]);
+      g.classList.toggle("dim", blast ? !hit : !!focus && !inCur[id] && !!onLive[id]);
       g.classList.toggle("on", !!inCur[id]);
-      g.classList.toggle("now", !!cur && cur.nodes[step] === id);
-      g.classList.toggle("sel", inspecting === id);
+      g.classList.toggle("now", !!focus && focus.nodes[step] === id);
+      g.classList.toggle("sel", inspecting === id && !blast);
+      g.classList.toggle("blast", !!hit);
+      g.classList.toggle("origin", !!blast && blast.root === id);
     });
     Object.keys(edgeEls).forEach(function (k) {
-      var e = edgeEls[k], isCur = !!edgeCur[k], dead = !edgeLive[k];
+      var e = edgeEls[k], isCur = !!edgeCur[k], dead = !edgeLive[k], weapon = !!via[k];
+      var spread = !!blast && !!blast.edges[k], severed = dead && weapon && !blast;
       e.path.classList.toggle("on", isCur);
-      e.path.classList.toggle("cut", isCur && dead);
+      e.path.classList.toggle("cut", isCur && dead && !weapon);
+      e.path.classList.toggle("sever", severed);
+      e.path.classList.toggle("blast", spread);
+      if (e.label) e.label.classList.toggle("sever", severed);
       [e.g, e.label].forEach(function (x) {
         if (!x) return;
-        x.classList.toggle("gone", dead && !isCur);
-        x.classList.toggle("dim", !!cur && !isCur && !dead);
+        x.classList.toggle("gone", !blast && dead && !isCur && !severed);
+        x.classList.toggle("dim", blast ? !spread : !!focus && !isCur && !dead);
       });
     });
     $("counter").textContent = live.length + "/" + data.paths.length;
-    var head = $("headline"), sub = $("subhead"), touched = Object.keys(fixed).some(function (k) { return fixed[k]; });
-    if (head && touched) {
+    var head = $("headline"), sub = $("subhead"), used = touched().length;
+    if (head) {
       head.textContent = "";
       head.classList.toggle("clear", !live.length);
-      if (live.length) {
-        var open = h("em", "", plural(live.length, "attack path")); head.appendChild(open);
-        head.appendChild(document.createTextNode(" still open, " + (data.paths.length - live.length) + " closed by your fixes"));
+      if (!used) {
+        var goals = {}; data.paths.forEach(function (p) { goals[p.target] = true; });
+        head.appendChild(h("em", "", plural(data.paths.length, "attack path")));
+        head.appendChild(document.createTextNode((data.paths.length === 1 ? " reaches " : " reach ") + plural(Object.keys(goals).length, "high-value asset")));
+      } else if (live.length) {
+        head.appendChild(h("em", "", plural(live.length, "attack path")));
+        head.appendChild(document.createTextNode(" still open, " + (data.paths.length - live.length) + " closed by " + plural(used, "fix").replace("fixs", "fixes")));
       } else {
         head.appendChild(h("em", "", "Every attack path is closed"));
-        head.appendChild(document.createTextNode(" by your fixes"));
+        head.appendChild(document.createTextNode(" by " + plural(used, "fix").replace("fixs", "fixes")));
       }
-      if (sub) sub.textContent = "This is a preview on this page. breachgraph fix writes the safe ones for you.";
+      if (sub) sub.textContent = used ? "This is a preview on this page. breachgraph fix writes the safe ones for you." : sub.dataset.first;
     }
     drawPaths(); drawFixes();
   }
@@ -838,7 +906,7 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
       b.appendChild(m);
       var at = p.steps.map(function (s) { return s.via; }).indexOf(p.steps.filter(function (s) { return s.via; }).map(function (s) { return s.via; })[0]);
       if (at >= 0) b.appendChild(h("span", "m", words(p.steps[at].via) + " at " + node(p.nodes[at]).name));
-      b.addEventListener("click", function () { selectPath(p, true); });
+      b.addEventListener("click", function () { clearBlast(); selectPath(p, true); });
       box.appendChild(b);
     });
   }
@@ -848,6 +916,19 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     if (!data.fixes.length) return;
     box.appendChild(h("div", "divider"));
     box.appendChild(h("div", "panelabel", "Fix first"));
+    var plan = smallestFixes(), openPaths = data.paths.filter(alive).length;
+    if (openPaths && plan.length) {
+      var all = h("button", "closeall", "Close all " + plural(openPaths, "path")); all.type = "button";
+      all.appendChild(h("small", "", "The smallest set: " + plural(plan.length, "fix").replace("fixs", "fixes")));
+      all.disabled = closing;
+      all.addEventListener("click", closeAll);
+      box.appendChild(all);
+    }
+    if (touched().length && !closing) {
+      var reset = h("button", "closeall reset", "Reset"); reset.type = "button";
+      reset.addEventListener("click", function () { fixed = {}; selectPath(cur || data.paths[0], false); });
+      box.appendChild(reset);
+    }
     data.fixes.forEach(function (f) {
       var lab = h("label", "fix"), cb = h("input"); cb.type = "checkbox"; cb.checked = !!fixed[f.fingerprint];
       cb.addEventListener("change", function () { setFixed(f.fingerprint, cb.checked); });
@@ -861,6 +942,146 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
   }
 
   function setFixed(fp, on) { stop(); fixed[fp] = on; draw(); if (inspecting) drawNode(inspecting); else drawTrace(); }
+
+  /* The fewest fixes that close every path: each round takes the one that closes the most. */
+  function smallestFixes() {
+    var open = data.paths.filter(function (p) { return alive(p) && p.weaknesses.length; }), picks = [];
+    while (open.length) {
+      var count = {};
+      open.forEach(function (p) { p.weaknesses.forEach(function (w) { count[w] = (count[w] || 0) + 1; }); });
+      var best = Object.keys(count).sort(function (a, b) { return count[b] - count[a]; })[0];
+      picks.push(best);
+      open = open.filter(function (p) { return p.weaknesses.indexOf(best) < 0; });
+    }
+    return picks;
+  }
+  function closeAll() {
+    stop(); clearBlast();
+    var plan = smallestFixes(), i = 0;
+    closing = true; inspecting = null;
+    if (motion) fit();
+    function next() {
+      if (i >= plan.length) { closing = false; cur = null; draw(); drawDone(plan); fit(); return; }
+      fixed[plan[i++]] = true;
+      var open = data.paths.filter(alive);
+      cur = open[0] || data.paths[0]; step = 0;
+      draw(); drawTrace();
+      setTimeout(next, motion ? 850 : 0);
+    }
+    cur = null; draw(); setTimeout(next, motion ? 500 : 0);
+  }
+
+  function drawDone(plan) {
+    var pane = $("inspector"); pane.textContent = "";
+    var head = h("div", "tracehead");
+    head.appendChild(h("h3", "", "Your fix list"));
+    head.appendChild(h("div", "m", plural(plan.length, "fix").replace("fixs", "fixes") + (plan.length === 1 ? " closes " : " close ") + "all " + plural(data.paths.length, "path")));
+    pane.appendChild(head);
+    var scroll = h("div", "scroll"), box = h("div", "trace"), ul = h("ul", "plan");
+    plan.forEach(function (fp) {
+      var f = fixInfo[fp], patch = patchFor[fp], li = h("li");
+      li.appendChild(document.createTextNode((f ? f.title : fp).replace(/`/g, "")));
+      if (f && f.at) li.appendChild(h("code", "", f.at));
+      li.appendChild(h("span", "s" + (patch ? " ready" : ""), patch ? "breachgraph writes this one: " + plural(patch.removed, "path") + " removed, " + patch.added + " added" : "Needs a person: open any path for the advice"));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    var run = h("div", "runline"), cmd = "breachgraph fix --pr", cp = h("button", "linkbtn", "Copy"); cp.type = "button";
+    run.appendChild(h("span", "", cmd)); run.appendChild(cp);
+    cp.addEventListener("click", function () { copied(cp, cmd); });
+    box.appendChild(run);
+    scroll.appendChild(box); pane.appendChild(scroll);
+  }
+
+  /* What if this is breached? The compromise spreads outward, one hop at a time. */
+  function breach(id) {
+    stop(); clearBlast();
+    var dist = {}, order = [], queue = [id], come = {};
+    dist[id] = 0;
+    while (queue.length) {
+      var at = queue.shift();
+      order.push(at);
+      edgeList.forEach(function (e) {
+        if (e.src === at && dist[e.dst] === undefined) {
+          dist[e.dst] = dist[at] + 1; come[e.dst] = e.key; queue.push(e.dst);
+        }
+      });
+    }
+    var run = { root: id, nodes: {}, edges: {}, timer: null }, level = 0, top = Math.max.apply(null, order.map(function (n) { return dist[n]; }));
+    blast = run; inspecting = null;
+    function spread() {
+      if (blast !== run) return;
+      inspecting = null;
+      order.forEach(function (n) {
+        if (dist[n] === level) { run.nodes[n] = level; if (come[n]) run.edges[come[n]] = true; }
+      });
+      draw(); drawBlast(dist, order);
+      if (level++ < top) run.timer = setTimeout(spread, motion ? 420 : 0);
+    }
+    frame(order, true); spread();
+  }
+  function clearBlast() { if (blast) { clearTimeout(blast.timer); blast = null; } }
+  function drawBlast(dist, order) {
+    var n = node(blast.root), pane = $("inspector"), hit = order.filter(function (x) { return blast.nodes[x] !== undefined && x !== blast.root; });
+    var worth = hit.filter(function (x) { return jewels[x]; });
+    pane.textContent = "";
+    var head = h("div", "tracehead");
+    head.appendChild(h("h3", "", "If " + n.name + " is breached"));
+    head.appendChild(h("div", "m", worth.length ? plural(worth.length, "high-value asset") + " in reach" : (hit.length ? "No high-value asset in reach so far" : "Nothing further in these paths")));
+    var ctrls = h("div", "ctrls"), back = h("button", "ctl", "← Back"); back.type = "button";
+    back.addEventListener("click", function () { clearBlast(); selectPath(cur || data.paths[0], false); });
+    ctrls.appendChild(back); head.appendChild(ctrls); pane.appendChild(head);
+    var scroll = h("div", "scroll"), box = h("div", "trace");
+    hit.slice().sort(function (a, b) { return (jewels[b] ? 1 : 0) - (jewels[a] ? 1 : 0) || dist[a] - dist[b]; }).forEach(function (x) {
+      var row = h("div", "reach" + (jewels[x] ? " jewel" : ""));
+      row.appendChild(h("span", "", node(x).name));
+      row.appendChild(h("i", "", plural(dist[x], "hop")));
+      box.appendChild(row);
+    });
+    box.appendChild(h("p", "muted", "Within the graph drawn here, assuming control of this node at each step."));
+    box.lastChild.style.cssText = "margin-top: 12px; font-size: 12px";
+    scroll.appendChild(box); pane.appendChild(scroll);
+  }
+
+  /* plain English, for people who won't read a graph */
+  function story(p) {
+    var out = [], said = node(p.nodes[1] || p.nodes[0]).name, end = said;
+    out.push(["Anyone on the internet can reach ", said, "."]);
+    p.steps.forEach(function (s, i) {
+      var from = node(p.nodes[i]).name, to = node(p.nodes[i + 1]).name, a = /^[aeiou]/.test(s.via || "") ? "An " : "A ";
+      if (!s.via) return;
+      if (from === said) out.push([a + words(s.via) + " weakness there opens the way to ", to, "."]);
+      else out.push([a + words(s.via) + " weakness at ", from, " opens the way to ", to, "."]);
+      said = end = to;
+    });
+    if (end !== p.target) out.push(["From there it reaches ", p.target, "."]);
+    return out;
+  }
+  function storyText(p) { return story(p).map(function (x) { return x.join(""); }).join(" "); }
+  function ticket(p) {
+    var lines = ["# Attack path to " + p.target, "", storyText(p), "", "## Steps", ""];
+    p.nodes.forEach(function (id, i) {
+      var s = i ? p.steps[i - 1] : null;
+      lines.push((i + 1) + ". " + node(id).name + (s && s.via ? " (needs " + words(s.via) + ")" : ""));
+      if (s && s.via && s.at) lines.push("   `" + s.at + "`: " + (s.title || ""));
+    });
+    var fixes = smallestFixes().filter(function (fp) { return p.weaknesses.indexOf(fp) >= 0; });
+    if (fixes.length) {
+      lines.push("", "## Fix", "");
+      fixes.forEach(function (fp) { var f = fixInfo[fp]; if (f) lines.push("- " + f.title + (f.at ? " (`" + f.at + "`)" : "")); });
+    }
+    lines.push("", "Risk " + Math.round(p.score * 10) / 10 + ", " + p.confidence + " confidence. Found by breachgraph.");
+    return lines.join("\n");
+  }
+  function shareLink() {
+    var state = "path=" + data.paths.indexOf(cur) + (touched().length ? "&fixed=" + touched().map(function (f) { return f.slice(0, 10); }).join(",") : "");
+    return location.href.split("#")[0] + "#" + state;
+  }
+  function copied(btn, text) {
+    var was = btn.textContent;
+    function done() { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = was; }, 1300); }
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
+  }
 
   function drawTrace() {
     var pane = $("inspector"); pane.textContent = "";
@@ -882,9 +1103,20 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     hint.appendChild(h("kbd", "", "←→")); hint.appendChild(document.createTextNode(" step"));
     ctrls.appendChild(hint);
     head.appendChild(ctrls);
+    var links = h("div", "links"), tk = h("button", "linkbtn", "Copy as ticket"), ln = h("button", "linkbtn", "Copy link to this view");
+    tk.type = ln.type = "button";
+    tk.addEventListener("click", function () { copied(tk, ticket(cur)); });
+    ln.addEventListener("click", function () { copied(ln, shareLink()); });
+    links.appendChild(tk); links.appendChild(ln); head.appendChild(links);
     pane.appendChild(head);
 
-    var scroll = h("div", "scroll"), trace = h("div", "trace");
+    var scroll = h("div", "scroll"), told = h("p", "story");
+    story(cur).forEach(function (part, pi) {
+      if (pi) told.appendChild(document.createTextNode(" "));
+      part.forEach(function (bit, bi) { told.appendChild(bi % 2 ? h("b", "", bit) : document.createTextNode(bit)); });
+    });
+    scroll.appendChild(told);
+    var trace = h("div", "trace");
     if (!open) trace.appendChild(h("p", "closednote", "Closed: your fix breaks this path."));
     var list = h("ol"); list.style.cssText = "list-style:none;margin:0;padding:0";
     cur.nodes.forEach(function (id, i) {
@@ -896,20 +1128,37 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
       }
       if (s && s.note) li.appendChild(h("div", "how", s.note.replace(/`/g, "")));
       if (s && s.via) {
-        var fp = n && cur.weaknesses[0], fixedHere = cur.weaknesses.some(function (w) { return fixed[w]; });
+        var fp = s.fp && cur.weaknesses.indexOf(s.fp) >= 0 ? s.fp : cur.weaknesses[0], fixedHere = !!fixed[fp];
         var w = h("div", "weak" + (fixedHere ? " done" : ""));
         w.appendChild(h("div", "c", (fixedHere ? "Fixed: " : "Needs ") + words(s.via)));
         if (s.title) w.appendChild(h("div", "", s.title.replace(/`/g, "")));
         if (s.at) w.appendChild(h("code", "", s.at));
         li.appendChild(w);
+        if (s.snippet) li.appendChild(h("pre", "code", s.snippet));
         if (fp) {
           var b = h("button", "act", fixedHere ? "Undo" : "Mark as fixed"); b.type = "button";
           b.addEventListener("click", function (ev) {
             ev.stopPropagation();
-            cur.weaknesses.forEach(function (x) { setFlag(x, !fixedHere); });
-            draw(); drawTrace();
+            setFixed(fp, !fixedHere);
           });
           li.appendChild(b);
+          var patch = patchFor[fp], info = fixInfo[fp];
+          if (patch) {
+            var pb = h("div", "patch"), ph = h("div", "ph");
+            ph.appendChild(h("span", "", "Proved: " + plural(patch.removed, "path") + " removed, " + patch.added + " added"));
+            var cp = h("button", "linkbtn", "Copy"); cp.type = "button";
+            cp.addEventListener("click", function (ev) { ev.stopPropagation(); copied(cp, patch.diff); });
+            ph.appendChild(cp); pb.appendChild(ph);
+            var pre = h("pre", "diff");
+            patch.diff.split("\n").forEach(function (ln) {
+              var m = /^(\+\+\+|---|@@)/.test(ln);
+              pre.appendChild(h("span", m ? "meta" : ln[0] === "+" ? "add" : ln[0] === "-" ? "del" : "", ln || " "));
+            });
+            pb.appendChild(pre); pb.addEventListener("click", function (ev) { ev.stopPropagation(); });
+            li.appendChild(pb);
+          } else if (info && info.remediation) {
+            li.appendChild(h("p", "advice", info.remediation));
+          }
         }
       }
       if (s && s.techniques && s.techniques.length) {
@@ -928,7 +1177,6 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     });
     trace.appendChild(list); scroll.appendChild(trace); pane.appendChild(scroll);
   }
-  function setFlag(fp, on) { stop(); fixed[fp] = on; }
 
   function drawNode(id) {
     var n = node(id), pane = $("inspector"); pane.textContent = "";
@@ -940,6 +1188,12 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     var ctrls = h("div", "ctrls"); ctrls.appendChild(back); head.appendChild(ctrls);
     pane.appendChild(head);
     var scroll = h("div", "scroll"), box = h("div", "trace info");
+    if (n.kind !== "internet" && !jewels[id]) {
+      var wi = h("button", "breachbtn", "What if this is breached?"); wi.type = "button";
+      wi.addEventListener("click", function () { breach(id); });
+      box.appendChild(wi);
+      box.appendChild(h("div", "", ""));
+    }
     if (n.evidence.length) {
       var dl = h("dl"); dl.appendChild(h("dt", "", "Defined in")); dl.appendChild(h("dd", "", n.evidence.join(", ")));
       box.appendChild(dl);
@@ -1022,24 +1276,72 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
   }
 
   document.addEventListener("keydown", function (ev) {
-    if (/INPUT|SELECT|TEXTAREA/.test(ev.target.tagName) || ev.metaKey || ev.ctrlKey || !cur) return;
+    if (/INPUT|SELECT|TEXTAREA/.test(ev.target.tagName) || ev.metaKey || ev.ctrlKey) return;
+    if (ev.key === "/") { ev.preventDefault(); openFind(); return; }
+    if (!cur) return;
     var i = data.paths.indexOf(cur);
     if (ev.key === "ArrowRight") { ev.preventDefault(); go(step + 1); }
     else if (ev.key === "ArrowLeft") { ev.preventDefault(); go(step - 1); }
     else if (ev.key === "ArrowDown" && benchInView()) { ev.preventDefault(); selectPath(data.paths[(i + 1) % data.paths.length], false); }
     else if (ev.key === "ArrowUp" && benchInView()) { ev.preventDefault(); selectPath(data.paths[(i + data.paths.length - 1) % data.paths.length], false); }
     else if (ev.key === "r") replay();
-    else if (ev.key === "Escape") { inspecting = null; stop(); draw(); drawTrace(); }
+    else if (ev.key === "Escape") { clearBlast(); inspecting = null; selectPath(cur, false); }
   });
   function benchInView() { var r = $("explorer").getBoundingClientRect(); return r.top < innerHeight * .6 && r.bottom > innerHeight * .4; }
 
+  /* find: jump to any path or asset */
+  function openFind() {
+    if ($("palette")) return;
+    var wrap = h("div", "palette"), box = h("div", "box"), input = h("input"), list = h("ul");
+    wrap.id = "palette"; input.placeholder = "Find a path, asset or identity"; input.setAttribute("aria-label", "Find");
+    box.appendChild(input); box.appendChild(list); wrap.appendChild(box); document.body.appendChild(wrap);
+    var items = data.paths.map(function (p, i) { return { label: p.target, kind: "path " + (i + 1), go: function () { clearBlast(); selectPath(p, true); } }; });
+    Object.keys(pos).forEach(function (id) {
+      var n = node(id);
+      items.push({ label: n.name, kind: KIND[n.kind] || n.kind, go: function () { clearBlast(); inspectNode(id); cam.k = Math.max(cam.k, .85); follow(id, true); } });
+    });
+    var shown = [], at = 0;
+    function close() { wrap.remove(); }
+    function paint() {
+      var t = input.value.toLowerCase();
+      shown = items.filter(function (x) { return (x.label + " " + x.kind).toLowerCase().indexOf(t) >= 0; }).slice(0, 12);
+      at = Math.min(at, Math.max(0, shown.length - 1));
+      list.textContent = "";
+      if (!shown.length) list.appendChild(h("li", "none", "Nothing matches"));
+      shown.forEach(function (x, i) {
+        var li = h("li"); li.setAttribute("aria-selected", String(i === at));
+        li.appendChild(h("span", "", x.label)); li.appendChild(h("i", "", x.kind));
+        li.addEventListener("click", function () { close(); x.go(); });
+        list.appendChild(li);
+      });
+    }
+    input.addEventListener("input", function () { at = 0; paint(); });
+    input.addEventListener("keydown", function (ev) {
+      if (ev.key === "ArrowDown") { ev.preventDefault(); at = Math.min(at + 1, shown.length - 1); paint(); }
+      else if (ev.key === "ArrowUp") { ev.preventDefault(); at = Math.max(at - 1, 0); paint(); }
+      else if (ev.key === "Enter" && shown[at]) { close(); shown[at].go(); }
+      else if (ev.key === "Escape") { ev.stopPropagation(); close(); }
+    });
+    wrap.addEventListener("click", function (ev) { if (ev.target === wrap) close(); });
+    paint(); input.focus();
+    requestAnimationFrame(function () { wrap.classList.add("on"); });
+  }
+  var finder = $("find"); finder.hidden = false; finder.addEventListener("click", openFind);
+
   $("explorer").hidden = false;
   fit();
-  selectPath(data.paths[0], false);
+  var subline = $("subhead"); if (subline) subline.dataset.first = subline.textContent;
+  /* a shared link reopens the same path with the same fixes */
+  var shared = {}; location.hash.slice(1).split("&").forEach(function (kv) { var x = kv.split("="); shared[x[0]] = x[1]; });
+  if (shared.fixed) shared.fixed.split(",").forEach(function (short) {
+    var all = {}; data.paths.forEach(function (p) { p.weaknesses.forEach(function (w) { all[w] = true; }); });
+    Object.keys(all).forEach(function (w) { if (short && w.slice(0, 10) === short) fixed[w] = true; });
+  });
+  selectPath(data.paths[+shared.path] || data.paths[0], false);
   /* play the first path once, when it first comes into view */
   if (motion && "IntersectionObserver" in window) {
     var seen = new IntersectionObserver(function (es) {
-      if (es[0].isIntersecting) { seen.disconnect(); setTimeout(function () { if (cur === data.paths[0] && step === 0) replay(); }, 500); }
+      if (es[0].isIntersecting) { seen.disconnect(); setTimeout(function () { if (!location.hash && cur === data.paths[0] && step === 0 && !blast && !closing) replay(); }, 500); }
     }, { threshold: .4 });
     seen.observe($("explorer"));
   }

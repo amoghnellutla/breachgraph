@@ -14,11 +14,12 @@ import os
 import re
 import shutil
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from breachgraph.config import Config
-from breachgraph.fix import Fix
+from breachgraph.fix import Fix, plan
 from breachgraph.graph import AttackGraphResult, build_attack_graph
 from breachgraph.graph.summary import path_id
 from breachgraph.models import Category, Finding, Location, ScanResult, Severity
@@ -273,6 +274,37 @@ def prove(fixes: list[Fix], result: ScanResult, target: Path, config: Config) ->
             fix.reason = "rebuilding the graph with this change removed no attack path"
             fix.files = {}
     return fixes
+
+
+def previews(
+    result: ScanResult, target: Path, config: Config, budget_s: float = 20
+) -> list[dict[str, object]]:
+    """The patches `breachgraph fix` would write, as diffs with their proof, for the HTML report.
+    Proving rebuilds the graph once per fix, so this stops when it has used its time budget."""
+    started = time.monotonic()
+    out: list[dict[str, object]] = []
+    for fix in plan(result, target, top=6):
+        if not fix.files or time.monotonic() - started > budget_s:
+            continue
+        prove([fix], result, target, config)
+        if fix.files:
+            out.append(
+                {
+                    "fingerprint": fix.finding.fingerprint,
+                    "summary": fix.summary,
+                    "diff": "\n".join(_diff(rel, new, target) for rel, new in fix.files.items()),
+                    "removed": fix.removed,
+                    "added": fix.added,
+                }
+            )
+    return out
+
+
+def _diff(rel: str, new: str, target: Path) -> str:
+    old = (target / rel).read_text(encoding="utf-8", errors="replace")
+    return "\n".join(
+        difflib.unified_diff(old.splitlines(), new.splitlines(), f"a/{rel}", f"b/{rel}", lineterm="", n=1)
+    )
 
 
 def proved_settings(result: ScanResult, target: Path, config: Config, top: int) -> list[Fix]:

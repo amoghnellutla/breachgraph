@@ -13,7 +13,7 @@ from markupsafe import Markup
 from breachgraph import PROJECT_URL
 from breachgraph.compare import path_changes
 from breachgraph.graph.attack import TECHNIQUES, technique_url
-from breachgraph.models import ScanResult, Status
+from breachgraph.models import Finding, ScanResult, Status
 
 # Autoescape is enabled for every template; scanner output is untrusted.
 _env = Environment(  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
@@ -30,6 +30,12 @@ def explorer_payload(result: ScanResult) -> dict[str, Any] | None:
     ag = result.attack_graph
     if ag is None or not ag.paths or ag.graph is None:
         return None
+    at_line = {(f.location.path, f.location.start_line): f for f in result.findings}
+    by_fp = {fp: f for f in result.findings for fp in (f.fingerprints or [f.fingerprint])}
+
+    def finding(step: Any) -> Finding | None:
+        return at_line.get((step.evidence_path, step.evidence_line)) if step.via else None
+
     return {
         "nodes": [n.model_dump(mode="json") for n in ag.graph.nodes],
         "edges": [e.model_dump(mode="json") for e in ag.graph.edges],
@@ -52,6 +58,8 @@ def explorer_payload(result: ScanResult) -> dict[str, Any] | None:
                         "at": _at(s.evidence_path, s.evidence_line),
                         "note": s.note,
                         "techniques": s.techniques,
+                        "snippet": (found.location.snippet or "")[:600] if (found := finding(s)) else "",
+                        "fp": found.fingerprint if found else "",
                     }
                     for s in p.steps
                 ],
@@ -65,10 +73,12 @@ def explorer_payload(result: ScanResult) -> dict[str, Any] | None:
                 "weakness": c.weakness,
                 "paths_cut": c.paths_cut,
                 "at": _at(c.path, c.line),
+                "remediation": by_fp[c.fingerprint].remediation if c.fingerprint in by_fp else "",
             }
             for c in ag.choke_points
             if c.fingerprint
         ],
+        "patches": result.metadata.get("fix_previews") or [],
     }
 
 

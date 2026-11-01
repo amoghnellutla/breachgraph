@@ -70,3 +70,33 @@ def test_a_fix_that_removes_no_path_is_dropped(tmp_path: Path) -> None:
 def test_nothing_on_a_path_means_no_candidates(tmp_path: Path) -> None:
     write(tmp_path, "main.tf", 'resource "aws_s3_bucket" "data" {\n  bucket = "customer-data"\n}\n')
     assert candidates(build_attack_graph(tmp_path, [], Config()), tmp_path) == []
+
+
+def test_previews_carry_the_diff_and_its_proof() -> None:
+    from breachgraph.settings_fix import previews
+
+    root = Path(__file__).parent.parent / "examples" / "vulnerable-platform"
+    workflow = ".github/workflows/triage.yml"
+    finding = Finding(
+        tool="cicd",
+        rule_id="cicd/script-injection",
+        title="Script injection",
+        severity=Severity.HIGH,
+        category=Category.CICD,
+        location=Location(path=workflow, start_line=21),
+        fingerprint="fp",
+        cwe=["CWE-94"],
+    )
+    from breachgraph.graph.summary import summarize
+
+    config = Config()
+    ag = build_attack_graph(root, [finding], config)
+    result = ScanResult(
+        breachgraph_version="1",
+        target=".",
+        findings=[finding],
+        attack_graph=summarize(ag, [finding], config.attack_graph, baseline_used=False),
+    )
+    [patch] = previews(result, root, config)
+    assert patch["fingerprint"] == "fp" and patch["removed"] and patch["added"] == 0
+    assert "+" in str(patch["diff"]) and workflow in str(patch["diff"])

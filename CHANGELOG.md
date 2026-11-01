@@ -15,6 +15,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The HTML report answers more on its own: what a breached node would reach, spreading hop by hop;
+  the smallest set of fixes that closes every path, applied one at a time; the vulnerable line and
+  the real patch with its proof, inside the path; each path in plain English with "Copy as ticket";
+  a link that reopens the same view; and `/` to find any path or asset.
 - The HTML report is rebuilt as an instrument for tracing an attack: paths, graph and a step-by-step
   trace side by side. Replay a path hop by hop, step with the arrow keys, mark a fix and watch the
   graph and headline respond. It stays one offline file and still works without JavaScript.

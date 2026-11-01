@@ -3,8 +3,9 @@
 **Find the few security findings an attacker can actually chain into a breach.**
 
 **[Open the live demo](https://amoghnellutla.github.io/breachgraph/)**: the real report for a small
-vulnerable platform (Flask on EKS, Terraform, GitHub Actions). Click a path to trace it, or mark a
-finding as fixed and watch the paths it breaks disappear. Nothing to install.
+vulnerable platform (Flask on EKS, Terraform, GitHub Actions). Replay an attack, ask what a breached
+node would reach, or press Close all and watch the smallest set of fixes end every path. Nothing to
+install.
 
 [![ci](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amoghnellutla/breachgraph/badge)](https://scorecard.dev/viewer/?uri=github.com/amoghnellutla/breachgraph)

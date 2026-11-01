@@ -26,7 +26,7 @@ from rich.table import Table
 
 from breachgraph import __version__, workspace
 from breachgraph.compare import path_changes
-from breachgraph.config import CONFIG_FILENAMES, ConfigError, Suppression, find_config, load_config
+from breachgraph.config import CONFIG_FILENAMES, Config, ConfigError, Suppression, find_config, load_config
 from breachgraph.integrations import notify
 from breachgraph.integrations.github import GitHubClient, GitHubContext, write_step_summary
 from breachgraph.models import Priority, ScanResult, ToolRun, ToolStatus
@@ -303,6 +303,8 @@ def scan_cmd(
         console.print(f"[green]baseline written:[/] {write_baseline_to} ({n} findings accepted)")
         raise typer.Exit(0)
 
+    if workspace_dir is None:
+        _add_fix_previews(result, target, config, fmt_list)
     written = write_reports(result, output_dir, fmt_list)
     _print_summary(result)
     for fmt, p in written.items():
@@ -317,6 +319,18 @@ def scan_cmd(
     if no_fail:
         raise typer.Exit(0)
     raise typer.Exit(result.gate.exit_code or 0)
+
+
+def _add_fix_previews(result: ScanResult, target: Path, config: Config, formats: list[str]) -> None:
+    """The HTML report shows each path's patch and its proof. Never worth failing a scan over."""
+    from breachgraph.settings_fix import previews
+
+    if "html" not in formats or not (result.attack_graph and result.attack_graph.paths):
+        return
+    try:
+        result.metadata["fix_previews"] = previews(result, target, config)
+    except Exception as exc:  # the report is still complete without them
+        result.warnings.append(f"fix previews skipped: {exc}")
 
 
 def _parse_priority(value: str) -> Priority:
