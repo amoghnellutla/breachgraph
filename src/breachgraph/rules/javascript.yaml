@@ -122,6 +122,9 @@ rules:
       - metavariable-regex:
           metavariable: $DB
           regex: (?i).*(sequelize|knex|pool|client|db|conn|connection|prisma|mysql|pg)$
+      - metavariable-regex: # a constant's name, or a value already made safe, isn't input
+          metavariable: $X
+          regex: ^(?![A-Z][A-Z0-9_]*$)(?!.*(?i:sanitize|escape|quote)).*
 
   - id: breachgraph.javascript.ssrf-tainted
     mode: taint

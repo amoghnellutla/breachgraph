@@ -73,7 +73,7 @@ def test_settings_given_as_a_list_count(tmp_path: Path) -> None:
     assert not compose(tmp_path, service).nodes
 
 
-def cluster(tmp: Path, service_type: str) -> Graph:
+def cluster(tmp: Path, service_type: str, name: str = "all.yaml") -> Graph:
     labels = {"app": "cache"}
     docs = [
         {
@@ -95,7 +95,8 @@ def cluster(tmp: Path, service_type: str) -> Graph:
             "spec": {"type": service_type, "selector": labels, "ports": [{"port": 6379}]},
         },
     ]
-    (tmp / "all.yaml").write_text(yaml.safe_dump_all(docs), encoding="utf-8")
+    (tmp / name).parent.mkdir(parents=True, exist_ok=True)
+    (tmp / name).write_text(yaml.safe_dump_all(docs), encoding="utf-8")
     g = Graph()
     KubernetesSource().collect(SourceContext(root=tmp, exclude=[]), g)
     return g
@@ -110,3 +111,7 @@ def test_an_open_service_behind_a_load_balancer_blocks(tmp_path: Path) -> None:
 def test_an_open_service_inside_the_cluster_is_not_an_internet_path(tmp_path: Path) -> None:
     g = cluster(tmp_path, "ClusterIP")
     assert INTERNET_ID not in g.nodes or not find_paths(g)
+
+
+def test_a_test_fixture_is_not_a_deployment(tmp_path: Path) -> None:
+    assert not find_paths(cluster(tmp_path, "LoadBalancer", "test/e2e/testdata/registry.yaml"))

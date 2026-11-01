@@ -71,7 +71,7 @@ READ_FILES = [*CONTROL, WeaknessClass.FILE_READ]
 # Code that a service does not run: tests, fixtures, examples and docs.
 _NOT_RUN = re.compile(
     r"(?:^|/)(?:tests?|__tests__|__mocks__|testdata|spec|e2e|cypress|playwright|fixtures?|examples?|samples?|docs?)/"
-    r"|\.(?:test|spec|stories)\.[a-z]+$|(?:^|/)(?:conftest\.py|test_[^/]+\.py|[^/]+_test\.(?:py|go))$"
+    r"|\.(?:test|spec|stories)\.[a-z]+$|(?:^|/)(?:conftest\.py|tests?\.(?:py|go|js|ts)|test_[^/]+\.py|[^/]+_test\.(?:py|go))$"
 )
 _BUILD_TOOLS = {
     "vite",

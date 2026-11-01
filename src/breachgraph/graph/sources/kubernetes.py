@@ -33,6 +33,7 @@ from breachgraph.graph.model import (
     Weakness,
     WeaknessClass,
     internet,
+    not_run,
 )
 from breachgraph.graph.sources.common import SourceContext, line_of
 from breachgraph.graph.sources.services import mark_open, open_service
@@ -882,7 +883,7 @@ class KubernetesSource:
             env = {str(e.get("name")): str(e.get("value") or "") for e in c.get("env") or []}
             run = " ".join(str(x) for x in [*(c.get("command") or []), *(c.get("args") or [])])
             found = open_service(str(c.get("image") or ""), env, run)
-            if found:
+            if found and not not_run(ev.path):  # a test fixture's registry isn't deployed
                 mark_open(graph, node, found, ev)
 
         # --- isolation weaknesses (each is a container-to-node escape condition)

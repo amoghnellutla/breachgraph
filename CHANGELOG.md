@@ -44,6 +44,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The JavaScript SQL rule no longer reports an interpolated constant or a sanitized value, which made
+  up most of its leads on real code.
 - Helm charts in a directory named `charts/`, the usual layout, were taken for subcharts and never
   rendered, so their workloads were missing from the graph. A chart whose dependencies aren't
   committed now renders its own templates and says what is missing.
