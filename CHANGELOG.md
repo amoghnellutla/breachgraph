@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The HTML report is rebuilt as an instrument for tracing an attack: paths, graph and a step-by-step
+  trace side by side. Replay a path hop by hop, step with the arrow keys, mark a fix and watch the
+  graph and headline respond. It stays one offline file and still works without JavaScript.
 - Checkov is off by default; set `scanners.checkov.enabled: true` to use it. Across the 8 benchmark
   projects no attack path depends on it, Trivy already checks infrastructure files, and it was 39%
   of all findings. The image still includes it.

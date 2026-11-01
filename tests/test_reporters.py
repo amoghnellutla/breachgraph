@@ -111,7 +111,7 @@ def test_html_escapes_untrusted_content() -> None:
     assert "<script>alert(1)</script>" not in page
     assert "&lt;script&gt;" in page
     assert 'href="javascript:' not in page
-    assert "Gate failed" in page
+    assert 'Gate <b class="failed">failed</b>' in page
 
 
 def test_junit_marks_gating_findings_as_failures() -> None:

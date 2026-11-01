@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import PurePath
 from typing import Any
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 from markupsafe import Markup
 
+from breachgraph import PROJECT_URL
 from breachgraph.compare import path_changes
 from breachgraph.graph.attack import TECHNIQUES, technique_url
 from breachgraph.models import ScanResult, Status
@@ -40,10 +42,17 @@ def explorer_payload(result: ScanResult) -> dict[str, Any] | None:
                 "gating": p.gating,
                 "is_new": p.is_new,
                 "score": p.score,
+                "needs_login": p.needs_login,
                 "nodes": p.node_ids,
                 "weaknesses": p.weaknesses,
                 "steps": [
-                    {"via": s.via, "title": s.weakness_title, "at": _at(s.evidence_path, s.evidence_line)}
+                    {
+                        "via": s.via,
+                        "title": s.weakness_title,
+                        "at": _at(s.evidence_path, s.evidence_line),
+                        "note": s.note,
+                        "techniques": s.techniques,
+                    }
                     for s in p.steps
                 ],
             }
@@ -90,6 +99,8 @@ def render(result: ScanResult) -> str:
         tools=sorted({s for f in result.findings for s in f.sources}),
         categories=sorted({f.category.value for f in result.findings}),
         changes=path_changes(result),
+        demo=bool(os.environ.get("BREACHGRAPH_DEMO")),
+        project_url=PROJECT_URL,
         explorer=payload,
         explorer_json=_embed(payload),
     )
