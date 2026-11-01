@@ -238,6 +238,18 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## This leaked, what now?
+
+```bash
+breachgraph graph --from "DEPLOY_KEY"          # what falls if this is lost
+breachgraph graph --to "customer-data"         # what can reach this asset
+```
+
+`--from` assumes the named secret, role or workload is lost, and every later step must be possible
+today, so an answer never rests on a second imagined bug. `--to` gives the route an outsider has
+today, if any, and everything that could get there if it fell. Add `--findings breachgraph.json` to
+include what a scan found.
+
 ## Writing what runs
 
 A role can become another role without assuming it, by changing code that runs as that role:

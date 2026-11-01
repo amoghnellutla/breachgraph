@@ -27,6 +27,9 @@ All notable changes to this project are documented here. The format follows
   Memcached, Elasticsearch, Grafana, MinIO, Jupyter and a Docker registry, judged from their own
   defaults and settings. In Compose these are leads, since a Compose file may only be for a laptop.
 
+- `breachgraph graph --from` says what falls if a secret, role or workload is lost, and `--to` says
+  what can reach an asset. The MCP server offers both as `what_reaches`.
+
 ### Changed
 
 - Attack paths that use the same kind of flaw to reach the same asset are shown as one entry, "and

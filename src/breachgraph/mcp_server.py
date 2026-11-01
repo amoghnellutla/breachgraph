@@ -16,6 +16,7 @@ from breachgraph import __version__
 from breachgraph.check import base_path, run_check
 from breachgraph.config import Config
 from breachgraph.graph import build_attack_graph
+from breachgraph.graph.query import answer
 from breachgraph.graph.why import explain
 from breachgraph.models import ScanResult
 from breachgraph.paths import normalize_path
@@ -47,6 +48,20 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["location"],
         },
     },
+    {
+        "name": "what_reaches",
+        "description": (
+            "What falls if a secret, role or workload is lost, and what can reach an asset. Give "
+            "'lost', 'asset' or both, as part of a name from the attack graph."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "lost": {"type": "string", "description": "A secret, role or workload that leaked."},
+                "asset": {"type": "string", "description": "An asset to protect."},
+            },
+        },
+    },
 ]
 
 
@@ -67,6 +82,13 @@ def _explain(target: Path, config: Config, location: str) -> dict[str, Any]:
     ]
     ag = build_attack_graph(target, result.findings, config)
     return {"findings": [{"title": f.title, "why": explain(f, ag)} for f in found]}
+
+
+def _what_reaches(target: Path, config: Config, lost: str | None, asset: str | None) -> dict[str, Any]:
+    if not lost and not asset:
+        raise ValueError("give 'lost', 'asset' or both")
+    graph = build_attack_graph(target, _base(target).findings, config).graph
+    return answer(graph, lost, asset, config.attack_graph.crown_value)
 
 
 def handle(message: dict[str, Any], target: Path, config: Config) -> dict[str, Any] | None:
@@ -93,6 +115,8 @@ def handle(message: dict[str, Any], target: Path, config: Config) -> dict[str, A
                 out = run_check(target, config, bool(args.get("update_base")))
             elif name == "explain_finding":
                 out = _explain(target, config, str(args["location"]))
+            elif name == "what_reaches":
+                out = _what_reaches(target, config, args.get("lost"), args.get("asset"))
             else:
                 reply["error"] = {"code": -32602, "message": f"unknown tool: {name}"}
                 return reply

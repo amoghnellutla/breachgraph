@@ -15,7 +15,7 @@ import sys
 import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 import httpx
 import typer
@@ -556,6 +556,30 @@ def report_cmd(
         console.print(f"{fmt:>6} {p}")
 
 
+def _print_answer(graph: Any, lost: str | None, asset: str | None, crown_value: int) -> None:
+    from breachgraph.graph.query import answer
+
+    try:
+        out = answer(graph, lost, asset, crown_value)
+    except ValueError as exc:
+        console.print(f"[red]{escape(str(exc))}[/]")
+        raise typer.Exit(2) from exc
+    if lost:
+        falls = cast("list[dict[str, str]]", out["falls_with_it"])
+        console.print(f"[bold]If {escape(str(out['from']))} is lost:[/] {len(falls)} asset(s) fall with it")
+        for x in falls:
+            console.print(f"  - {escape(x['asset'])}")
+            console.print(f"    [dim]{escape(x['route'])}[/]")
+    if asset:
+        console.print(f"[bold]{escape(str(out['to']))}[/]")
+        today = out["reachable_from_the_internet_today"]
+        console.print(f"  From the internet today: {escape(str(today)) if today else 'no route found'}")
+        sources = cast("list[str]", out["reachable_if_these_fall"])
+        console.print(f"  Reachable if one of these falls ({len(sources)}):")
+        for name in sources[:20]:
+            console.print(f"    - {escape(name)}")
+
+
 @app.command("graph")
 def graph_cmd(
     path: Annotated[Path, typer.Argument(help="Directory to analyze.")] = Path(),
@@ -567,6 +591,10 @@ def graph_cmd(
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Write the graph as JSON to this file.")
     ] = None,
+    lost: Annotated[
+        str | None, typer.Option("--from", help="What falls if this secret, role or workload is lost?")
+    ] = None,
+    asset: Annotated[str | None, typer.Option("--to", help="What can reach this asset?")] = None,
 ) -> None:
     """Build the code-to-cloud attack graph only (no scanners) and print the attack paths.
 
@@ -598,6 +626,9 @@ def graph_cmd(
             raise typer.Exit(2) from exc
 
     ag = build_attack_graph(target, findings, config)
+    if lost or asset:
+        _print_answer(ag.graph, lost, asset, config.attack_graph.crown_value)
+        return
     summary = summarize(ag, findings, config.attack_graph, baseline_used=False)
     summary.coverage = coverage(summary, ag, tools)
     result = ScanResult(breachgraph_version=__version__, target=str(target), attack_graph=summary)
