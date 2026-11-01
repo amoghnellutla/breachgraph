@@ -27,6 +27,7 @@ from breachgraph.graph.model import (
     Node,
     NodeKind,
     internet,
+    not_run,
 )
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.paths import iter_files
@@ -39,7 +40,7 @@ class HostingSource:
 
     def collect(self, ctx: SourceContext, graph: Graph) -> None:
         for path, rel in iter_files(ctx.root, ctx.exclude):
-            if path.name.lower() not in _FILES or path.stat().st_size > 512_000:
+            if path.name.lower() not in _FILES or path.stat().st_size > 512_000 or not_run(rel):
                 continue
             text = ctx.read(path)
             if text is None:

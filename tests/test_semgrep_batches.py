@@ -62,6 +62,34 @@ def test_a_first_batch_timeout_is_a_failure(tmp_path: Path) -> None:
     assert outcome.run.status is ToolStatus.FAILED
 
 
+class Mixed(Slow):
+    """Batches that finish or die, given as their exit codes."""
+
+    codes: tuple[int, ...] = (0, 1, 0)
+
+    def steps(self, ctx: ScanContext, exe: str) -> list[Step]:
+        out = []
+        for i, code in enumerate(self.codes):
+            part = ctx.work_dir / f"{i}.json"
+            script = f"import sys; open(sys.argv[1],'w').write('{{}}') if {code} == 0 else sys.exit({code})"
+            out.append(Step([exe, "-c", script, str(part)], part))
+        return out
+
+
+def test_a_failed_batch_costs_that_batch_and_the_rest_still_run(tmp_path: Path) -> None:
+    outcome = Mixed().run(ScanContext(target=tmp_path, work_dir=tmp_path, config=Config()))
+    assert outcome.run.status is ToolStatus.PARTIAL
+    assert "1 of 3 batches failed" in (outcome.run.message or "")
+
+
+def test_every_batch_failing_is_a_failure(tmp_path: Path) -> None:
+    class AllBad(Mixed):
+        codes = (1, 1)
+
+    outcome = AllBad().run(ScanContext(target=tmp_path, work_dir=tmp_path, config=Config()))
+    assert outcome.run.status is ToolStatus.FAILED
+
+
 def test_report_status_round_trips() -> None:
     assert json.dumps(ToolStatus.PARTIAL.value) == '"partial"'
 

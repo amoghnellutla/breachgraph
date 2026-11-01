@@ -47,6 +47,7 @@ VOLUME = "breachgraph-corpus"
 MODELED = ("routes", "workloads", "cloud_resources", "kubernetes_objects", "ci_jobs", "crown_jewels")
 PUBLISHED = ROOT / "benchmarks" / "results" / "real-world.json"
 PAGE = ROOT / "docs" / "real-world.md"
+RECALL_WINDOW = 5
 # What a release may not exceed. A first scan that blocks most projects teaches people to turn it off.
 LIMITS = {"crashes": 0, "over_5_minutes": 0, "false_gating_paths": 0, "median_blocking_findings": 0}
 
@@ -290,6 +291,11 @@ def summary() -> int:
     return 0
 
 
+def recall_table(r: dict[str, Any]) -> str:
+    rows = [f"| {w} | {f} of {n} |" for w, (f, n) in sorted(r["by_weakness"].items())]
+    return "\n".join(["| Weakness | Found |", "|---|---|", *rows, f"| All | {r['found']} of {r['cases']} |"])
+
+
 def counts(rows: list[dict[str, Any]], review: dict[str, int]) -> dict[str, Any]:
     """Aggregates only: nothing here names a project or a file."""
     ok = [r for r in rows if r["outcome"] == "ok"]
@@ -349,8 +355,7 @@ Every path that blocks a merge was reviewed by reading the code. Nothing was run
 project. Findings in other people's projects stay private, so only counts are given here and no
 project is named.
 
-Run on {c["date"]} at commit `{c["commit"]}`. The clock includes a cold start for the first project,
-which downloads the scanners' vulnerability databases.
+Run on {c["date"]} at commit `{c["commit"]}`.
 
 Correction: the version of this page released with 0.7.0 was wrong. Seven of its 51 scans had run on
 an interrupted checkout with no files, and those scans counted as clean passes, so it overstated
@@ -376,8 +381,22 @@ treats a scan that saw nothing as a failure, which stops a release from publishi
 | Of those, false | {c["false_gating_paths"]} |
 | Projects told what one more bug would reach | {c["projects_one_bug_away"]} |
 
-The other attack paths are low confidence: leads to read, which never block. Reading a path shows
-that it holds in the code, but no path here was exploited to prove it.
+The other attack paths are low confidence: leads to read, which never block. They are noisy. In a
+random sample of 16, before the last rule fix, about 2 looked real. Reading a path shows that it holds
+in the code, but no path here was exploited to prove it.
+
+## Would it have found real vulnerabilities?
+
+Precision can't show what a tool misses, so `benchmarks/recall.py` takes reviewed GitHub advisories by
+a written rule: the newest HIGH or CRITICAL ones in npm, PyPI, Go and Maven for weaknesses breachgraph
+has rules for, each with a linked fix commit. It scans the commit just before the fix and counts a
+case as found when a code finding lands within {RECALL_WINDOW} lines of a line the fix changed.
+
+{recall_table(c["recall"])}
+
+Most of these are missed. They are library bugs, often deep in code a
+rule-based scanner can't follow, so read this as a floor for what attack paths can start from, and
+as the reason a path's absence never means a repository is safe.
 
 ## What this does not show
 
@@ -400,6 +419,8 @@ fixes in the tool:
 - Calls are followed from routes to helpers, and a route behind a login is labeled and ranked lower.
 - Rule bugs were fixed, such as a database rule matching a web framework's `ctx.Query`.
 - Graph building on a 10,000-file project went from over 6 minutes to well under one.
+- Charts in a directory named `charts/`, the usual layout, were being skipped as subcharts. Rendering
+  them took blind spots from 312 to 68.
 
 ## Rerun it
 
@@ -417,6 +438,7 @@ for today's GitHub.
 def publish() -> int:
     rows = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((WORK / "results").glob("*.json"))]
     c = counts(rows, json.loads((WORK / "review.json").read_text(encoding="utf-8")))
+    c["recall"] = json.loads((WORK / "recall" / "summary.json").read_text(encoding="utf-8"))
     over = {k: c[k] for k, limit in LIMITS.items() if c[k] > limit}
     if over:
         print(f"over the limit, not published: {over}", file=sys.stderr)

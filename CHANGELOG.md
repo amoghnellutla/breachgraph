@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-01
+
 ### Added
 
 - Attack paths from a CI job to production: a write token reaches what deploy jobs hold through the
@@ -30,6 +32,8 @@ All notable changes to this project are documented here. The format follows
   Memcached, Elasticsearch, Grafana, MinIO, Jupyter and a Docker registry, judged from their own
   defaults and settings. In Compose these are leads, since a Compose file may only be for a laptop.
 
+- `benchmarks/recall.py` measures what breachgraph misses: it scans the commit before real security
+  fixes. It found 10 of 38. See [docs/real-world.md](docs/real-world.md).
 - `breachgraph fix` pins a transitive dependency when the fix stays within its major version: npm
   `overrides`, Yarn `resolutions`, pnpm `overrides`, or a line in `requirements.txt`.
 - The MCP server offers `preview_fixes`: proved settings changes, with no files touched.
@@ -44,6 +48,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- One failed Semgrep batch on a very large repository no longer fails the whole scanner: the other
+  batches' findings are kept and the run is reported as partial.
+- A `vercel.json` or similar file in tests or examples isn't a deployment.
 - The JavaScript SQL rule no longer reports an interpolated constant or a sanitized value, which made
   up most of its leads on real code.
 - Helm charts in a directory named `charts/`, the usual layout, were taken for subcharts and never
@@ -515,7 +522,8 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.4.0...v0.5.0

@@ -10,6 +10,7 @@ results are in [docs/benchmark.md](../docs/benchmark.md).
 | `results/` | One compact summary per target: counts, tools, attack paths, blind spots |
 | `labels/` | A hand review of every reported attack path, plus scenarios breachgraph missed |
 | `corpus.py` | Scans popular real projects chosen by a written rule; `publish` builds `docs/real-world.md`, counts only, and refuses numbers over its limits. The list and per-project results stay in `.tmp/` |
+| `recall.py` | Scans the commit before each real security fix, chosen by a written rule, to measure what breachgraph misses |
 | `report.py` | Builds `docs/benchmark.md` from results and labels; `--check` fails if any path is unlabeled or the page is stale (CI runs it as a test) |
 
 ## Labeling

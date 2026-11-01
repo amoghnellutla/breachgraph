@@ -119,6 +119,7 @@ class Scanner(ABC):
         timeout = settings.timeout or ctx.config.timeout
         findings: list[Finding] = []
         done = 0
+        lost = ""  # why a batch failed, when others can stand without it
         steps: list[Step] = []
         try:
             steps = self.steps(ctx, exe)
@@ -140,7 +141,11 @@ class Scanner(ABC):
                 if step.stdout_to_output and proc.stdout:
                     step.output.write_text(proc.stdout, encoding="utf-8")
                 if not self.accept_exit(proc.returncode) or not step.output.exists():
-                    raise ScannerError(f"exit code {proc.returncode}: {_reason(proc.stderr or proc.stdout)}")
+                    why = f"exit code {proc.returncode}: {_reason(proc.stderr or proc.stdout)}"
+                    if not self.partial_results or len(steps) < 2:
+                        raise ScannerError(why)
+                    lost = why
+                    continue
                 if step.parse:
                     findings.extend(self.parse(load_json(step.output), ctx))
                 done += 1
@@ -160,6 +165,20 @@ class Scanner(ABC):
             return self._failed(started, f"timed out after {timeout}s")
         except (ScannerError, OSError, ValueError) as exc:
             return self._failed(started, str(exc))
+        if lost and not done:
+            return self._failed(started, lost)
+        if lost:
+            return ScannerOutcome(
+                ToolRun(
+                    name=self.name,
+                    status=ToolStatus.PARTIAL,
+                    version=self.version(),
+                    duration_s=round(time.monotonic() - started, 2),
+                    findings=len(findings),
+                    message=f"{len(steps) - done} of {len(steps)} batches failed ({lost})",
+                ),
+                findings,
+            )
         return ScannerOutcome(
             ToolRun(
                 name=self.name,

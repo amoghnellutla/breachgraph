@@ -15,13 +15,13 @@ listed as misses.
 | [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 560 | 548 | 0 | 0 | 0 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 601 | 601 | 0 | 1 | 1 | 0 | 0 |
 | [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 583 | 514 | 10 | 3 | 3 | 0 | 0 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 492 | 409 | 8 | 2 | 2 | 0 | 0 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 496 | 413 | 8 | 2 | 2 | 0 | 0 |
 | [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 481 | 412 | 8 | 5 | 4 | 1 | 0 |
-| [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 272 | 272 | 2 | 4 | 3 | 1 | 0 |
+| [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 273 | 273 | 2 | 4 | 3 | 1 | 0 |
 | [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 629 | 622 | 1 | 0 | 0 | 0 | 0 |
-| **Total** | | **4,333** | **4,055** | **34** | **17** | **15** | **2** | **0** |
+| **Total** | | **4,338** | **4,060** | **34** | **17** | **15** | **2** | **0** |
 
-**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,055 deduplicated findings reduce to **17 attack paths** to review first.
+**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,060 deduplicated findings reduce to **17 attack paths** to review first.
 
 Of the 15 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 5 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
 
@@ -112,12 +112,12 @@ OWASP Juice Shop is a deliberately vulnerable Node.js shop with no cloud or Kube
 
 - **true** · medium confidence · `Internet -> compose service juice-shop -> GET /profile -> Application database (Sequelize)` via Data from the request is evaluated as code, or deserialized into objects.
   The server-side template injection challenge: a username written as #{...} is passed to eval (routes/userProfile.ts:65), which runs code in the app and so can use its database connection.
-- **false** · low confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
-  A sample answer for a coding challenge (data/static/codefixes/dbSchemaChallenge_1.ts), served as text and never run. No route reaches it, so it is low confidence and doesn't gate.
 - **true** · medium confidence · `Internet -> compose service juice-shop -> GET /rest/products/search -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
   The UNION SQL injection in product search (routes/search.ts:23), reached through searchProducts. The app is reached through nginx on port 80 (infrastructure/docker-compose.yml).
 - **true** · medium confidence · `Internet -> compose service juice-shop -> POST /rest/user/login -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
   The SQL injection in the login route (routes/login.ts:34), where user input is concatenated into a Sequelize query: the challenge Juice Shop is best known for.
+- **false** · low confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
+  A sample answer for a coding challenge (data/static/codefixes/dbSchemaChallenge_1.ts), served as text and never run. No route reaches it, so it is low confidence and doesn't gate.
 
 ### online-boutique
 
@@ -150,7 +150,7 @@ The longest chains:
 - terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data`
 - terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data_science`
 - cloudgoat: `Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> AWS account administrator`
-- cloudgoat: `Internet -> Leaked access key of IAM user dev_user (assumed) -> IAM user dev_user -> DynamoDB table secrets_table`
+- cloudgoat: `Internet -> Leaked access key of IAM user starting_user (assumed) -> IAM user starting_user -> IAM role lambda_execution_role -> DynamoDB table secrets_table`
 
 ## Reproduce
 
@@ -160,4 +160,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Run with breachgraph at commit `182f9e1`, `41deea7`. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `1433c67`. Scanner versions are recorded per run in `benchmarks/results/`.

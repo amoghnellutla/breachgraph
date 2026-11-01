@@ -3,16 +3,16 @@
   "repo": "https://github.com/ine-labs/AWSGoat",
   "sha": "b24869ad455ed8d1393d00ecdc15ee638d1c1332",
   "kind": "vulnerable",
-  "breachgraph_version": "0.6.0",
-  "breachgraph_commit": "182f9e1",
-  "wall_time_s": 57.9,
+  "breachgraph_version": "0.7.0",
+  "breachgraph_commit": "1433c67",
+  "wall_time_s": 51.4,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 5,
-      "duration_s": 30.32,
+      "duration_s": 26.96,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 16,
-      "duration_s": 5.71,
+      "duration_s": 5.84,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 543,
-      "duration_s": 51.24,
+      "duration_s": 45.44,
       "message": null
     },
     {
@@ -36,15 +36,15 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 19,
-      "duration_s": 1.08,
+      "duration_s": 1.12,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "findings": 0,
-      "duration_s": 0.09,
+      "duration_s": 0.07,
       "message": null
     }
   ],
@@ -60,11 +60,12 @@
   "gating_findings": 10,
   "graph_stats": {
     "nodes": 38,
-    "edges": 42,
+    "edges": 46,
     "routes": 17,
     "workloads": 4,
     "crown_jewels": 9,
-    "paths": 3
+    "paths": 3,
+    "paths_not_shown": 0
   },
   "blind_spots": [],
   "attack_paths": [

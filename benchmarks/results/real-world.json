@@ -1,21 +1,51 @@
 {
   "date": "2026-11-01",
-  "commit": "bf2f507",
+  "commit": "1433c67",
   "projects": 51,
   "crashes": 0,
-  "median_seconds": 43.8,
-  "max_seconds": 277.1,
+  "median_seconds": 31.9,
+  "max_seconds": 223.3,
   "over_5_minutes": 0,
-  "findings": 25256,
-  "paths": 73,
-  "projects_with_paths": 18,
+  "findings": 25142,
+  "paths": 76,
+  "projects_with_paths": 19,
   "gating_paths": 2,
   "real_gating_paths": 2,
   "false_gating_paths": 0,
-  "projects_passing": 46,
-  "blocking_findings": 4,
+  "projects_passing": 48,
+  "blocking_findings": 2,
   "median_blocking_findings": 0,
   "max_blocking_findings": 1,
-  "projects_one_bug_away": 35,
-  "projects_modeling_nothing": 0
+  "projects_one_bug_away": 34,
+  "projects_modeling_nothing": 0,
+  "recall": {
+    "cases": 38,
+    "found": 10,
+    "by_weakness": {
+      "code injection": [
+        1,
+        7
+      ],
+      "command injection": [
+        6,
+        13
+      ],
+      "SSRF": [
+        0,
+        3
+      ],
+      "path traversal": [
+        3,
+        12
+      ],
+      "deserialization": [
+        0,
+        2
+      ],
+      "SQL injection": [
+        0,
+        1
+      ]
+    }
+  }
 }
