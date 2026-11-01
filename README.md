@@ -158,6 +158,9 @@ Boutique that takes 8 to 9 seconds, with exactly the findings and paths a full s
   and the report ranks the fixes that break the most paths. `breachgraph fix` writes the safe ones
   (a dependency upgrade to its fixed version, the `env:` fix for a GitHub Actions script injection)
   and with `--pr` opens one pull request per fix. Anything it can't fix safely gets a reason.
+- **It helps before there's a bug.** Most repositories have no complete path. "One bug away" lists
+  what a single new bug at each public entry would reach and what to change, and a pull request
+  is told when it widens that. This is advice and never fails a build.
 - **It says what it couldn't see.** Every report has a coverage line: how many routes, workloads,
   cloud resources, Kubernetes objects and CI jobs were modeled, and why a clean result might be
   incomplete (a scanner that didn't run, Helm charts that weren't rendered, no deployment

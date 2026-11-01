@@ -40,7 +40,18 @@ def compare(head: ScanResult, base: ScanResult) -> Comparison:
         new_findings=sum(1 for f in head.findings if f.status is Status.NEW),
         resolved_findings=sum(1 for f in base.findings if not _present(f, head_fps)),
         policy_changes=policy_changes(base.metadata.get("policy"), head.metadata.get("policy") or {}),
+        wider_exposures=_wider(head, base),
     )
+
+
+def _wider(head: ScanResult, base: ScanResult) -> list[str]:
+    """Exposures this change adds. A base report that didn't compute them says nothing."""
+    before = base.attack_graph.exposures if base.attack_graph else None
+    now = (head.attack_graph.exposures if head.attack_graph else None) or []
+    if before is None:
+        return []
+    known = {x.id for x in before}
+    return [x.id for x in now if x.id not in known]
 
 
 def _present(f: Finding, fps: set[str]) -> bool:

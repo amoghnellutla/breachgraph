@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
   JavaScript/TypeScript, Java and Go. A weakness in a helper is on every route that reaches it,
   so an SSRF one call away from a handler now makes a path. A call resolves only within the file,
   its package or what it imports; a chain is medium confidence at most and is shown as evidence.
+- One bug away: for each public service or outsider-started CI job, what a single new bug there
+  would reach, with the setting to change. Every later step must already be possible, so it never
+  assumes two bugs. It is hardening advice and never gates. A pull request is told when it widens
+  this, which a role or RBAC change does far more often than it opens a full path.
 - Routes behind a login are labelled. Guards are read from the declaration (Flask, Django, FastAPI,
   Express, NestJS, Spring, Go middleware and groups); a path through one says "needs a login" and
   ranks below anonymous paths, but is still reported and still gates. An auth-bypass finding on

@@ -415,6 +415,7 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
             )
         if ag.coverage:
             console.print(f"[dim]{escape(ag.coverage.line())}[/]")
+        _print_exposures(result)
         return
     console.print(f"\n[bold red]{len(ag.paths)} attack path(s) to crown-jewel assets[/]")
     if ag.coverage:
@@ -432,6 +433,16 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
         for c in ag.choke_points[:5]:
             loc = f" ({c.path}:{c.line})" if c.path else ""
             console.print(f"    - {escape(c.title)}{escape(loc)}, breaks {c.paths_cut} path(s)")
+    _print_exposures(result)
+
+
+def _print_exposures(result: ScanResult) -> None:
+    ag = result.attack_graph
+    if ag is None or not ag.exposures:
+        return
+    console.print(f"\n[bold]One bug away[/] ({len(ag.exposures)}): hardening advice, doesn't affect the gate")
+    for x in ag.exposures[:5]:
+        console.print(f"  - {escape(x.entry)} → {escape(x.target)}: {escape(x.harden)}")
 
 
 def _print_summary(result: ScanResult) -> None:

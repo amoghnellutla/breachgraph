@@ -7,7 +7,7 @@ from pathlib import Path
 
 from breachgraph.compare import path_changes
 from breachgraph.graph.attack import technique_url
-from breachgraph.models import AttackPathView, Finding, Priority, ScanResult, Status, ToolStatus
+from breachgraph.models import AttackPathView, ExposureView, Finding, Priority, ScanResult, Status, ToolStatus
 
 MARKER = "<!-- breachgraph-report -->"
 _MAX_CHARS = 60_000  # GitHub comments are capped at 65,536 characters
@@ -146,7 +146,33 @@ def _change_md(result: ScanResult) -> list[str]:
         out += ["### This change edits the security policy", ""]
         out += ["Settings that decide what fails this check differ from the base branch:", ""]
         out += [f"- {_plain(c, 300)}" for c in policy[:15]] + [""]
+    ag = result.attack_graph
+    wider = set(result.comparison.wider_exposures) if result.comparison else set()
+    if ag and ag.exposures and wider:
+        added = [x for x in ag.exposures if x.id in wider]
+        out += [f"### This change widens what one bug could reach ({len(added)})", ""]
+        out += [f"- {_exposure_line(x)}" for x in added[:5]] + [""]
     return out
+
+
+def _exposure_line(x: ExposureView) -> str:
+    via = "".join(f" → {_cell(n, 40)}" for n in x.via)
+    bug = " or ".join(n.replace("_", " ") for n in x.needs[:2])
+    return f"`{_cell(x.entry, 50)}`{via} → **{_cell(x.target, 50)}** (a {bug} bug); {_plain(x.harden, 120)}"
+
+
+def _exposures_md(result: ScanResult) -> list[str]:
+    ag = result.attack_graph
+    if ag is None or not ag.exposures:
+        return []
+    out = [
+        f"### One bug away ({len(ag.exposures)})",
+        "",
+        "No finding today, but a single new bug at these public entry points would reach a "
+        "high-value asset. This is hardening advice and doesn't affect the gate.",
+        "",
+    ]
+    return out + [f"- {_exposure_line(x)}" for x in ag.exposures[:8]] + [""]
 
 
 def _coverage_md(result: ScanResult) -> list[str]:
@@ -263,6 +289,7 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
 
     out += _change_md(result)
     out += _attack_paths_md(result)
+    out += _exposures_md(result)
 
     gating = [f for f in result.findings if f.gating]
     if gating:

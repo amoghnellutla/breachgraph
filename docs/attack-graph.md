@@ -217,6 +217,19 @@ attack_graph:
 Data stores and secrets get a default value of 6 even without a rule, so obvious targets are never
 missed. Set `enabled: false` to turn the whole layer off.
 
+## One bug away
+
+An attack path needs a weakness that exists today. Most healthy repositories have none, yet a
+public service whose role can read the customer bucket is one bug from a breach. So for every
+entry an outsider reaches without any weakness (a public workload, an outsider-started CI job),
+breachgraph assumes one bug there, and only there, and reports the high-value assets that would
+then be reachable. Every later step must already be possible, so a result never rests on two
+imagined bugs. A target with a real path is not repeated.
+
+These are hardening advice with the setting to change. They never fail a build. With `--compare`,
+a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
+day it is proposed, before any bug exists.
+
 ## From a route to the code it runs
 
 A finding inside a handler is on that route. A finding in a function the handler calls, directly or

@@ -332,10 +332,24 @@ class Coverage(BaseModel):
         return f"Modeled: {modeled}. Incomplete: {'; '.join(self.gaps)}."
 
 
+class ExposureView(BaseModel):
+    """One bug away: what a single new weakness at an exposed entry would reach. Advice, never a
+    reason to fail a build. None on reports from versions that didn't compute it."""
+
+    id: str
+    entry: str
+    target: str
+    target_kind: str
+    needs: list[str] = Field(default_factory=list)  # kinds of bug at the entry that would do it
+    via: list[str] = Field(default_factory=list)  # names of the nodes in between
+    harden: str = ""  # the setting that takes the target out of reach
+
+
 class AttackGraphSummary(BaseModel):
     enabled: bool = True
     paths: list[AttackPathView] = Field(default_factory=list)
     choke_points: list[ChokePointView] = Field(default_factory=list)
+    exposures: list[ExposureView] | None = None
     skipped: list[str] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
     graph: GraphExport | None = None
@@ -356,6 +370,7 @@ class Comparison(BaseModel):
     new_findings: int = 0
     resolved_findings: int = 0
     policy_changes: list[str] = Field(default_factory=list)  # gate settings that differ from the base
+    wider_exposures: list[str] = Field(default_factory=list)  # ids of exposures absent from the base
 
 
 class ScanResult(BaseModel):

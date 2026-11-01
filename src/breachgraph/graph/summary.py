@@ -7,7 +7,8 @@ import hashlib
 from breachgraph.config import AttackGraph as AttackGraphConfig
 from breachgraph.graph import AttackGraphResult
 from breachgraph.graph.attack import step_techniques
-from breachgraph.graph.model import Confidence, Graph
+from breachgraph.graph.exposure import Exposure
+from breachgraph.graph.model import Confidence, Graph, NodeKind
 from breachgraph.graph.paths import AttackPath
 from breachgraph.models import (
     AttackGraphSummary,
@@ -15,6 +16,7 @@ from breachgraph.models import (
     AttackStep,
     ChokePointView,
     Coverage,
+    ExposureView,
     Finding,
     GraphEdgeView,
     GraphExport,
@@ -96,9 +98,29 @@ def summarize(
         enabled=True,
         paths=views,
         choke_points=chokes,
+        exposures=[_exposure(x, result.graph) for x in result.exposures],
         skipped=result.skipped,
         stats=result.stats,
         graph=export_graph(result, views),
+    )
+
+
+def _exposure(x: Exposure, graph: Graph) -> ExposureView:
+    names = [graph.nodes[n].name for n in x.via]
+    identity = next((graph.nodes[n] for n in x.via if graph.nodes[n].kind is NodeKind.IDENTITY), None)
+    harden = (
+        f"limit {identity.name} so it can't reach {x.target.name}"
+        if identity
+        else f"keep {x.target.name} out of {x.entry.name}"
+    )
+    return ExposureView(
+        id=x.id,
+        entry=x.entry.name,
+        target=x.target.name,
+        target_kind=x.target.kind.value,
+        needs=[c.value for c in x.needs],
+        via=names,
+        harden=harden,
     )
 
 

@@ -328,6 +328,12 @@ ul.warn { margin: 0; padding-left: 18px; }
       {% endif %}
     </details>
     {% endif %}
+    {% if ag.exposures %}
+    <details style="margin-top: var(--s3)"{% if not ag.paths %} open{% endif %}><summary>One bug away ({{ ag.exposures | length }})</summary>
+      <p class="muted">No finding today, but a single new bug at these public entry points would reach a high-value asset. Hardening advice; it doesn't affect the gate.</p>
+      <ul>{% for x in ag.exposures %}<li><strong>{{ x.entry }}</strong>{% for n in x.via %} &rarr; {{ n }}{% endfor %} &rarr; <strong>{{ x.target }}</strong> <span class="muted">({{ x.needs | join(", ") }}; {{ x.harden }})</span></li>{% endfor %}</ul>
+    </details>
+    {% endif %}
     {% if ag.skipped %}
     <details style="margin-top: var(--s3)"><summary>Blind spots ({{ ag.skipped | length }})</summary>
       <ul class="warn">{% for s in ag.skipped %}<li>{{ s }}</li>{% endfor %}</ul>

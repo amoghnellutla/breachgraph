@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 from breachgraph.config import Config
 from breachgraph.graph.callgraph import CallGraph
 from breachgraph.graph.correlate import attach, code_units
+from breachgraph.graph.exposure import Exposure, one_bug_away
 from breachgraph.graph.model import CONTROL, INTERNET_ID, Edge, EdgeKind, Graph, Node, NodeKind, internet
 from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_paths
 from breachgraph.graph.sources.actions import ActionsSource
@@ -33,6 +34,7 @@ class AttackGraphResult:
     choke_points: list[ChokePoint]
     skipped: list[str] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
+    exposures: list[Exposure] = field(default_factory=list)
 
     @property
     def has_paths(self) -> bool:
@@ -160,4 +162,7 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
         "crown_jewels": sum(1 for n in graph.nodes.values() if n.value >= config.attack_graph.crown_value),
         "paths": len(paths),
     }
-    return AttackGraphResult(graph=graph, paths=paths, choke_points=chokes, skipped=ctx.skipped, stats=stats)
+    exposures = one_bug_away(graph, config.attack_graph.crown_value, paths)
+    return AttackGraphResult(
+        graph=graph, paths=paths, choke_points=chokes, skipped=ctx.skipped, stats=stats, exposures=exposures
+    )
