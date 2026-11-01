@@ -353,7 +353,20 @@ def attach(
                         continue
                     graph.nodes[wid].weaknesses.append(_weakness(f, cls, sure_here))
 
+    _forged_logins(findings, route_nodes)
     _unlock(graph, route_nodes)
+
+
+def _forged_logins(findings: list[Finding], route_nodes: list[tuple[Route, Node, CodeUnit | None]]) -> None:
+    """A signing key in the source opens the door a login guards: the route is no longer behind one."""
+    for f in findings:
+        if "hardcoded-signing-key" not in f.rule_id or f.status.value == "suppressed":
+            continue
+        if not_run(f.location.path):
+            continue
+        for _r, node, _unit in route_nodes:
+            if node.attrs.get("auth"):
+                node.weaknesses.append(_weakness(f, WeaknessClass.AUTH_BYPASS))
 
 
 def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]) -> None:

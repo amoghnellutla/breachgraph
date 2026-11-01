@@ -155,6 +155,12 @@ The default starting point is the internet. Two kinds of credentials are followe
   password login enabled, or an EC2 instance whose key pair's private key is in the repository,
   can be logged into by anyone who can read the repository (everyone, if it is public). With the
   VM's SSH or RDP port open to the internet, that login reaches the VM's identity.
+- **Hosted database passwords.** A settings file with a real password for a hosted database
+  (RDS, Supabase, Neon, Atlas and similar) reaches that database. Placeholders, example files and
+  private hosts don't count, because a private host says nothing about who can reach it.
+- **Signing keys.** A login token signed with a key from the source, including a fallback like
+  `process.env.JWT_SECRET || "dev"`, means a login can be forged, so routes behind a login lose
+  that label and rank with anonymous ones.
 - **IAM users.** Users, groups, inline and attached policies are evaluated like roles, and a user
   reaches a role only when its policy allows `sts:AssumeRole` on that role and the role's trust
   policy admits the user or its account.

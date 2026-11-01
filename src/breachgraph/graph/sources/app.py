@@ -23,13 +23,17 @@ from breachgraph.graph.model import (
     Graph,
     Node,
     NodeKind,
+    Weakness,
+    WeaknessClass,
     internet,
+    not_run,
 )
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.paths import iter_files
 from breachgraph.reachability.imports import ImportIndex
 
 APP_ID = "app:application"
+READER_ID = "entry:repository-reader"
 DB_PREFIX = "app:database:"
 
 # Imports that mean "this code queries a database": import name -> engine/library label.
@@ -79,6 +83,79 @@ _SETTING = re.compile(
 _SETTING_FILES = re.compile(
     r"(?:^|/)(?:\.env[^/]*|[^/]*\.ya?ml|[^/]*\.toml|[^/]*\.json|[^/]*\.ini|Dockerfile[^/]*|[^/]*\.properties)$"
 )
+
+
+_DB_URL = re.compile(
+    r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|rediss?)://[^:@/\s'\"]+:([^@/\s'\"]+)@([^/:\s'\"?]+)"
+)
+# Hosted databases answer on the internet unless someone restricted them. A private host says nothing.
+_MANAGED_HOST = re.compile(
+    r"\.(?:rds\.amazonaws\.com|supabase\.(?:co|com)|neon\.tech|mongodb\.net|psdb\.cloud|upstash\.io|"
+    r"aivencloud\.com|cockroachlabs\.cloud|database\.azure\.com|redis\.cache\.windows\.net)$",
+    re.I,
+)
+_NOT_A_PASSWORD = re.compile(
+    r"[$<{%]|^(?:pass(?:word)?|changeme|change_me|secret|example|test|x{3,}|\*+|your[-_].*)$", re.I
+)
+_EXAMPLE_FILE = re.compile(r"example|sample|template|\.dist$", re.I)
+
+
+def committed_databases(ctx: SourceContext, graph: Graph) -> None:
+    """A real password for a hosted database: reading the repository is enough to log in."""
+    for file, rel in iter_files(ctx.root, ctx.exclude):
+        if not _SETTING_FILES.search(rel) or not_run(rel) or _EXAMPLE_FILE.search(rel):
+            continue
+        if file.stat().st_size > 512_000:
+            continue
+        text = ctx.read(file) or ""
+        for m in _DB_URL.finditer(text):
+            password, host = m.group(1), m.group(2)
+            if _NOT_A_PASSWORD.search(password) or not _MANAGED_HOST.search(host):
+                continue
+            ev = Evidence(
+                path=rel, line=text.count("\n", 0, m.start()) + 1, detail="database URL", source="app"
+            )
+            _reader_reaches(graph, host, ev)
+
+
+def _reader_reaches(graph: Graph, host: str, ev: Evidence) -> None:
+    graph.add_node(internet())
+    reader = graph.add_node(
+        Node(id=READER_ID, kind=NodeKind.ENTRYPOINT, name="Anyone who can read this repository")
+    )
+    graph.add_edge(
+        Edge(
+            src=INTERNET_ID,
+            dst=READER_ID,
+            kind=EdgeKind.EXPOSES,
+            confidence=Confidence.MEDIUM,
+            evidence=[ev],
+            note="everyone, if the repository is public",
+        )
+    )
+    reader.weaknesses.append(
+        Weakness(cls=WeaknessClass.CREDENTIAL_EXPOSURE, title=f"Database password in {ev.path}", evidence=ev)
+    )
+    db = graph.add_node(
+        Node(
+            id=f"app:hosted:{host}",
+            kind=NodeKind.DATASTORE,
+            name=f"Database at {host}",
+            value=9,
+            evidence=[ev],
+        )
+    )
+    graph.add_edge(
+        Edge(
+            src=READER_ID,
+            dst=db.id,
+            kind=EdgeKind.CONNECTS_TO,
+            requires=[WeaknessClass.CREDENTIAL_EXPOSURE],
+            confidence=Confidence.MEDIUM,
+            evidence=[ev],
+            note="a hosted database answers on the internet unless someone restricted it",
+        )
+    )
 
 
 def application_assets(ctx: SourceContext, graph: Graph, index: ImportIndex, route_count: int) -> None:

@@ -184,3 +184,30 @@ rules:
     pattern-sanitizers:
       - pattern: secure_filename(...)
       - pattern: os.path.basename(...)
+  - id: breachgraph.python.hardcoded-signing-key
+    languages: [python]
+    severity: WARNING
+    message: A login token is signed with a key from the source code, so anyone who reads it can forge a login.
+    metadata:
+      cwe: ["CWE-321: Use of Hard-coded Cryptographic Key"]
+      confidence: MEDIUM
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: jwt.encode($P, "$V", ...)
+              - pattern: jwt.decode($T, "$V", ...)
+              - pattern: $APP.secret_key = "$V"
+              - pattern: $APP.config["SECRET_KEY"] = "$V"
+          - metavariable-regex:
+              metavariable: $V
+              regex: .{4,}
+      - patterns:
+          - pattern-either:
+              - pattern: os.environ.get("$K", "$V")
+              - pattern: os.getenv("$K", "$V")
+          - metavariable-regex:
+              metavariable: $K
+              regex: (?i).*(jwt|signing|session_secret|secret_key).*
+          - metavariable-regex:
+              metavariable: $V
+              regex: .{4,}

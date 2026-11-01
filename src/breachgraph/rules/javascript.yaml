@@ -176,3 +176,28 @@ rules:
           - focus-metavariable: $P
     pattern-sanitizers:
       - pattern: path.basename(...)
+  - id: breachgraph.javascript.hardcoded-signing-key
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A login token is signed with a key from the source code, so anyone who reads it can forge a login.
+    metadata:
+      cwe: ["CWE-321: Use of Hard-coded Cryptographic Key"]
+      confidence: MEDIUM
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: jwt.sign($P, "$V", ...)
+              - pattern: jwt.verify($T, "$V", ...)
+          - metavariable-regex:
+              metavariable: $V
+              regex: .{4,}
+      - patterns:
+          - pattern-either:
+              - pattern: process.env.$K || "$V"
+              - pattern: process.env.$K ?? "$V"
+          - metavariable-regex:
+              metavariable: $K
+              regex: (?i).*(jwt|signing|session_secret|secret_key|auth_secret).*
+          - metavariable-regex:
+              metavariable: $V
+              regex: .{4,}

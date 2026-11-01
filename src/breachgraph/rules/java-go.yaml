@@ -198,3 +198,21 @@ rules:
       - pattern: http.ServeFile(...)
     pattern-sanitizers:
       - pattern: filepath.Base(...)
+  - id: breachgraph.java.hardcoded-signing-key
+    languages: [java]
+    severity: WARNING
+    message: A login token is signed with a key from the source code, so anyone who reads it can forge a login.
+    metadata:
+      cwe: ["CWE-321: Use of Hard-coded Cryptographic Key"]
+      confidence: MEDIUM
+    pattern-either:
+      - pattern: Algorithm.HMAC256("...")
+      - pattern: Algorithm.HMAC512("...")
+  - id: breachgraph.go.hardcoded-signing-key
+    languages: [go]
+    severity: WARNING
+    message: A login token is signed with a key from the source code, so anyone who reads it can forge a login.
+    metadata:
+      cwe: ["CWE-321: Use of Hard-coded Cryptographic Key"]
+      confidence: MEDIUM
+    pattern: $T.SignedString([]byte("..."))

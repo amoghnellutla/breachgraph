@@ -13,7 +13,7 @@ from breachgraph.graph.exposure import Exposure, one_bug_away
 from breachgraph.graph.model import CONTROL, INTERNET_ID, Edge, EdgeKind, Graph, Node, NodeKind, internet
 from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_paths
 from breachgraph.graph.sources.actions import ActionsSource
-from breachgraph.graph.sources.app import application_assets
+from breachgraph.graph.sources.app import application_assets, committed_databases
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.hosting import HostingSource
 from breachgraph.graph.sources.images import ImageSource
@@ -142,6 +142,7 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
     routes = RouteSource().collect(ctx)
     application_assets(ctx, graph, collect_imports(ctx), len(routes))
     actions.delivery(graph)  # once every workload and what it can reach is known
+    committed_databases(ctx, graph)
 
     assumed_entries(graph, config.attack_graph.entry_points)
     name = repo_name or PurePosixPath(target.resolve().as_posix()).name
