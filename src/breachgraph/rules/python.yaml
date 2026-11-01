@@ -211,3 +211,24 @@ rules:
           - metavariable-regex:
               metavariable: $V
               regex: .{4,}
+  - id: breachgraph.python.model-output-execution
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: Text from a language model reaches code execution. Prompt injection in anything the model reads then runs here.
+    metadata:
+      cwe: ["CWE-94: Improper Control of Generation of Code"]
+      confidence: MEDIUM
+    pattern-sources:
+      - pattern: $C.chat.completions.create(...)
+      - pattern: $C.responses.create(...)
+      - pattern: $C.messages.create(...)
+      - pattern: $M.generate_content(...)
+      - pattern: $CHAIN.invoke(...)
+      - pattern: $LLM.predict(...)
+    pattern-sinks:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: os.system(...)
+      - pattern: subprocess.$F(..., shell=True, ...)
+      - pattern: $CURSOR.execute(...)

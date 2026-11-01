@@ -45,3 +45,12 @@ def test_an_example_workload_does_not_inherit_the_only_dockerfile() -> None:
     other = Graph()
     other.add_node(workload())
     assert [u.workloads for u in code_units(other, [""], "repo")] == [["w"]]
+
+
+def test_model_output_at_a_sink_is_a_lead_until_outsiders_text_is_shown_to_reach_it() -> None:
+    f = make_finding(path="app.py", rule_id="breachgraph.python.model-output-execution")
+    f.cwe = ["CWE-94"]
+    graph = Graph()
+    node = graph.add_node(workload())
+    attach(graph, [f], [], [CodeUnit("", ["w"], Confidence.HIGH)])
+    assert [w.confidence for w in node.weaknesses] == [Confidence.LOW]

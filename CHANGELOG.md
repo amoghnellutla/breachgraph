@@ -21,6 +21,9 @@ All notable changes to this project are documented here. The format follows
   writing to the bucket that holds its code. Writing to a bucket or table that triggers a function
   reaches that function, though going further still needs a weapon in it. A bucket that holds
   Terraform state counts as a crown jewel. Eight more IAM escalation methods.
+- New rule `model-output-execution` for Python, JavaScript and TypeScript: text from a language model
+  reaches `eval`, a shell or SQL. These are leads, since prompt injection depends on what the model
+  reads.
 - Whoever controls a workload also has any open service beside it, within what NetworkPolicy allows,
   and a server-side request reaches one that speaks HTTP.
 - Stock services that answer anyone are a way in with no bug in your code: Redis, MongoDB,

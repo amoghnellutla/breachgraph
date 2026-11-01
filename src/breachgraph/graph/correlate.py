@@ -301,7 +301,9 @@ def attach(
         # A guessed secret (see scanners/gitleaks.py) can't carry a path that gates either.
         guess = f.category is Category.SECRETS and f.confidence.value == "low"
         harmless = calls is not None and _expands_trusted_text(f, calls.root)
-        weak = constant or guess or harmless or _less_than_control(f)
+        # Whether outsiders' text reaches the model isn't in the code around the call.
+        indirect = "model-output" in f.rule_id
+        weak = constant or guess or harmless or indirect or _less_than_control(f)
         sure = Confidence.LOW if weak else Confidence.HIGH
         # 1. code findings inside a route handler
         hit = False
