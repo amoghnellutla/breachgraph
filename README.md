@@ -166,6 +166,8 @@ Boutique that takes 8 to 9 seconds, with exactly the findings and paths a full s
 - **It helps before there's a bug.** Most repositories have no complete path. "One bug away" lists
   what a single new bug at each public entry would reach and what to change, and a pull request
   is told when it widens that. This is advice and never fails a build.
+- **It explains itself.** `breachgraph why app.py:23` says why a finding is or isn't on a path,
+  and which step is missing.
 - **It says what it couldn't see.** Every report has a coverage line: how many routes, workloads,
   cloud resources, Kubernetes objects and CI jobs were modeled, and why a clean result might be
   incomplete (a scanner that didn't run, Helm charts that weren't rendered, no deployment

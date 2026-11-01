@@ -29,7 +29,7 @@ from breachgraph.config import CONFIG_FILENAMES, ConfigError, find_config, load_
 from breachgraph.integrations import notify
 from breachgraph.integrations.github import GitHubClient, GitHubContext, write_step_summary
 from breachgraph.models import Priority, ScanResult, ToolRun, ToolStatus
-from breachgraph.paths import project_name
+from breachgraph.paths import normalize_path, project_name
 from breachgraph.pipeline import PipelineError, ScanOptions, scan
 from breachgraph.policy import evaluate_gate, write_baseline
 from breachgraph.reporters import FORMATS, markdown, write_reports
@@ -576,6 +576,43 @@ def graph_cmd(
         output.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
         console.print(f"[dim]graph written to {output}[/]")
     raise typer.Exit(1 if summary.gating_paths else 0)
+
+
+@app.command("why")
+def why_cmd(
+    location: Annotated[str, typer.Argument(help="A finding's location: path/to/file or path/to/file:line.")],
+    path: Annotated[Path, typer.Argument(help="Repository the report was made from.")] = Path(),
+    report: Annotated[
+        Path | None, typer.Option("--report", "-r", help="breachgraph.json (default: from the last scan).")
+    ] = None,
+) -> None:
+    """Explain why a finding is, or isn't, part of an attack path."""
+    from breachgraph.graph import build_attack_graph
+    from breachgraph.graph.why import explain
+
+    target = path.resolve()
+    source = report or target / "breachgraph-report" / "breachgraph.json"
+    try:
+        result = ScanResult.model_validate_json(source.read_text(encoding="utf-8"))
+        config = load_config(find_config(target))
+    except (OSError, ValidationError, ConfigError) as exc:
+        console.print(f"[red]error:[/] cannot read {source} ({exc}). Run: breachgraph scan {path}")
+        raise typer.Exit(2) from exc
+    file, _, line = location.partition(":")
+    file = normalize_path(file)
+    found = [
+        f
+        for f in result.findings
+        if f.location.path == file and (not line or f.location.start_line == int(line))
+    ]
+    if not found:
+        console.print(f"No finding at {escape(location)} in {source}.")
+        raise typer.Exit(1)
+    ag = build_attack_graph(target, result.findings, config)
+    for f in found:
+        console.print(f"[bold]{escape(f.title)}[/] ({escape(f.location.path)}:{f.location.start_line})")
+        for sentence in explain(f, ag):
+            console.print(f"  {escape(sentence)}")
 
 
 @app.command("setup")
