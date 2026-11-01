@@ -23,7 +23,8 @@ _GUARD = re.compile(
     r"authenticate\w*|authori[sz]e\w*|auth_?(?:middleware|guard|required)\w*|"
     r"get_current_\w*user\w*|current_active_user|verify_\w*token\w*|"
     r"PreAuthorize|Secured|RolesAllowed|UseGuards|AuthGuard|withAuth|JwtAuthGuard|"
-    r"AuthRequired|AuthMiddleware|JWTAuth\w*|RequireAuth\w*|BasicAuth)\b",
+    r"AuthRequired|AuthMiddleware|JWTAuth\w*|RequireAuth\w*|BasicAuth|"
+    r"\w*(?:protected|authed|authenticated|private|admin)Procedure|RequiresAuthentication|RequiresUser)\b",
     re.I,
 )
 _BARE_AUTH = re.compile(r"[,(]\s*(auth)(?:\(\))?\s*[,)]")
@@ -35,6 +36,7 @@ _USE = re.compile(r"\b(\w+)\.[Uu]se\(\s*(?:['\"`]([^'\"`]*)['\"`]\s*,)?(.*)\)\s*
 _GROUP = re.compile(r"\b(\w+)\s*:?=\s*\w+\.Group\(\s*['\"`]([^'\"`]*)['\"`]\s*,(.*)\)", re.M)
 _CLASS = re.compile(r"^\s*(?:export\s+|public\s+|abstract\s+|final\s+)*class\s+\w+", re.M)
 _RECEIVER = re.compile(r"^\s*(\w+)\s*\.")
+_PERMISSIONS = re.compile(r"permission_classes\s*=.*\b(Is\w*(?:Authenticated|Admin)\w*)")
 
 
 def _named(code: str) -> str:
@@ -53,7 +55,7 @@ def _declaration(lines: list[str], route: Route) -> str:
     while first > 0 and lines[first - 1].lstrip().startswith("@"):
         first -= 1
     text = "\n".join(lines[first : route.end_line])
-    if route.framework in ("express", "go", "nextjs"):
+    if route.framework in ("express", "go", "nextjs", "trpc"):
         return text[: m.start()] if (m := _BODY.search(text)) else text
     # Decorators and annotations come first; stop at the end of the signature.
     return text[: m.end()] if (m := re.search(r"\)\s*(?:->[^:\n]+)?:\s*$|\{\s*$", text, re.M)) else text
@@ -69,6 +71,16 @@ def _file_guards(text: str) -> list[tuple[str, str, int, str]]:
                 prefix = "" if rx is _GROUP else m.group(2) or ""
                 out.append((m.group(1), prefix, text.count("\n", 0, m.start()) + 1, name))
     return out
+
+
+def _drf_guard(lines: list[str], start: int) -> str:
+    """`permission_classes = [IsAuthenticated]` in the class a method belongs to."""
+    for line in reversed(lines[: start - 1]):
+        if m := _PERMISSIONS.search(line):
+            return m.group(1)
+        if line.startswith("class "):
+            return ""
+    return ""
 
 
 def annotate(routes: list[Route], text: str) -> None:
@@ -87,6 +99,8 @@ def annotate(routes: list[Route], text: str) -> None:
             continue
         receiver = _RECEIVER.match(lines[r.start_line - 1])
         r.auth = _named(_declaration(lines, r)) or class_guard
+        if not r.auth and r.framework == "drf":
+            r.auth = _drf_guard(lines, r.start_line)
         for var, prefix, line, name in guards:
             if r.auth:
                 break

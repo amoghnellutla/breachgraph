@@ -1,8 +1,9 @@
 """HTTP route discovery with tree-sitter: which code is reachable from a request, and where.
 
-Supported: Python (Flask, FastAPI, Starlette-style decorators, Django urls.py), JavaScript /
-TypeScript (Express/Koa/Fastify-style routers, NestJS decorators, Next.js route files),
-Java (Spring MVC annotations), Go (net/http, Gin, Echo, Chi, gorilla/mux).
+Supported: Python (Flask, FastAPI, Starlette-style decorators, Django urls.py, class-based views
+and Django REST Framework), JavaScript / TypeScript (Express/Koa/Fastify/Hono-style routers, NestJS
+decorators, Next.js route files, tRPC procedures), Java (Spring MVC and JAX-RS annotations), Go
+(net/http, Gin, Echo, Chi, gorilla/mux).
 
 Each route records the handler's line range so scanner findings inside it can be attached.
 """
@@ -166,10 +167,53 @@ def routes_in_file(path: Path, rel: str) -> list[Route]:
 # ------------------------------------------------------------------ Python
 
 
-def _python(root: ts.Node, rel: str) -> list[Route]:
+# Class-based views: each HTTP-named method, and DRF's @action methods, is a route.
+_VIEW_BASE = re.compile(r"ViewSet\b|APIView\b|\bMethodView\b|\b(?:views\.)?View\b|Mixin.*ViewSet")
+_VIEW_METHODS = {
+    "get": "GET",
+    "post": "POST",
+    "put": "PUT",
+    "patch": "PATCH",
+    "delete": "DELETE",
+    "list": "GET",
+    "retrieve": "GET",
+    "create": "POST",
+    "update": "PUT",
+    "partial_update": "PATCH",
+    "destroy": "DELETE",
+}
+
+
+def _class_views(root: ts.Node, rel: str) -> list[Route]:
     out: list[Route] = []
+    for cls in (n for n in _walk(root) if n.type == "class_definition"):
+        if not _VIEW_BASE.search(_text(cls.child_by_field_name("superclasses"))):
+            continue
+        name = _text(cls.child_by_field_name("name"))
+        body = cls.child_by_field_name("body")
+        for item in body.children if body else []:
+            fn = item.child_by_field_name("definition") if item.type == "decorated_definition" else item
+            if fn is None or fn.type != "function_definition":
+                continue
+            method = _text(fn.child_by_field_name("name"))
+            action = item.type == "decorated_definition" and "action(" in _text(item).split("def ")[0]
+            if method in _VIEW_METHODS or action:
+                start, end = _lines(item)
+                verb = _VIEW_METHODS.get(method, "ANY")
+                out.append(Route(verb, f"/{name}/{method}", rel, start, end, method, "drf"))
+    return out
+
+
+def _python(root: ts.Node, rel: str) -> list[Route]:
+    out: list[Route] = _class_views(root, rel)
     funcs = {_text(n.child_by_field_name("name")): n for n in _walk(root) if n.type == "function_definition"}
     for n in _walk(root):
+        if n.type == "call" and _text(n.child_by_field_name("function")).endswith(".add_url_rule"):
+            args = n.child_by_field_name("arguments")
+            first = next((a for a in (args.children if args else []) if a.type == "string"), None)
+            if (rule := _string(first)) is not None:
+                start, end = _lines(n)
+                out.append(Route("ANY", rule, rel, start, end, "<inline>", "flask"))
         if n.type == "decorated_definition":
             fn = n.child_by_field_name("definition")
             if fn is None or fn.type != "function_definition":
@@ -226,8 +270,27 @@ def _python(root: ts.Node, rel: str) -> list[Route]:
 _NEXT_ROUTE = re.compile(r"(?:^|/)(?:pages/api/(.+?)|app/(.*?)/?route)\.(?:js|jsx|ts|tsx|mjs)$")
 
 
-def _javascript(root: ts.Node, rel: str, path: Path) -> list[Route]:
+def _trpc(root: ts.Node, rel: str) -> list[Route]:
+    """`getUser: protectedProcedure.input(...).query(async ...)` inside a router."""
     out: list[Route] = []
+    for pair in (n for n in _walk(root) if n.type == "pair"):
+        value = pair.child_by_field_name("value")
+        if value is None or value.type != "call_expression":
+            continue
+        func = value.child_by_field_name("function")
+        if func is None or func.type != "member_expression":
+            continue
+        verb = _text(func.child_by_field_name("property"))
+        chain = _text(func.child_by_field_name("object"))
+        if verb in ("query", "mutation") and re.search(r"procedure\b", chain, re.I):
+            start, end = _lines(pair)
+            name = _text(pair.child_by_field_name("key")).strip("'\"")
+            out.append(Route("POST", f"/trpc/{name}", rel, start, end, name, "trpc"))
+    return out
+
+
+def _javascript(root: ts.Node, rel: str, path: Path) -> list[Route]:
+    out: list[Route] = _trpc(root, rel)
     m = _NEXT_ROUTE.search(rel)
     if m:
         next_url = "/" + (("api/" + m.group(1)) if m.group(1) else (m.group(2) or ""))
@@ -289,6 +352,8 @@ def _javascript(root: ts.Node, rel: str, path: Path) -> list[Route]:
 # ------------------------------------------------------------------ Java (Spring)
 
 _SPRING = re.compile(r"@(Get|Post|Put|Patch|Delete|Request)Mapping\b(?:\((.*)\))?", re.S)
+_JAXRS_VERB = re.compile(r"@(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)")
+_JAXRS_PATH = re.compile(r"@Path\(\s*\"([^\"]*)\"")
 
 
 def _spring_path(args: str | None) -> str:
@@ -298,15 +363,37 @@ def _spring_path(args: str | None) -> str:
     return m.group(1) if m else ""
 
 
+def _jaxrs(cls: ts.Node, rel: str, prefix: str) -> list[Route]:
+    """JAX-RS: `@GET` on a method, with `@Path` on the class and optionally the method."""
+    out: list[Route] = []
+    body = cls.child_by_field_name("body")
+    for meth in (c for c in (body.children if body else []) if c.type == "method_declaration"):
+        mmods = next((c for c in meth.children if c.type == "modifiers"), None)
+        notes = [_text(a) for a in (mmods.children if mmods else [])]
+        verb = next((n[1:] for n in notes if _JAXRS_VERB.fullmatch(n)), None)
+        if verb is None:
+            continue
+        sub = next((m.group(1) for n in notes if (m := _JAXRS_PATH.match(n))), "")
+        url = "/" + "/".join(p.strip("/") for p in (prefix, sub) if p.strip("/"))
+        start, end = _lines(meth)
+        out.append(Route(verb, url, rel, start, end, _text(meth.child_by_field_name("name")), "jaxrs"))
+    return out
+
+
 def _java(root: ts.Node, rel: str) -> list[Route]:
     out: list[Route] = []
     for cls in (n for n in _walk(root) if n.type == "class_declaration"):
         prefix = ""
         mods = next((c for c in cls.children if c.type == "modifiers"), None)
+        jaxrs = ""
         for ann in mods.children if mods else []:
+            if jp := _JAXRS_PATH.match(_text(ann)):
+                jaxrs = jp.group(1)
             m = _SPRING.match(_text(ann))
             if m and m.group(1) == "Request":
                 prefix = _spring_path(m.group(2))
+        if jaxrs:
+            out += _jaxrs(cls, rel, jaxrs)
         body = cls.child_by_field_name("body")
         for meth in (c for c in (body.children if body else []) if c.type == "method_declaration"):
             mmods = next((c for c in meth.children if c.type == "modifiers"), None)

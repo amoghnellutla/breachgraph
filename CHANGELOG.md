@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows
   JavaScript/TypeScript, Java and Go. A weakness in a helper is on every route that reaches it,
   so an SSRF one call away from a handler now makes a path. A call resolves only within the file,
   its package or what it imports; a chain is medium confidence at most and is shown as evidence.
+- More routes are seen: Django REST Framework and class-based views, Flask `MethodView` and
+  `add_url_rule`, JAX-RS, and tRPC procedures, with their permission classes and protected
+  procedures read as guards. Each was found missing by measuring real projects.
 - `breachgraph setup` installs every scanner without Docker, at the versions the image pins: binaries
   checked against recorded SHA-256 values, Python scanners from the hash-pinned locks. Tools already
   on your PATH keep being used.
