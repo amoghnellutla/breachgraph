@@ -11,19 +11,19 @@ listed as misses.
 
 | Project | Kind | Scanner findings | After dedupe | Blocking findings | Attack paths | True | False | Unclear |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 1,205 | 1,089 | 52 | 2 | 2 | 0 | 0 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 947 | 840 | 21 | 0 | 0 | 0 | 0 |
-| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 1,667 | 1,446 | 59 | 1 | 1 | 0 | 0 |
-| [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 913 | 786 | 38 | 3 | 3 | 0 | 0 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 607 | 506 | 42 | 2 | 2 | 0 | 0 |
-| [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 509 | 413 | 28 | 5 | 4 | 1 | 0 |
-| [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 447 | 411 | 100 | 2 | 2 | 0 | 0 |
-| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 1,161 | 991 | 9 | 0 | 0 | 0 | 0 |
-| **Total** | | **7,456** | **6,482** | **349** | **15** | **14** | **1** | **0** |
+| [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 715 | 677 | 51 | 2 | 2 | 0 | 0 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 560 | 548 | 8 | 0 | 0 | 0 | 0 |
+| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 601 | 601 | 41 | 1 | 1 | 0 | 0 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 583 | 514 | 31 | 3 | 3 | 0 | 0 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 497 | 414 | 29 | 2 | 2 | 0 | 0 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 481 | 412 | 28 | 5 | 4 | 1 | 0 |
+| [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 272 | 272 | 23 | 4 | 3 | 1 | 0 |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 629 | 622 | 7 | 0 | 0 | 0 | 0 |
+| **Total** | | **4,338** | **4,060** | **218** | **17** | **15** | **2** | **0** |
 
-**Path precision: 93%** (14 of 15 decided paths are real attack chains). 6,482 deduplicated findings reduce to **15 attack paths** to review first.
+**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,060 deduplicated findings reduce to **17 attack paths** to review first.
 
-Of the 14 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 4 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
+Of the 15 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 5 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
 
 ## Per project
 
@@ -70,7 +70,7 @@ AWSGoat runs a serverless blog (API Gateway REST -> Lambda -> DynamoDB) and an E
   aws_s3_bucket_acl public-read with every public access block disabled (modules/module-1/main.tf:3387).
 - **true** · medium confidence · `Internet -> S3 bucket dev`
   aws_s3_bucket_acl public-read with every public access block disabled (modules/module-1/main.tf:3307).
-- **true** · medium confidence · `Internet -> Lambda lambda_ba_data -> DynamoDB table blog-posts` via Detected user input used to manually construct a SQL string.
+- **true** · medium confidence · `Internet -> Lambda lambda_ba_data -> DynamoDB table blog-posts` via A function's parameter is concatenated into a SQL statement.
   User input is concatenated into a PartiQL statement passed to DynamoDB execute_statement (resources/lambda/data/lambda_function.py:503), behind an unauthenticated API Gateway method. The injection reads the blog-users table; the path names blog-posts because the function's role can read both and one target is reported per set of weaknesses.
 - **miss**: Module 2, ECS task / EC2 privilege escalation. Starts from command execution in a container image with no code in this repository and from the instance metadata, which breachgraph models only behind an application weakness.
 
@@ -100,7 +100,7 @@ GCPGoat runs public Cloud Functions, GCE instances and several buckets. breachgr
   allUsers is granted a custom role with object read permissions (main.tf:69).
 - **true** · high confidence · `Internet -> GCS bucket data_bucket`
   allUsers is granted a custom role with object read permissions (main.tf:55).
-- **false** · low confidence · `Internet -> Cloud Function backend-function -> App Engine default service account -> GCS bucket bucket` via Detected a dynamic value being used with urllib.
+- **false** · low confidence · `Internet -> Cloud Function backend-function -> App Engine default service account -> GCS bucket bucket` via A function's parameter is used as a URL to fetch.
   The SSRF is real (urllib.request.urlopen on a user URL, cloud_function/data/main.py:28), but the code sends a fixed User-Agent header, so it cannot add the Metadata-Flavor header the metadata server requires and no token can be taken. breachgraph marks the step low confidence (the header requirement, and Editor-by-default for the default account), which keeps it from gating, but it cannot tell whether an SSRF controls headers.
 - **miss**: Developer VM -> admin VM privilege escalation (GCE metadata and SSH keys). Starts from SSH access with credentials not present in the repository.
 
@@ -108,12 +108,16 @@ GCPGoat runs public Cloud Functions, GCE instances and several buckets. breachgr
 
 Node.js web application vulnerabilities, dependencies and CI workflows. Commit `717f5efa886b`.
 
-OWASP Juice Shop is a deliberately vulnerable Node.js shop with no cloud or Kubernetes configuration. Its infrastructure/docker-compose.yml runs the app behind an nginx proxy that publishes ports 80 and 443, and the code talks to its database through Sequelize. breachgraph models that database as the crown jewel and reports two independent ways to it.
+OWASP Juice Shop is a deliberately vulnerable Node.js shop with no cloud or Kubernetes configuration. Its infrastructure/docker-compose.yml runs the app behind an nginx proxy that publishes ports 80 and 443, and the code talks to its database through Sequelize. breachgraph models that database as the crown jewel and reports three independent ways to it, each named by the route that reaches it.
 
-- **true** · medium confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Found data from an Express or Next web request flowing to `eval`.
-  Both paths are real. One is the SQL injection in the login route (routes/login.ts:34, user input concatenated into a Sequelize query), the challenge Juice Shop is best known for. The other is its server-side template injection challenge: a username written as #{...} is passed to eval (routes/userProfile.ts:65), which runs code in the app and so can use its database connection. The app is reached through the nginx service that publishes port 80 (infrastructure/docker-compose.yml).
-- **true** · medium confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Detected a sequelize statement that is tainted by user-input.
-  Both paths are real. One is the SQL injection in the login route (routes/login.ts:34, user input concatenated into a Sequelize query), the challenge Juice Shop is best known for. The other is its server-side template injection challenge: a username written as #{...} is passed to eval (routes/userProfile.ts:65), which runs code in the app and so can use its database connection. The app is reached through the nginx service that publishes port 80 (infrastructure/docker-compose.yml).
+- **true** · medium confidence · `Internet -> compose service juice-shop -> GET /profile -> Application database (Sequelize)` via Data from the request is evaluated as code, or deserialized into objects.
+  The server-side template injection challenge: a username written as #{...} is passed to eval (routes/userProfile.ts:65), which runs code in the app and so can use its database connection.
+- **false** · low confidence · `Internet -> compose service juice-shop -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
+  A sample answer for a coding challenge (data/static/codefixes/dbSchemaChallenge_1.ts), served as text and never run. No route reaches it, so it is low confidence and doesn't gate.
+- **true** · medium confidence · `Internet -> compose service juice-shop -> GET /rest/products/search -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
+  The UNION SQL injection in product search (routes/search.ts:23), reached through searchProducts. The app is reached through nginx on port 80 (infrastructure/docker-compose.yml).
+- **true** · medium confidence · `Internet -> compose service juice-shop -> POST /rest/user/login -> Application database (Sequelize)` via Data from the request is built into a SQL statement.
+  The SQL injection in the login route (routes/login.ts:34), where user input is concatenated into a Sequelize query: the challenge Juice Shop is best known for.
 
 ### online-boutique
 
@@ -133,7 +137,7 @@ points on, add the paths below. They are not hand-labeled and are not part of th
 | Project | From a leaked access key | From inside the cluster |
 |---|---:|---:|
 | terragoat | 6 | 0 |
-| kubernetes-goat | 0 | 1 |
+| kubernetes-goat | 0 | 0 |
 | cloudgoat | 26 | 0 |
 | awsgoat | 0 | 0 |
 | azuregoat | 0 | 0 |
@@ -145,7 +149,6 @@ The longest chains:
 
 - terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data`
 - terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data_science`
-- kubernetes-goat: `Internet -> Inside the cluster (assumed breach) -> Deployment default/health-check-deployment -> POST / -> Kubernetes worker nodes`
 - cloudgoat: `Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> AWS account administrator`
 - cloudgoat: `Internet -> Leaked access key of IAM user dev_user (assumed) -> IAM user dev_user -> DynamoDB table secrets_table`
 
@@ -157,4 +160,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Run with breachgraph at commit `eaa0d77`. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `9a0cdfe`. Scanner versions are recorded per run in `benchmarks/results/`.

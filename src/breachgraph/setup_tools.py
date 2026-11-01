@@ -140,3 +140,8 @@ def install_python(tool: str) -> Path:
 
 def targets() -> list[str]:
     return [*pins()["binaries"], *PYTHON_TOOLS]
+
+
+def default_targets() -> list[str]:
+    """What a scan runs by default. Checkov is opt-in: `setup --only checkov`."""
+    return [t for t in targets() if t != "checkov"]

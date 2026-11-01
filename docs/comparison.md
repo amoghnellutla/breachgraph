@@ -7,7 +7,7 @@ doesn't, and when another tool is the better choice.
 
 ## Compared with running the scanners yourself
 
-breachgraph runs Semgrep, Gitleaks, Trivy, Checkov and zizmor, so this is the closest comparison.
+breachgraph runs Semgrep, Gitleaks, Trivy and zizmor (Checkov is optional), so this is the closest comparison.
 
 | | Scanners on their own | breachgraph |
 |---|---|---|

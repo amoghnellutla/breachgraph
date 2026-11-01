@@ -3,16 +3,16 @@
   "repo": "https://github.com/ine-labs/AWSGoat",
   "sha": "b24869ad455ed8d1393d00ecdc15ee638d1c1332",
   "kind": "vulnerable",
-  "breachgraph_version": "0.4.0",
-  "breachgraph_commit": "eaa0d77",
-  "wall_time_s": 106.0,
+  "breachgraph_version": "0.6.0",
+  "breachgraph_commit": "9a0cdfe",
+  "wall_time_s": 40.4,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
-      "findings": 146,
-      "duration_s": 81.82,
+      "findings": 5,
+      "duration_s": 20.75,
       "message": null
     },
     {
@@ -20,23 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 16,
-      "duration_s": 10.61,
+      "duration_s": 4.36,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 513,
-      "duration_s": 86.08,
-      "message": null
-    },
-    {
-      "name": "checkov",
-      "status": "ok",
-      "version": "3.3.26",
-      "findings": 219,
-      "duration_s": 18.48,
+      "findings": 543,
+      "duration_s": 34.85,
       "message": null
     },
     {
@@ -44,28 +36,28 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 19,
-      "duration_s": 0.94,
+      "duration_s": 0.91,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.4.0",
+      "version": "0.6.0",
       "findings": 0,
-      "duration_s": 0.06,
+      "duration_s": 0.3,
       "message": null
     }
   ],
-  "raw_findings": 913,
-  "findings": 786,
-  "multi_tool_findings": 60,
+  "raw_findings": 583,
+  "findings": 514,
+  "multi_tool_findings": 0,
   "by_priority": {
-    "P1": 37,
-    "P2": 177,
-    "P3": 414,
-    "P4": 158
+    "P1": 31,
+    "P2": 107,
+    "P3": 207,
+    "P4": 169
   },
-  "gating_findings": 38,
+  "gating_findings": 31,
   "graph_stats": {
     "nodes": 38,
     "edges": 42,
@@ -105,29 +97,29 @@
       "gating": true,
       "score": 11.05,
       "weapons": [
-        "Detected user input used to manually construct a SQL string."
+        "A function's parameter is concatenated into a SQL statement."
       ],
       "evidence": [
         "modules/module-1/main.tf:240",
-        "modules/module-1/resources/lambda/data/lambda_function.py:503"
+        "modules/module-1/resources/lambda/data/lambda_function.py:505"
       ]
     }
   ],
   "choke_points": [
     {
-      "title": "Detected user input used to manually construct a SQL string.",
+      "title": "A function's parameter is concatenated into a SQL statement.",
       "paths_cut": 1,
-      "at": "modules/module-1/resources/lambda/data/lambda_function.py:503"
+      "at": "modules/module-1/resources/lambda/data/lambda_function.py:505"
     },
     {
-      "title": "Detected user input used to manually construct a SQL string.",
+      "title": "A function's parameter is concatenated into a SQL statement.",
       "paths_cut": 1,
-      "at": "modules/module-1/resources/lambda/data/lambda_function.py:509"
+      "at": "modules/module-1/resources/lambda/data/lambda_function.py:511"
     },
     {
-      "title": "Detected user input used to manually construct a SQL string.",
+      "title": "A function's parameter is concatenated into a SQL statement.",
       "paths_cut": 1,
-      "at": "modules/module-1/resources/lambda/data/lambda_function.py:515"
+      "at": "modules/module-1/resources/lambda/data/lambda_function.py:516"
     }
   ],
   "assumed_paths": []

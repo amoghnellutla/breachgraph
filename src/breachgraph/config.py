@@ -82,6 +82,9 @@ class TrivyConfig(ScannerConfig):
 
 
 class CheckovConfig(ScannerConfig):
+    # Off by default: on the benchmark no attack path depends on it, Trivy already checks
+    # infrastructure files, and it was the slowest scanner and 39% of all findings.
+    enabled: bool = False
     frameworks: list[str] = Field(default_factory=list)  # empty = checkov's auto-detection
 
 

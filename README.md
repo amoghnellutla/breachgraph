@@ -11,7 +11,7 @@ finding as fixed and watch the paths it breaks disappear. Nothing to install.
 [![PyPI](https://img.shields.io/pypi/v/breachgraph.svg)](https://pypi.org/project/breachgraph/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-breachgraph runs Semgrep, Gitleaks, Trivy, Checkov and zizmor on your repository, then reads your
+breachgraph runs Semgrep, Gitleaks, Trivy and zizmor on your repository, then reads your
 code, Kubernetes manifests, Terraform (AWS, Azure, GCP) and GitHub Actions workflows to build one
 graph of how they connect. It reports the **attack paths**: an SSRF on a public route, in a pod on a
 node whose role can read the customer bucket, is a breach, even though each scanner saw only one
@@ -26,18 +26,19 @@ healthy control. Every path it reported was checked by hand.
 <!-- benchmark-table:start -->
 | Project | Findings after dedupe | Attack paths | Real |
 |---|---:|---:|---:|
-| [terragoat](https://github.com/bridgecrewio/terragoat) | 1,089 | 2 | 2 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 840 | 0 | 0 |
-| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 1,446 | 1 | 1 |
-| [awsgoat](https://github.com/ine-labs/AWSGoat) | 786 | 3 | 3 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | 506 | 2 | 2 |
-| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 413 | 5 | 4 |
-| [juice-shop](https://github.com/juice-shop/juice-shop) | 411 | 2 | 2 |
-| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 991 | 0 | 0 |
-| **Total** | **6,482** | **15** | **14** |
+| [terragoat](https://github.com/bridgecrewio/terragoat) | 677 | 2 | 2 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 548 | 0 | 0 |
+| [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 601 | 1 | 1 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | 514 | 3 | 3 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | 414 | 2 | 2 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 412 | 5 | 4 |
+| [juice-shop](https://github.com/juice-shop/juice-shop) | 272 | 4 | 3 |
+| [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 622 | 0 | 0 |
+| **Total** | **4,060** | **17** | **15** |
 
-6,482 findings come down to 15 attack paths, and 14 of them are real chains an
-attacker could use (93% precision). The control project gets none.
+4,060 findings come down to 17 attack paths, and 15 of them are real chains an
+attacker could use (88% precision). Of the 15 that block a merge, 15 are real;
+the rest are low confidence and only reported. The control project gets none.
 <!-- benchmark-table:end -->
 
 The method, every path with the reason it is or isn't real, the scenarios breachgraph missed, and
@@ -258,4 +259,4 @@ in breachgraph privately as described in [SECURITY.md](SECURITY.md).
 ## License
 
 [Apache-2.0](LICENSE). The bundled scanners keep their own licenses: Semgrep CE (LGPL-2.1), Gitleaks
-(MIT), Trivy (Apache-2.0), Checkov (Apache-2.0), zizmor (MIT).
+(MIT), Trivy (Apache-2.0), Checkov (Apache-2.0, optional), zizmor (MIT).

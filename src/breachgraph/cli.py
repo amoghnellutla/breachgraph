@@ -690,7 +690,7 @@ def setup_cmd(
     pins, checked against recorded checksums. A scanner already on your PATH keeps being used."""
     import breachgraph.setup_tools as tools
 
-    wanted = only or tools.targets()
+    wanted = only or tools.default_targets()
     unknown = sorted(set(wanted) - set(tools.targets()))
     if unknown:
         console.print(

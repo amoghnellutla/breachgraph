@@ -1,6 +1,6 @@
 name: breachgraph security gate
 description: >-
-  Run Semgrep, Gitleaks, Trivy, Checkov and zizmor in one step, link the
+  Run Semgrep, Gitleaks, Trivy and zizmor in one step, link the
   findings to code, Kubernetes, cloud IAM and CI into attack paths, and tell each pull request
   whether it opens or closes a path to your crown jewels.
 author: breachgraph contributors

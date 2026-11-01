@@ -72,7 +72,7 @@ Locally, the same comparison is `breachgraph scan . --compare base/breachgraph.j
 ## Pull-request speed
 
 With a base report available, pull requests are scanned incrementally (`incremental`, on by
-default): only changed files go through Semgrep and Checkov, Trivy, Gitleaks and zizmor run only
+default): only changed files go through Semgrep (and Checkov, if on); Trivy, Gitleaks and zizmor run only
 when a file they read changed, and the default branch's findings are reused for the rest. The
 attack graph is always rebuilt from the whole tree. If anything about the base is in doubt (no
 file digests, another breachgraph version, other scanner settings), the scan is full.

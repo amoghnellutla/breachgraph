@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Checkov is off by default; set `scanners.checkov.enabled: true` to use it. Across the 8 benchmark
+  projects no attack path depends on it, Trivy already checks infrastructure files, and it was 39%
+  of all findings. The image still includes it.
 - Reports lead with what to fix first: what blocks, what's actively exploited and what's on an
   attack path. Everything else is a collapsed backlog in the console, pull request and HTML report.
 - **Semgrep runs breachgraph's own rules by default.** They are written for this project

@@ -21,7 +21,11 @@ rules:
       - pattern: execSync($X, ...)
       - pattern: child_process.exec($X, ...)
       - pattern: child_process.execSync($X, ...)
-      - pattern: $CP.exec($X, ...)
+      - patterns:
+          - pattern: $CP.exec($X, ...)
+          - metavariable-regex:
+              metavariable: $CP
+              regex: (?i)^(cp|childProcess|child_process|shell)$
       - patterns:
           - pattern: "spawn($X, ..., {shell: true, ...})"
           - focus-metavariable: $X

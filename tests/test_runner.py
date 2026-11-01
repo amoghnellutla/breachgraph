@@ -115,7 +115,6 @@ def test_select_scanners() -> None:
         "semgrep",
         "gitleaks",
         "trivy",
-        "checkov",
         "zizmor",
         "cicd",
     ]

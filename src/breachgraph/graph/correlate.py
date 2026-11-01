@@ -241,6 +241,8 @@ def attach(
             continue
         # A helper the handler calls: the same weapon, one or more calls away.
         linked = calls is not None and _called_from_routes(f, cls, route_nodes, calls, sure)
+        if linked:
+            continue  # on its routes; on the workload too it would read as a second way in
         # 2. infrastructure findings inside a Terraform resource that became a node
         for node in graph.nodes.values():
             tf = node.attrs.get("tf_range")

@@ -167,9 +167,12 @@ def _assumed(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) 
 def readme_table(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]]) -> str:
     """The README's results table and headline, generated so they can't drift from the data."""
     lines = ["| Project | Findings after dedupe | Attack paths | Real |", "|---|---:|---:|---:|"]
-    findings = paths = real = 0
+    findings = paths = real = blocking = blocking_real = 0
     for target, result, labels in rows:
         v, _ = verdicts(result, labels)
+        gates = [p for p in result["attack_paths"] if p["gating"]]
+        blocking += len(gates)
+        blocking_real += sum(1 for p in gates if v[p["key"]] == "true")
         n_real = sum(1 for p in result["attack_paths"] if v[p["key"]] == "true")
         name = f"[{target['name']}]({target['repo']})" + (" (control)" if target["kind"] == "control" else "")
         lines.append(f"| {name} | {result['findings']:,} | {len(result['attack_paths'])} | {n_real} |")
@@ -182,7 +185,9 @@ def readme_table(rows: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]
         f"| **Total** | **{findings:,}** | **{paths}** | **{real}** |",
         "",
         f"{findings:,} findings come down to {paths} attack paths, and {real} of them are real chains an",
-        f"attacker could use ({_pct(real, paths)} precision). The control project gets none.",
+        f"attacker could use ({_pct(real, paths)} precision). Of the {blocking} that block a merge, "
+        f"{blocking_real} are real;",
+        "the rest are low confidence and only reported. The control project gets none.",
     ]
     return "\n".join(lines)
 
