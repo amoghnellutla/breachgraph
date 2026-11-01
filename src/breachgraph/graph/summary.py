@@ -216,6 +216,8 @@ def coverage(summary: AttackGraphSummary, result: AttackGraphResult, tools: list
         if t is None or t.status in (ToolStatus.SKIPPED, ToolStatus.FAILED):
             why = "not run" if t is None else ("failed" if t.status is ToolStatus.FAILED else "not installed")
             missing.append(f"{name} {why}, so {what} are not in the graph")
+        elif t.status is ToolStatus.PARTIAL:
+            missing.append(f"{name} did not finish ({t.message}), so some {what} may be missing")
     cov = Coverage(
         routes=result.stats.get("routes", 0),
         workloads=result.stats.get("workloads", 0),

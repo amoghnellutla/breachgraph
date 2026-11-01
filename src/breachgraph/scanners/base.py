@@ -48,6 +48,7 @@ class Scanner(ABC):
     name: ClassVar[str]
     binary: ClassVar[str]
     version_args: ClassVar[list[str]] = ["--version"]
+    partial_results: ClassVar[bool] = False  # steps are independent, so finished ones stand alone
 
     def settings(self, config: Config) -> ScannerConfig:
         result: ScannerConfig = getattr(config.scanners, self.name)
@@ -105,8 +106,14 @@ class Scanner(ABC):
         settings = self.settings(ctx.config)
         timeout = settings.timeout or ctx.config.timeout
         findings: list[Finding] = []
+        done = 0
+        steps: list[Step] = []
         try:
-            for step in self.steps(ctx, exe):
+            steps = self.steps(ctx, exe)
+            for step in steps:
+                remaining = timeout - (time.monotonic() - started)
+                if remaining <= 0:
+                    raise subprocess.TimeoutExpired(step.cmd, timeout)
                 step.output.unlink(missing_ok=True)
                 proc = subprocess.run(
                     step.cmd,
@@ -115,7 +122,7 @@ class Scanner(ABC):
                     text=True,
                     encoding="utf-8",
                     errors="replace",
-                    timeout=timeout,
+                    timeout=remaining,  # the limit is for the whole tool, not each step
                     check=False,
                 )
                 if step.stdout_to_output and proc.stdout:
@@ -125,7 +132,20 @@ class Scanner(ABC):
                     raise ScannerError(f"exit code {proc.returncode}: {tail}")
                 if step.parse:
                     findings.extend(self.parse(load_json(step.output), ctx))
+                done += 1
         except subprocess.TimeoutExpired:
+            if done and self.partial_results:
+                return ScannerOutcome(
+                    ToolRun(
+                        name=self.name,
+                        status=ToolStatus.PARTIAL,
+                        version=self.version(),
+                        duration_s=round(time.monotonic() - started, 2),
+                        findings=len(findings),
+                        message=f"time limit of {timeout}s reached after {done} of {len(steps)} batches",
+                    ),
+                    findings,
+                )
             return self._failed(started, f"timed out after {timeout}s")
         except (ScannerError, OSError, ValueError) as exc:
             return self._failed(started, str(exc))

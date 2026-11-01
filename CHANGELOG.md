@@ -35,6 +35,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Semgrep no longer loses everything on a large monorepo. Past 4,000 source files it skips test
+  code and runs in batches, server code first, and the time limit covers the whole run. If time
+  runs out, finished batches stand, the scanner is shown as `partial` and the coverage line says
+  so. Found on real projects, where it timed out and reported nothing.
 - An `acl = "public-read"` set directly on an `aws_s3_bucket` now counts as public, as the
   separate ACL resource always did.
 - An attack path step shows where the weakness is, not where the route is declared.

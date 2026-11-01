@@ -216,6 +216,7 @@ class ToolStatus(StrEnum):
     SKIPPED = "skipped"
     IMPORTED = "imported"
     REUSED = "reused"  # incremental scan: nothing it reads changed, so the base report's findings stand
+    PARTIAL = "partial"  # ran out of time part way: what it finished stands, the rest wasn't looked at
 
 
 class ToolRun(BaseModel):

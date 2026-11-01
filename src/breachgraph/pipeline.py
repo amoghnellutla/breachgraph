@@ -167,7 +167,7 @@ def process(
     for run in tools:
         if run.status is ToolStatus.FAILED:
             result.warnings.append(f"{run.name} failed: {run.message}")
-        elif run.status is ToolStatus.OK and run.message:
+        elif run.status in (ToolStatus.OK, ToolStatus.PARTIAL) and run.message:
             result.warnings.append(f"{run.name}: {run.message}")
     result.metadata["policy"] = policy_snapshot(config)
     if base is not None:

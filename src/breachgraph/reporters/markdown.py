@@ -17,6 +17,7 @@ _TOOL_STATUS = {
     ToolStatus.SKIPPED: "skipped",
     ToolStatus.FAILED: "failed",
     ToolStatus.REUSED: "reused",
+    ToolStatus.PARTIAL: "partial",
 }
 
 
