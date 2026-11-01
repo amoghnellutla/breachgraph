@@ -61,7 +61,7 @@ def test_dependency_cases_that_need_a_person(tmp_path: Path) -> None:
         in fixer.fix_finding(dep("requirements.txt", "requests", "2.25.1", "2.32.0"), tmp_path).reason
     )
     write(tmp_path, "web/package.json", '{"dependencies": {"express": "4.17.1"}}')
-    out = fixer.fix_finding(dep("web/package-lock.json", "qs", "6.5.2", "6.5.3"), tmp_path)
+    out = fixer.fix_finding(dep("web/package-lock.json", "qs", "6.5.2", "7.0.0"), tmp_path)
     assert not out.files and "transitive" in out.reason
     assert (
         "no fixed version"

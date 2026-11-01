@@ -20,6 +20,7 @@ from breachgraph.graph.query import answer
 from breachgraph.graph.why import explain
 from breachgraph.models import ScanResult
 from breachgraph.paths import normalize_path
+from breachgraph.settings_fix import previews
 
 PROTOCOL = "2025-06-18"
 TOOLS: list[dict[str, Any]] = [
@@ -47,6 +48,14 @@ TOOLS: list[dict[str, Any]] = [
             },
             "required": ["location"],
         },
+    },
+    {
+        "name": "preview_fixes",
+        "description": (
+            "Settings changes that remove attack paths, each proved by rebuilding the graph with the "
+            "change applied. Returns the diff and how many paths it removes. Changes no files."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "what_reaches",
@@ -115,6 +124,8 @@ def handle(message: dict[str, Any], target: Path, config: Config) -> dict[str, A
                 out = run_check(target, config, bool(args.get("update_base")))
             elif name == "explain_finding":
                 out = _explain(target, config, str(args["location"]))
+            elif name == "preview_fixes":
+                out = {"fixes": previews(_base(target), target, config)}
             elif name == "what_reaches":
                 out = _what_reaches(target, config, args.get("lost"), args.get("asset"))
             else:

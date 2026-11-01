@@ -130,9 +130,63 @@ def _dependency(f: Finding, target: Path) -> Fix:
                 summary=f"Upgrade {pkg.name} {pkg.version or ''} to {to} in {rel}".replace("  ", " "),
                 notes=notes,
             )
-    return Fix(
-        f, reason=f"{pkg.name} is not declared directly (a transitive dependency): upgrade what pulls it in"
-    )
+    return _transitive(f, pkg.name, pkg.version or "", to, manifest, target)
+
+
+# Where each lock file's package manager takes a version for a package nothing declares directly.
+_OVERRIDE_KEYS = {
+    "package-lock.json": ("overrides",),
+    "yarn.lock": ("resolutions",),
+    "pnpm-lock.yaml": ("pnpm", "overrides"),
+}
+
+
+def _transitive(f: Finding, name: str, version: str, to: str, manifest: PurePosixPath, target: Path) -> Fix:
+    """Pin a dependency of a dependency, within its major version. A jump past that can break
+    whatever pulls it in, and only a person can judge that."""
+    parent = f"{name} is not declared directly (a transitive dependency): upgrade what pulls it in"
+    if version and _vkey(version)[:1] != _vkey(to)[:1]:
+        return Fix(f, reason=f"{parent}; the fix is a new major version of {name}")
+    keys = _OVERRIDE_KEYS.get(manifest.name)
+    rel = manifest.parent / "package.json"
+    if keys and (target / rel).is_file():
+        new = _override(_read(target / rel), keys, name, to)
+        if new is not None:
+            return Fix(
+                f,
+                files={str(rel): new},
+                summary=f"Pin transitive {name} {version} to {to} in {rel}".replace("  ", " "),
+                notes=["Run your package manager's install so the lock file matches."],
+            )
+    if "requirements" in manifest.name and (target / manifest).is_file():
+        text = _read(target / manifest)
+        if "--hash=" not in text:
+            line = f"{name}>={to}  # transitive, for {f.title.split(' ')[0]}\n"
+            return Fix(
+                f,
+                files={str(manifest): text.rstrip("\n") + "\n" + line},
+                summary=f"Require transitive {name} >= {to} in {manifest}",
+            )
+    return Fix(f, reason=parent)
+
+
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _override(text: str, keys: tuple[str, ...], name: str, to: str) -> str | None:
+    try:
+        doc = json.loads(text)
+    except ValueError:
+        return None
+    section = doc
+    for key in keys:
+        section = section.setdefault(key, {})
+    if not isinstance(section, dict) or name in section:
+        return None  # an existing pin was someone's decision
+    section[name] = to
+    indent = re.search(r'^( +|\t)"', text, re.M)
+    return json.dumps(doc, indent=indent.group(1) if indent else 2, ensure_ascii=False) + "\n"
 
 
 def _requirements(text: str, name: str, to: str) -> str | None:

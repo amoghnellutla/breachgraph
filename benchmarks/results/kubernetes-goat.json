@@ -3,16 +3,16 @@
   "repo": "https://github.com/madhuakula/kubernetes-goat",
   "sha": "723a0db478f050d173d23b4ce5044b65bce0bdd0",
   "kind": "vulnerable",
-  "breachgraph_version": "0.6.0",
-  "breachgraph_commit": "182f9e1",
-  "wall_time_s": 47.7,
+  "breachgraph_version": "0.7.0",
+  "breachgraph_commit": "41deea7",
+  "wall_time_s": 110.0,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 1,
-      "duration_s": 23.07,
+      "duration_s": 47.39,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 13,
-      "duration_s": 2.22,
+      "duration_s": 2.55,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 546,
-      "duration_s": 44.29,
+      "duration_s": 105.54,
       "message": null
     },
     {
@@ -42,9 +42,9 @@
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "findings": 0,
-      "duration_s": 0.22,
+      "duration_s": 0.17,
       "message": null
     }
   ],
@@ -64,7 +64,8 @@
     "routes": 6,
     "workloads": 16,
     "crown_jewels": 3,
-    "paths": 0
+    "paths": 0,
+    "paths_not_shown": 0
   },
   "blind_spots": [],
   "attack_paths": [],

@@ -30,6 +30,9 @@ All notable changes to this project are documented here. The format follows
   Memcached, Elasticsearch, Grafana, MinIO, Jupyter and a Docker registry, judged from their own
   defaults and settings. In Compose these are leads, since a Compose file may only be for a laptop.
 
+- `breachgraph fix` pins a transitive dependency when the fix stays within its major version: npm
+  `overrides`, Yarn `resolutions`, pnpm `overrides`, or a line in `requirements.txt`.
+- The MCP server offers `preview_fixes`: proved settings changes, with no files touched.
 - `breachgraph graph --from` says what falls if a secret, role or workload is lost, and `--to` says
   what can reach an asset. The MCP server offers both as `what_reaches`.
 

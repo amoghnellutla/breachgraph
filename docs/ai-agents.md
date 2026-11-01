@@ -28,6 +28,8 @@ It offers two tools:
 - `check_change`: whether the working tree opens a path, closes one, or widens what one bug could
   reach. An assistant can call it after writing a change and fix what it finds.
 - `explain_finding`: why a finding at a file and line is or isn't on a path.
+- `preview_fixes`: settings changes that remove paths, each with its diff and proof. It changes no
+  files.
 - `what_reaches`: what falls if a secret, role or workload is lost, and what can reach an asset.
 
 To make this a habit, add a line to your assistant's instructions: "Before finishing a change, call
