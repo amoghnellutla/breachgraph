@@ -41,6 +41,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- docs/real-world.md as released in 0.7.0 was wrong: 7 of 51 scans ran on an empty checkout and
+  counted as clean passes. The page is corrected, and the corpus now refuses to publish such a scan.
 - `attack_graph.max_paths` could drop a path that blocks a merge in favor of low-confidence leads,
   because the score doesn't weigh how sure a weakness is. Leads now rank last, and reports say how
   many paths were left out.

@@ -349,7 +349,13 @@ Every path that blocks a merge was reviewed by reading the code. Nothing was run
 project. Findings in other people's projects stay private, so only counts are given here and no
 project is named.
 
-Run on {c["date"]} at commit `{c["commit"]}`.
+Run on {c["date"]} at commit `{c["commit"]}`. The clock includes a cold start for the first project,
+which downloads the scanners' vulnerability databases.
+
+Correction: the version of this page released with 0.7.0 was wrong. Seven of its 51 scans had run on
+an interrupted checkout with no files, and those scans counted as clean passes, so it overstated
+how many projects pass and understated findings. The corpus now rejects a checkout with no files and
+treats a scan that saw nothing as a failure, which stops a release from publishing one.
 
 ## Results
 

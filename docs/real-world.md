@@ -17,7 +17,13 @@ Every path that blocks a merge was reviewed by reading the code. Nothing was run
 project. Findings in other people's projects stay private, so only counts are given here and no
 project is named.
 
-Run on 2026-11-01 at commit `182f9e1`.
+Run on 2026-11-01 at commit `bf2f507`. The clock includes a cold start for the first project,
+which downloads the scanners' vulnerability databases.
+
+Correction: the version of this page released with 0.7.0 was wrong. Seven of its 51 scans had run on
+an interrupted checkout with no files, and those scans counted as clean passes, so it overstated
+how many projects pass and understated findings. The corpus now rejects a checkout with no files and
+treats a scan that saw nothing as a failure, which stops a release from publishing one.
 
 ## Results
 
@@ -25,18 +31,18 @@ Run on 2026-11-01 at commit `182f9e1`.
 |---|---|
 | Projects | 51 |
 | Crashes | 0 |
-| Scan time, median | 28s |
-| Scan time, slowest | 254s |
+| Scan time, median | 44s |
+| Scan time, slowest | 277s |
 | Scans over 5 minutes | 0 |
-| Findings reported | 15,664 |
-| Projects that pass a first scan | 48 of 51 |
+| Findings reported | 25,256 |
+| Projects that pass a first scan | 46 of 51 |
 | Blocking findings per project, median | 0 |
 | Blocking findings per project, most | 1 |
-| Attack paths reported | 72, in 17 projects |
+| Attack paths reported | 73, in 18 projects |
 | Attack paths that block a merge | 2 |
 | Of those, real on review | 2 |
 | Of those, false | 0 |
-| Projects told what one more bug would reach | 30 |
+| Projects told what one more bug would reach | 35 |
 
 The other attack paths are low confidence: leads to read, which never block. Reading a path shows
 that it holds in the code, but no path here was exploited to prove it.
@@ -44,7 +50,7 @@ that it holds in the code, but no path here was exploited to prove it.
 ## What this does not show
 
 - The list is popular open-source projects, not private company code.
-- 7 of the 51 projects gave breachgraph neither routes nor
+- 0 of the 51 projects gave breachgraph neither routes nor
   workloads to model, so it could only report their findings.
 - A path reviewed as real still depends on what is deployed, which a repository only partly shows.
 - Recall isn't measured here: nobody knows every path in these projects. The benchmark measures it
