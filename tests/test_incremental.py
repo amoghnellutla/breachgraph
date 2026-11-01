@@ -118,6 +118,7 @@ def test_incremental_scan_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(
         pipeline, "SCANNERS", {"semgrep": Recorder("semgrep", sem), "gitleaks": Recorder("gitleaks", [])}
     )
+    monkeypatch.setenv("CI", "true")
     opts = ScanOptions(offline=True)
     base = scan(repo, Config(), opts, tmp_path / "w1")
     assert Recorder.seen == {"semgrep": None, "gitleaks": None} and len(base.findings) == 2
@@ -157,6 +158,17 @@ def test_incremental_scan_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert not last.warnings  # reusing findings is normal, not a warning
     md = markdown.render(last)
     assert "semgrep (reused, 2)" in md
+
+
+def test_a_scan_outside_ci_does_not_read_every_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    write(tmp_path / "repo", "app.py", "print(1)\n")
+    monkeypatch.setattr(pipeline, "SCANNERS", {"semgrep": Recorder("semgrep", [])})
+    monkeypatch.delenv("CI", raising=False)
+    local = scan(tmp_path / "repo", Config(), ScanOptions(offline=True), tmp_path / "w1")
+    assert "tree" not in local.metadata
+    monkeypatch.setenv("CI", "true")
+    ci = scan(tmp_path / "repo", Config(), ScanOptions(offline=True), tmp_path / "w2")
+    assert list(ci.metadata["tree"]) == ["app.py"]
 
 
 def test_rescanned_member_of_a_carried_cluster_is_not_duplicated(tmp_path: Path) -> None:

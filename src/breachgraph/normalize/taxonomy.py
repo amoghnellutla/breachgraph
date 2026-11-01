@@ -138,6 +138,7 @@ CICD_RISKS: dict[str, str] = {
 _CICD_RULES: dict[str, str] = {
     "cicd/script-injection": "CICD-SEC-4",
     "cicd/untrusted-checkout": "CICD-SEC-4",
+    "cicd/agent-prompt-injection": "CICD-SEC-4",
     "supply-chain/dependency-confusion": "CICD-SEC-3",
     "template-injection": "CICD-SEC-4",
     "dangerous-triggers": "CICD-SEC-4",

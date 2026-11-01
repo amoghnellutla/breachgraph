@@ -7,6 +7,8 @@ otherwise:
   by ``${{ }}`` into a shell script or ``github-script``, in a workflow an outsider can trigger;
 - pwn request: a ``pull_request_target`` / ``workflow_run`` job that checks out the pull request's
   code and then runs it, with the base repository's secrets and token;
+- prompt injection: an AI agent reads text an outsider wrote, in a job holding secrets, a write
+  token or a shell;
 - dependency confusion: pip's ``--extra-index-url``, which merges a private index with PyPI and
   installs whichever has the higher version, so anyone can publish a same-named package on PyPI.
 
@@ -91,6 +93,7 @@ def analyze(target: Path, exclude: list[str]) -> tuple[list[Finding], list[str]]
                 continue  # forks can't start it; only people who can push branches can
             findings += _script_injection(wf, job)
             findings += _untrusted_checkout(wf, job, by_name)
+            findings += _agent_prompt_injection(wf, job)
     findings += dependency_confusion(target, exclude)
     return findings, skipped
 
@@ -350,6 +353,126 @@ def _untrusted_checkout(wf: Workflow, job: Job, by_name: dict[str, Workflow] | N
             )
         ]
     return []
+
+
+# ------------------------------------------------------------------ AI agents
+
+# Agent actions -> name. Agents read issue and pull request text as instructions, so that text is
+# a prompt injection when an outsider wrote it.
+_AGENT_ACTIONS = {
+    "anthropics/claude-code-action": "Claude Code",
+    "anthropics/claude-code-base-action": "Claude Code",
+    "google-github-actions/run-gemini-cli": "Gemini CLI",
+    "google-gemini/gemini-cli-action": "Gemini CLI",
+    "openai/codex-action": "Codex",
+    "actions/ai-inference": "GitHub AI Inference",
+}
+# These refuse to run for users without write access unless an input opens them up.
+_WRITE_CHECK_BYPASS = {
+    "anthropics/claude-code-action": ("allowed_non_write_users", "allowed_bots"),
+    "openai/codex-action": ("allow-users",),
+}
+# This one reads the triggering issue or pull request itself, with nothing in the workflow saying so.
+_READS_EVENT = {"anthropics/claude-code-action"}
+_AGENT_CLI = re.compile(
+    r"(?:^|[\s;&|(])(?:npx\s+(?:-y\s+)?)?(?P<cli>claude|@anthropic-ai/claude-code|gemini|@google/gemini-cli|"
+    r"codex|@openai/codex|aider|opencode)(?:@\S+)?\s+(?:[^\n]*\s)?"
+    r"(?:-p|--print|--prompt|exec|run|--message|--yolo|--dangerously-skip-permissions)(?:\s|=|$)",
+    re.M,
+)
+# Settings that let an agent run any command. `Bash(gh issue view:*)` is one command, not a shell.
+_AGENT_SHELL = re.compile(
+    r"--dangerously-skip-permissions|--yolo|\bbypassPermissions\b|danger-full-access|"
+    r"safety-strategy['\"]?[:,]\s*['\"]?unsafe|--full-auto|"
+    r"\bBash\b(?!\()|\bBash\(\*|\bBash\(:\*|run_shell_command(?!\()",
+)
+# Token scopes that reach code, releases or other workflows. `issues: write` alone is what a
+# triage bot needs: an attacker gains spam, and the action's own docs recommend that setup.
+_AGENT_STRONG_SCOPES = {"contents", "packages", "actions", "workflows", "deployments", "pull-requests"}
+# What the agent needs to run at all: not extra access an attacker gains.
+_MODEL_KEY = re.compile(r"ANTHROPIC|CLAUDE|OPENAI|GEMINI|GOOGLE_API_KEY|CODEX", re.I)
+
+
+def _agent(step: Step) -> str:
+    if name := _AGENT_ACTIONS.get(step.action):
+        return name
+    if m := _AGENT_CLI.search(step.run):
+        return m.group("cli").removeprefix("@").split("/")[-1]
+    return ""
+
+
+def _agent_prompt_injection(wf: Workflow, job: Job) -> list[Finding]:
+    """An agent reads text an outsider wrote, in a job holding something worth stealing."""
+    privileged = wf.triggers & PRIVILEGED_TRIGGERS
+    if not privileged:
+        return []  # fork pull requests get no secrets and a read-only token
+    out: list[Finding] = []
+    for step in job.steps:
+        agent = _agent(step)
+        bypass = _WRITE_CHECK_BYPASS.get(step.action, ())
+        if not agent or (bypass and not any(str(step.with_.get(k, "")).strip() == "*" for k in bypass)):
+            continue
+        given = repr((step.with_, step.env, step.run, job.env, wf.env))
+        contexts = sorted({m.group(0) for e in _EXPR.findall(given) for m in UNTRUSTED_CONTEXT.finditer(e)})
+        if not contexts and step.action not in _READS_EVENT:
+            continue
+        perms = wf.job_permissions(job)
+        scopes = perms if isinstance(perms, dict) else {}
+        granted = {k for k, v in scopes.items() if v == "write"}
+        if "anthropic_federation_rule_id" in step.with_:
+            granted.discard("id-token")  # exchanged for the model key
+        write = perms == "write-all" or bool(granted & (_AGENT_STRONG_SCOPES | {"id-token"}))
+        secrets = sorted(s for s in job_secrets(wf, job) if not _MODEL_KEY.search(s))
+        shell = bool(_AGENT_SHELL.search(repr((step.with_, step.run))))
+        if not (shell or secrets or write or granted):
+            continue  # it can be talked into a wrong answer, and nothing more
+        gate = gated(wf, job, step)
+        severity = Severity.CRITICAL if shell and (secrets or write) else Severity.HIGH
+        if gate or not (shell or secrets or write):
+            severity = Severity.MEDIUM
+        text = f"`{', '.join(contexts)}`" if contexts else "the text of the triggering issue or pull request"
+        held = [f"secrets {', '.join(secrets)}"] if secrets else []
+        held += ["a token with write permissions"] if write else []
+        held += [f"a token limited to {', '.join(sorted(granted))}"] if granted and not write else []
+        power = "it can run any command" if shell else "it can use whatever tools it was given"
+        out.append(
+            Finding(
+                tool=TOOL,
+                rule_id="cicd/agent-prompt-injection",
+                title=f"{agent} in `{job.id}` reads text an outsider controls",
+                description=(
+                    f"`{sorted(privileged)[0]}` lets anyone with a GitHub account start this job, and "
+                    f"{agent} receives {text}. The model can't tell that text from its instructions, so "
+                    f"a crafted issue or comment can steer the agent: {power}"
+                    + (f", in a job holding {' and '.join(held)}" if held else "")
+                    + "."
+                    + (f" Mitigation in place: {gate}." if gate else "")
+                ),
+                severity=severity,
+                category=Category.CICD,
+                confidence=Confidence.MEDIUM if gate or not shell else Confidence.HIGH,
+                location=Location(
+                    path=wf.path,
+                    start_line=step.line,
+                    end_line=step.end_line,
+                    snippet=step.uses or step.run[:200],
+                ),
+                # With a shell this is code execution in the job, so it can start an attack path.
+                cwe=["CWE-1427", "CWE-94"] if shell else ["CWE-1427"],
+                remediation=(
+                    "Run the agent only for people with write access (`if:` on `author_association`, or "
+                    "keep the action's own write check). If outsiders must reach it, remove shell tools, "
+                    "give the job a read-only token and no secrets beyond the model key, and post results "
+                    "from a separate job that treats the agent's output as untrusted."
+                ),
+                references=[
+                    "https://www.aikido.dev/blog/promptpwnd-github-actions-ai-agents",
+                    "https://github.com/anthropics/claude-code-action/blob/main/docs/security.md",
+                    "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+                ],
+            )
+        )
+    return out
 
 
 # ------------------------------------------------------------------ dependency confusion

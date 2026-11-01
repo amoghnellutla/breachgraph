@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `cicd/agent-prompt-injection`: an AI agent (Claude Code, Gemini CLI, Codex, GitHub AI Inference,
+  or an agent CLI in a `run:` step) that reads text an outsider wrote, in a job started by an
+  outsider. Respects each action's write-access check, `if:` gates and tool limits. Critical with
+  a shell and a secret or write token; a shell-capable agent can start an attack path.
+- `benchmarks/corpus.py` runs breachgraph on real projects chosen by a written rule.
+
+### Changed
+
+- File digests are computed only when they will be used (CI, `--compare`, `--incremental`). On a
+  Docker bind mount from Windows or macOS they took more than 10 minutes on a 33,000-file project.
+
 ## [0.6.0] - 2026-10-27
 
 ### Added

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -230,7 +231,10 @@ def _scan(
     ctx = ScanContext(target=target, work_dir=work_dir, config=config)
 
     names = select_scanners(config, opts)
-    tree = incremental.tree_digest(target, config.exclude_paths)
+    # Reading every file costs minutes on a large tree over a Docker bind mount (Windows, macOS),
+    # and only a later incremental scan uses the result: CI, not a scan on a laptop.
+    digests = bool(opts.incremental or opts.compare or os.environ.get("CI"))
+    tree = incremental.tree_digest(target, config.exclude_paths) if digests else {}
     base = _base_for_incremental(opts)
     plan = incremental.plan(base, tree, config, __version__, names) if opts.incremental else None
     run = [n for n in names if plan is None or plan.modes[n] != "carry"]
@@ -265,7 +269,8 @@ def _scan(
     result = process(
         findings, [o.run for o in outcomes], config, target, opts, ctx.artifacts, started, carried=reused
     )
-    result.metadata["tree"] = tree
+    if digests:
+        result.metadata["tree"] = tree
     result.metadata["scanner_fingerprint"] = incremental.scanner_fingerprint(config)
     if plan is not None:
         result.metadata["incremental"] = {
