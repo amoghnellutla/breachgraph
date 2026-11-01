@@ -607,6 +607,50 @@ def graph_cmd(
     raise typer.Exit(1 if summary.gating_paths else 0)
 
 
+@app.command("check")
+def check_cmd(
+    path: Annotated[Path, typer.Argument(help="Repository to check.")] = Path(),
+    update_base: Annotated[bool, typer.Option("--update-base", help="Accept this tree as the base.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the result as JSON.")] = False,
+) -> None:
+    """Does this change open an attack path? Compares the working tree with a saved base."""
+    import json
+
+    from breachgraph.check import run_check
+
+    target = path.resolve()
+    out = run_check(target, load_config(find_config(target)), update_base)
+    if as_json:
+        typer.echo(json.dumps(out, indent=2))
+    elif out["status"] == "baseline":
+        console.print(f"{out['message']} It has {out['attack_paths']} attack path(s) today.")
+    else:
+        for p in out["opens"]:
+            console.print(f"[bold red]Opens a path:[/] {escape(p['route'])}")
+            for w in p["weapons"]:
+                console.print(f"  {escape(w['finding'] or w['needs'])} ({escape(w['at'])})")
+        for route in out["closes"]:
+            console.print(f"[green]Closes:[/] {escape(route)}")
+        for x in out["one_bug_away"]:
+            console.print(
+                f"[yellow]Widens:[/] one bug at {escape(x['entry'])} would reach {escape(x['target'])}"
+            )
+        if out["status"] == "clear" and not out["closes"]:
+            console.print("[green]No new attack path.[/]")
+        if out["incomplete"]:
+            console.print(f"[yellow]Incomplete:[/] {escape('; '.join(out['incomplete']))}")
+    raise typer.Exit(1 if out["status"] == "opens" else 0)
+
+
+@app.command("mcp")
+def mcp_cmd(path: Annotated[Path, typer.Argument(help="Repository to serve.")] = Path()) -> None:
+    """Serve attack-path checks to AI coding assistants over MCP (stdin and stdout)."""
+    from breachgraph.mcp_server import serve
+
+    target = path.resolve()
+    serve(target, load_config(find_config(target)))
+
+
 @app.command("ignore")
 def ignore_cmd(
     location: Annotated[str, typer.Argument(help="A finding's location: path/to/file:line.")],

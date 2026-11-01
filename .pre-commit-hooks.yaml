@@ -1,0 +1,7 @@
+- id: breachgraph
+  name: breachgraph check
+  description: Stops a push that opens a new attack path.
+  entry: breachgraph check
+  language: python
+  pass_filenames: false
+  stages: [pre-push]

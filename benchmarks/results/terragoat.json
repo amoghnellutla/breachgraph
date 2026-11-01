@@ -4,15 +4,15 @@
   "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
   "kind": "vulnerable",
   "breachgraph_version": "0.6.0",
-  "breachgraph_commit": "8002404",
-  "wall_time_s": 39.8,
+  "breachgraph_commit": "559d31b",
+  "wall_time_s": 33.7,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 0,
-      "duration_s": 9.16,
+      "duration_s": 7.52,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 4,
-      "duration_s": 1.35,
+      "duration_s": 1.06,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 698,
-      "duration_s": 35.33,
+      "duration_s": 24.45,
       "message": "package registry unavailable (rate limited); retried with --offline-scan, transitive Java dependencies were not resolved"
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 13,
-      "duration_s": 1.01,
+      "duration_s": 0.6,
       "message": null
     },
     {
@@ -44,7 +44,7 @@
       "status": "ok",
       "version": "0.6.0",
       "findings": 0,
-      "duration_s": 0.06,
+      "duration_s": 0.07,
       "message": null
     }
   ],
@@ -57,7 +57,7 @@
     "P3": 245,
     "P4": 81
   },
-  "gating_findings": 51,
+  "gating_findings": 5,
   "graph_stats": {
     "nodes": 47,
     "edges": 26,

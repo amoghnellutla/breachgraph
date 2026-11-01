@@ -45,6 +45,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `breachgraph check` says whether the working tree opens an attack path, before a pull request
+  exists, with a pre-commit hook and `breachgraph mcp`, an MCP server for AI coding assistants. See
+  [docs/ai-agents.md](docs/ai-agents.md).
 - [docs/network.md](docs/network.md) lists every connection a scan makes and how to turn it off, and
   [docs/stability.md](docs/stability.md) says what stays stable between releases.
 
