@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from breachgraph.config import Config, Suppression
 from breachgraph.models import (
@@ -31,6 +34,22 @@ def drop_excluded(findings: list[Finding], config: Config) -> list[Finding]:
 
 
 # ---------------------------------------------------------------- baseline
+
+
+def add_suppression(text: str, entry: Suppression) -> str:
+    """The config's text with one more suppression. Edited as text, so comments and layout stay."""
+    item = {k: v for k, v in entry.model_dump(mode="json").items() if v is not None}
+    block = "".join(
+        ("  - " if i == 0 else "    ") + yaml.safe_dump({k: v}, default_flow_style=False, width=10_000)
+        for i, (k, v) in enumerate(item.items())
+    )
+    empty = re.search(r"^suppressions:\s*(?:\[\s*\])?\s*(?:#.*)?$", text, re.M)
+    if empty is None:
+        return (text.rstrip() + "\n\n" if text.strip() else "version: 1\n\n") + "suppressions:\n" + block
+    line_end = text.find("\n", empty.start())
+    head = text[: line_end if line_end >= 0 else len(text)]
+    tail = text[line_end + 1 :] if line_end >= 0 else ""
+    return f"{re.sub(r'^suppressions:.*$', 'suppressions:', head, flags=re.M)}\n{block}{tail}"
 
 
 def load_baseline(path: Path) -> set[str]:

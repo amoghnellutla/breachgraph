@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -25,13 +26,13 @@ from rich.table import Table
 
 from breachgraph import __version__, workspace
 from breachgraph.compare import path_changes
-from breachgraph.config import CONFIG_FILENAMES, ConfigError, find_config, load_config
+from breachgraph.config import CONFIG_FILENAMES, ConfigError, Suppression, find_config, load_config
 from breachgraph.integrations import notify
 from breachgraph.integrations.github import GitHubClient, GitHubContext, write_step_summary
 from breachgraph.models import Priority, ScanResult, ToolRun, ToolStatus
 from breachgraph.paths import normalize_path, project_name
 from breachgraph.pipeline import PipelineError, ScanOptions, scan
-from breachgraph.policy import evaluate_gate, write_baseline
+from breachgraph.policy import add_suppression, evaluate_gate, write_baseline
 from breachgraph.reporters import FORMATS, markdown, write_reports
 from breachgraph.scanners import SCANNERS
 from breachgraph.setup_tools import add_to_path
@@ -576,6 +577,56 @@ def graph_cmd(
         output.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
         console.print(f"[dim]graph written to {output}[/]")
     raise typer.Exit(1 if summary.gating_paths else 0)
+
+
+@app.command("ignore")
+def ignore_cmd(
+    location: Annotated[str, typer.Argument(help="A finding's location: path/to/file:line.")],
+    reason: Annotated[str, typer.Option("--reason", help="Why this risk is accepted.")],
+    path: Annotated[Path, typer.Argument(help="Repository the report was made from.")] = Path(),
+    days: Annotated[
+        int, typer.Option("--days", min=1, max=365, help="Look at it again after this many days.")
+    ] = 90,
+    owner: Annotated[str | None, typer.Option("--owner", help="Who decided.")] = None,
+    report: Annotated[
+        Path | None, typer.Option("--report", "-r", help="breachgraph.json (default: from the last scan).")
+    ] = None,
+) -> None:
+    """Accept a risk: add a suppression with a reason and an expiry date to your config."""
+    target = path.resolve()
+    source = report or target / "breachgraph-report" / "breachgraph.json"
+    try:
+        result = ScanResult.model_validate_json(source.read_text(encoding="utf-8"))
+    except (OSError, ValidationError) as exc:
+        console.print(f"[red]error:[/] cannot read {source} ({exc}). Run: breachgraph scan {path}")
+        raise typer.Exit(2) from exc
+    file, _, line = location.partition(":")
+    found = [
+        f
+        for f in result.findings
+        if f.location.path == normalize_path(file) and (not line or f.location.start_line == int(line))
+    ]
+    if len(found) != 1:
+        where = "; ".join(f"{f.location.path}:{f.location.start_line} {f.title[:50]}" for f in found[:5])
+        console.print(f"[red]error:[/] {len(found)} findings match {escape(location)}. {escape(where)}")
+        raise typer.Exit(1)
+    if not reason.strip():
+        console.print("[red]error:[/] a reason is required.")
+        raise typer.Exit(2)
+    expires = datetime.now(UTC).date() + timedelta(days=days)
+    entry = Suppression(fingerprint=found[0].fingerprint, reason=reason, expires=expires, owner=owner)
+    config_path = find_config(target) or target / CONFIG_FILENAMES[0]
+    existing = config_path.read_text(encoding="utf-8") if config_path.is_file() else ""
+    updated = add_suppression(existing, entry)
+    config_path.write_text(updated, encoding="utf-8")
+    try:
+        load_config(config_path)
+    except ConfigError as exc:
+        config_path.write_text(existing, encoding="utf-8")
+        console.print(f"[red]error:[/] the config would be invalid, so it was left as it was: {exc}")
+        raise typer.Exit(2) from exc
+    console.print(f"[green]Ignored until {expires}:[/] {escape(found[0].title)}")
+    console.print(f"[dim]Written to {config_path}. Commit it so the decision is reviewed.[/]")
 
 
 @app.command("why")

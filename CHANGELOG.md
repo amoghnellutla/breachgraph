@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows
   JavaScript/TypeScript, Java and Go. A weakness in a helper is on every route that reaches it,
   so an SSRF one call away from a handler now makes a path. A call resolves only within the file,
   its package or what it imports; a chain is medium confidence at most and is shown as evidence.
+- `breachgraph ignore file:line --reason "..."` accepts a risk in one command. It writes a
+  suppression with an expiry (90 days unless `--days` says otherwise) to your config, keeping its
+  comments, so the decision goes through review with the code.
 - `breachgraph why file:line` explains why a finding is or isn't on an attack path, and names the
   missing step: not imported, not deployed, not exposed, no route reaches it, or nothing valuable
   beyond it.
