@@ -366,6 +366,8 @@ ul.warn { margin: 0; padding-left: 18px; }
       <select id="prio" aria-label="Priority"><option value="">All priorities</option>{% for p in ["P1","P2","P3","P4"] %}<option>{{ p }}</option>{% endfor %}</select>
       <select id="tool" aria-label="Tool"><option value="">All tools</option>{% for t in tools %}<option>{{ t }}</option>{% endfor %}</select>
       <select id="cat" aria-label="Category"><option value="">All categories</option>{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select>
+      {% set urgent = result.urgent() %}
+      <label class="muted"><input id="backlog" type="checkbox"{% if not urgent %} checked{% endif %}> Show the backlog ({{ result.findings | length - urgent | length }})</label>
       <select id="status" aria-label="Status"><option value="">All statuses</option><option>new</option><option>baseline</option><option>suppressed</option></select>
     </div>
     <div class="table-wrap">
@@ -373,7 +375,7 @@ ul.warn { margin: 0; padding-left: 18px; }
       <thead><tr><th>Priority</th><th>Finding</th><th>Location</th><th>Category</th><th>Tools</th><th>Status</th></tr></thead>
       <tbody>
       {% for f in result.findings %}
-        <tr class="finding" tabindex="0" aria-expanded="false" data-prio="{{ f.priority.value }}" data-tools="{{ f.sources | join(' ') }}"
+        <tr class="finding" tabindex="0" aria-expanded="false" data-urgent="{{ '1' if f in urgent else '' }}" data-prio="{{ f.priority.value }}" data-tools="{{ f.sources | join(' ') }}"
             data-cat="{{ f.category.value }}" data-status="{{ f.status.value }}"
             data-text="{{ (f.title ~ ' ' ~ f.rule_id ~ ' ' ~ f.location.path ~ ' ' ~ (f.cwe | join(' ')) ~ ' ' ~ (f.vuln_ids | join(' '))) | lower }}">
           <td><strong class="{{ f.priority.value }}">{{ f.priority.value }}</strong> <span class="muted">{{ f.risk_score }}</span></td>
@@ -438,10 +440,13 @@ ul.warn { margin: 0; padding-left: 18px; }
     r.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(r); } });
   });
   var q = document.getElementById("q"), sel = ["prio", "tool", "cat", "status"].map(function (id) { return document.getElementById(id); });
+  var backlog = document.getElementById("backlog");
   function apply() {
     var text = q.value.toLowerCase();
+    var searching = text || sel.some(function (s) { return s.value; });
     rows.forEach(function (r) {
-      var show = (!text || r.dataset.text.indexOf(text) !== -1)
+      var show = (backlog.checked || searching || r.dataset.urgent === "1")
+        && (!text || r.dataset.text.indexOf(text) !== -1)
         && (!sel[0].value || r.dataset.prio === sel[0].value)
         && (!sel[1].value || r.dataset.tools.split(" ").indexOf(sel[1].value) !== -1)
         && (!sel[2].value || r.dataset.cat === sel[2].value)
@@ -451,7 +456,9 @@ ul.warn { margin: 0; padding-left: 18px; }
     });
   }
   q.addEventListener("input", apply);
+  backlog.addEventListener("change", apply);
   sel.forEach(function (s) { s.addEventListener("change", apply); });
+  apply();
 
   /* ---------- attack-graph explorer ---------- */
   var dataEl = document.getElementById("bg-data");

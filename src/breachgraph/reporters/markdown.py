@@ -305,7 +305,7 @@ def render(result: ScanResult, link_base: str | None = None, details_url: str | 
     if others:
         scope = "new " if result.baseline_used else ""
         out += [
-            f"<details><summary>Other {scope}findings ({len(others)})</summary>",
+            f"<details><summary>Backlog: {len(others)} other {scope}finding(s)</summary>",
             "",
             *_table(others, link_base, 50),
             "",

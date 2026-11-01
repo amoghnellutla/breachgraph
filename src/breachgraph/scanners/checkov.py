@@ -20,7 +20,7 @@ class CheckovScanner(Scanner):
         settings = cast(CheckovConfig, self.settings(ctx.config))
         out = ctx.work_dir / "checkov.json"
         targets = ["-d", "."] if ctx.files is None else [a for f in ctx.files for a in ("-f", f)]
-        cmd = [exe, *targets, "-o", "json", "--compact", "--quiet", "--soft-fail"]
+        cmd = [exe, *targets, "-o", "json", "--compact", "--quiet", "--soft-fail", "--skip-download"]
         if settings.frameworks:
             cmd += ["--framework", *settings.frameworks]
         else:

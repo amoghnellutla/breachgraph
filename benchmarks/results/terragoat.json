@@ -3,16 +3,16 @@
   "repo": "https://github.com/bridgecrewio/terragoat",
   "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
   "kind": "vulnerable",
-  "breachgraph_version": "0.4.0",
-  "breachgraph_commit": "eaa0d77",
-  "wall_time_s": 111.9,
+  "breachgraph_version": "0.6.0",
+  "breachgraph_commit": "0db348d",
+  "wall_time_s": 147.9,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
-      "findings": 34,
-      "duration_s": 34.48,
+      "findings": 0,
+      "duration_s": 12.44,
       "message": null
     },
     {
@@ -20,15 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 4,
-      "duration_s": 1.15,
+      "duration_s": 1.33,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 685,
-      "duration_s": 85.04,
+      "findings": 698,
+      "duration_s": 125.5,
       "message": "package registry unavailable (rate limited); retried with --offline-scan, transitive Java dependencies were not resolved"
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "3.3.26",
       "findings": 469,
-      "duration_s": 25.46,
+      "duration_s": 16.53,
       "message": null
     },
     {
@@ -44,28 +44,28 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 13,
-      "duration_s": 1.28,
+      "duration_s": 0.41,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.4.0",
+      "version": "0.6.0",
       "findings": 0,
-      "duration_s": 0.15,
+      "duration_s": 0.04,
       "message": null
     }
   ],
-  "raw_findings": 1205,
-  "findings": 1089,
-  "multi_tool_findings": 78,
+  "raw_findings": 1184,
+  "findings": 1077,
+  "multi_tool_findings": 69,
   "by_priority": {
     "P1": 51,
-    "P2": 298,
-    "P3": 671,
-    "P4": 69
+    "P2": 300,
+    "P3": 665,
+    "P4": 61
   },
-  "gating_findings": 52,
+  "gating_findings": 51,
   "graph_stats": {
     "nodes": 47,
     "edges": 26,

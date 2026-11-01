@@ -206,6 +206,7 @@ def test_console_output_escapes_untrusted_text(capsys: pytest.CaptureFixture[str
         rule_id="r",
         title="Route [/admin] [bold]x",
         severity=Severity.HIGH,
+        gating=True,
         category=Category.SAST,
         location=Location(path="a[/b].py", start_line=1),
         ai=AIInsight(verdict=AIVerdict.NEEDS_REVIEW, summary="s", reasoning="r", remediation="f"),

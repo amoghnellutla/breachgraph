@@ -457,10 +457,12 @@ def _print_exposures(result: ScanResult) -> None:
 
 def _print_summary(result: ScanResult) -> None:
     open_findings = [f for f in result.findings if f.status.value != "suppressed"]
-    table = Table(title=f"Top findings ({len(open_findings)} open)", show_lines=False, expand=False)
+    urgent = result.urgent()
+    backlog = len(open_findings) - len(urgent)
+    table = Table(title=f"Fix these first ({len(urgent)})", show_lines=False, expand=False)
     for col in ("Prio", "Risk", "Finding", "Location", "Tools", "Status"):
         table.add_column(col, overflow="fold")
-    for f in open_findings[:15]:
+    for f in urgent[:15]:
         loc = f.location.path + (f":{f.location.start_line}" if f.location.start_line else "")
         flag = " [bold red]KEV[/]" if f.enrichment.kev else ""
         if f.ai:
@@ -473,8 +475,10 @@ def _print_summary(result: ScanResult) -> None:
             ",".join(f.sources),
             ("[bold red]BLOCKS[/] " if f.gating else "") + f.status.value,
         )
-    if open_findings:
+    if urgent:
         console.print(table)
+    if backlog:
+        console.print(f"[dim]{backlog} more in the backlog: nothing there blocks. See the report.[/]")
     changes = path_changes(result)
     if changes is not None:
         opened, closed = changes

@@ -400,6 +400,17 @@ class ScanResult(BaseModel):
     comparison: Comparison | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    def urgent(self) -> list[Finding]:
+        """What to look at first: what blocks, what's actively exploited, what's on an attack path.
+        Everything else is the backlog."""
+        on_paths = {fp for p in (self.attack_graph.paths if self.attack_graph else []) for fp in p.weaknesses}
+        return [
+            f
+            for f in self.findings
+            if f.status is not Status.SUPPRESSED
+            and (f.gating or f.enrichment.kev or on_paths & set(f.fingerprints or [f.fingerprint]))
+        ]
+
     def counts_by(
         self, attr: str, statuses: tuple[Status, ...] = (Status.NEW, Status.BASELINE)
     ) -> dict[str, int]:

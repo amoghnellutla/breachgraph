@@ -227,3 +227,17 @@ def test_load_config_empty_file(tmp_path: Path) -> None:
     p = tmp_path / ".breachgraph.yml"
     p.write_text("", encoding="utf-8")
     assert load_config(p).fail_on.priority is Priority.P1
+
+
+def test_urgent_is_what_blocks_is_exploited_or_is_on_a_path() -> None:
+    from breachgraph.models import AttackGraphSummary, AttackPathView
+
+    blocks, kev, on_path, backlog = [make_finding(path=f"{n}.py") for n in "abcd"]
+    for i, f in enumerate((blocks, kev, on_path, backlog)):
+        f.fingerprint = str(i)
+    blocks.gating = True
+    kev.enrichment.kev = True
+    result = _result([blocks, kev, on_path, backlog])
+    path = AttackPathView(target="t", target_kind="k", score=1, confidence="low", length=1, weaknesses=["2"])
+    result.attack_graph = AttackGraphSummary(paths=[path])
+    assert result.urgent() == [blocks, kev, on_path]

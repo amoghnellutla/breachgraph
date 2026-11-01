@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Reports lead with what to fix first: what blocks, what's actively exploited and what's on an
+  attack path. Everything else is a collapsed backlog in the console, pull request and HTML report.
 - **Semgrep runs breachgraph's own rules by default.** They are written for this project
   (Apache-2.0), ship in the package and the image, and cover what attack paths need: command, code,
   SQL and path injection, SSRF and deserialization, in Python, JavaScript/TypeScript, Java and Go. A
@@ -28,8 +30,14 @@ All notable changes to this project are documented here. The format follows
   findings. On 32 real projects the old behaviour produced 6,030 blocking secrets, 5,757 of them
   from the generic rule, and failed every project.
 
+### Added
+
+- [docs/network.md](docs/network.md) lists every connection a scan makes and how to turn it off, and
+  [docs/stability.md](docs/stability.md) says what stays stable between releases.
+
 ### Fixed
 
+- Checkov runs with `--skip-download`, so a scan doesn't contact its vendor.
 - A failed online audit no longer loses every zizmor finding: it reruns offline and says so.
 - A scanner failure is one readable line in the report, not a stack trace.
 - `breachgraph setup` works from a source checkout.

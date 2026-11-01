@@ -233,6 +233,16 @@ checksum-verified, every Python package is installed from a hash-pinned lock, ac
 commits, and releases are signed with Sigstore and ship with SBOM and provenance. The threat model is
 in [docs/architecture.md](docs/architecture.md#threat-model).
 
+## What leaves your machine
+
+No telemetry and no server. Your code stays on your machine unless you turn on AI triage. A default
+scan downloads vulnerability data and looks up CVE ids; it doesn't contact semgrep.dev, because
+Semgrep runs rules that ship with breachgraph. [docs/network.md](docs/network.md) lists every
+connection, what it sends, and how to turn it off.
+
+Pin an exact version if you want builds that only change when you choose:
+[docs/stability.md](docs/stability.md).
+
 ## Limits
 
 Dependency reachability is import-level, plus function-level evidence for Go (calls to the
