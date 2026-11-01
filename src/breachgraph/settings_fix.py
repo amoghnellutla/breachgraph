@@ -280,4 +280,4 @@ def proved_settings(result: ScanResult, target: Path, config: Config, top: int) 
     ag = build_attack_graph(target, result.findings, config)
     fixes = prove(candidates(ag, target), result, target, config)
     kept = [f for f in fixes if f.files and not f.added]
-    return sorted(kept, key=lambda f: -f.removed)[:top]
+    return sorted(kept, key=lambda f: -(f.removed or 0))[:top]
