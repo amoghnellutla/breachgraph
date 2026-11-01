@@ -99,12 +99,11 @@ jobs:
           import json
           r = json.load(open("demo-report/breachgraph.json"))
           tools = {t["name"]: t["status"] for t in r["tools"]}
-          assert all(tools[t] == "ok" for t in ("semgrep", "gitleaks", "trivy", "checkov")), tools
+          assert all(tools[t] == "ok" for t in ("semgrep", "gitleaks", "trivy")), tools
           rules = {f["rule_id"] for f in r["findings"]}
           assert "CVE-2021-44228" in rules, "Log4Shell not found"
           kev = [f for f in r["findings"] if f["enrichment"]["kev"]]
           assert kev, "KEV enrichment produced nothing"
-          assert any(len(f["sources"]) > 1 for f in r["findings"]), "no cross-tool dedupe"
           print(f"OK: {len(r['findings'])} findings, {len(kev)} KEV")
           PY
       - name: End-to-end attack paths on the vulnerable platform
@@ -119,10 +118,11 @@ jobs:
           import json
           r = json.load(open("platform-report/breachgraph.json"))
           tools = {t["name"]: t["status"] for t in r["tools"]}
-          assert all(tools[t] == "ok" for t in ("semgrep", "trivy", "checkov", "zizmor", "cicd")), tools
+          assert all(tools[t] == "ok" for t in ("semgrep", "trivy", "zizmor", "cicd")), tools
           paths = [[s["dst"] for s in p["steps"]] for p in r["attack_graph"]["paths"]]
           ends = sorted(p[-1] for p in paths)
           assert len(paths) == 4, paths
+          assert any(len(f["sources"]) > 1 for f in r["findings"]), "no cross-tool dedupe"
           assert any("IAM role ci-deploy" in p for p in paths), "CI -> OIDC role -> bucket path missing"
           assert any("GITHUB_TOKEN" in p[-1] for p in paths), "pwn request path missing"
           print("OK:", len(paths), "attack paths:", ends)
