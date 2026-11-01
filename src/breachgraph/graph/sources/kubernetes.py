@@ -224,6 +224,50 @@ def _pod_spec(kind: str, doc: dict[str, Any]) -> dict[str, Any]:
     return ((spec.get("template") or {}).get("spec")) or {}
 
 
+_MISSING_DEPENDENCIES = re.compile(
+    r"missing in charts|checking for chart dependencies|dependency update", re.I
+)
+
+
+def _subchart(chart: str, charts: set[str]) -> bool:
+    """A chart inside another chart's charts/ directory renders with its parent. A directory that
+    merely has that name, the usual home for a repository's charts, doesn't make one."""
+    holder = posixpath.dirname(chart)
+    return posixpath.basename(holder) == "charts" and posixpath.dirname(holder) in charts
+
+
+def _helm_template(
+    helm: str, chart: Path, files: list[str], env: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [helm, "template", "breachgraph", str(chart), *(a for f in files for a in ("-f", f))],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+        env=env,
+        check=False,
+    )
+
+
+def _without_dependencies(
+    helm: str, chart: Path, files: list[str], env: dict[str, str], work: str, rel: str, ctx: SourceContext
+) -> subprocess.CompletedProcess[str]:
+    """Dependencies usually aren't committed and fetching them isn't ours to do. The chart's own
+    templates are still what it deploys, so render those and say what is missing."""
+    copy = Path(work) / "chart" / chart.name
+    shutil.rmtree(copy, ignore_errors=True)
+    shutil.copytree(chart, copy, ignore=shutil.ignore_patterns(".git", "charts", "Chart.lock"))
+    meta = yaml.safe_load((copy / "Chart.yaml").read_text(encoding="utf-8")) or {}
+    names = [str(d.get("name")) for d in meta.pop("dependencies", None) or [] if isinstance(d, dict)]
+    (copy / "Chart.yaml").write_text(yaml.safe_dump(meta), encoding="utf-8")
+    proc = _helm_template(helm, copy, files, env)
+    if proc.returncode == 0:
+        ctx.skipped.append(f"{rel or '.'}: rendered without its dependencies ({', '.join(names)})")
+    return proc
+
+
 def _selects(selector: dict[str, Any], labels: dict[str, Any]) -> bool:
     """A label selector against labels. matchExpressions count as matching (upper bound)."""
     match = selector.get("matchLabels") or {}
@@ -304,11 +348,12 @@ class KubernetesSource:
         attack_graph.helm_values, and index the manifests; returns every chart directory. Without
         helm, or when a chart fails to render (missing vendored dependencies, required values),
         the chart is one blind spot with the reason."""
-        chart_dirs = sorted(
+        found = {
             posixpath.dirname(rel)
             for path, rel in iter_files(ctx.root, ctx.exclude)
-            if path.name == "Chart.yaml" and "/charts/" not in f"/{rel}"  # subcharts render with their parent
-        )
+            if path.name == "Chart.yaml"
+        }
+        chart_dirs = sorted(c for c in found if not _subchart(c, found))
         values: dict[str, list[str]] = {}
         for key, names in ctx.helm_values.items():
             chart_dir = _join("", key)
@@ -338,23 +383,16 @@ class KubernetesSource:
                     ctx.skipped.append(f"{c or '.'}: Helm chart not rendered: {files}")
                     continue
                 try:
-                    proc = subprocess.run(
-                        [helm, "template", "breachgraph", str(chart), *(a for f in files for a in ("-f", f))],
-                        capture_output=True,
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
-                        timeout=120,
-                        env=env,
-                        check=False,
-                    )
+                    proc = _helm_template(helm, chart, files, env)
+                    if proc.returncode != 0 and _MISSING_DEPENDENCIES.search(proc.stderr):
+                        proc = _without_dependencies(helm, chart, files, env, home, c, ctx)
                 except (OSError, subprocess.TimeoutExpired) as exc:
                     ctx.skipped.append(f"{c or '.'}: helm template failed ({type(exc).__name__})")
                     continue
-                if proc.returncode != 0:
+                if proc.returncode == 0:
+                    self._index_rendered(proc.stdout, c, ctx)
+                elif "library charts" not in proc.stderr:  # a library deploys nothing itself
                     ctx.skipped.append(f"{c or '.'}: helm template failed: {_tool_error(proc.stderr, ctx)}")
-                    continue
-                self._index_rendered(proc.stdout, c, ctx)
         return chart_dirs
 
     def _index_rendered(self, output: str, chart_dir: str, ctx: SourceContext) -> None:

@@ -41,6 +41,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Helm charts in a directory named `charts/`, the usual layout, were taken for subcharts and never
+  rendered, so their workloads were missing from the graph. A chart whose dependencies aren't
+  committed now renders its own templates and says what is missing.
 - A secret rule that matches a provider's name and any token no longer blocks a merge on its own, and
   a scanner's own ignore list isn't scanned for secrets. Both were real false blocks: an icon name and
   a `.secretsignore` entry.

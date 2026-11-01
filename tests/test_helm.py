@@ -8,6 +8,9 @@ import pytest
 
 from breachgraph.config import Config
 from breachgraph.graph import build_attack_graph
+from breachgraph.graph.model import Graph, NodeKind
+from breachgraph.graph.sources.common import SourceContext
+from breachgraph.graph.sources.kubernetes import KubernetesSource, _subchart
 from tests.test_entry_points import write
 
 HELM = os.environ.get("BREACHGRAPH_HELM_BIN") or shutil.which("helm")
@@ -113,3 +116,60 @@ def test_values_files_must_be_inside_the_tree(tmp_path: Path) -> None:
         "deploy/shop: Helm chart not rendered: values file ../secret.yaml is outside the scanned directory"
         in (res.skipped)
     )
+
+
+def app(root: Path, where: str, extra: str = "") -> None:
+    write(root, f"{where}/Chart.yaml", f"apiVersion: v2\nname: shop\nversion: 0.1.0\n{extra}")
+    write(
+        root,
+        f"{where}/templates/deployment.yaml",
+        """apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  template:
+    metadata:
+      labels: {app: api}
+    spec:
+      containers:
+        - name: api
+          image: shop/api:1
+""",
+    )
+
+
+def render(root: Path) -> tuple[Graph, list[str]]:
+    g = Graph()
+    ctx = SourceContext(root=root, exclude=[])
+    KubernetesSource().collect(ctx, g)
+    return g, ctx.skipped
+
+
+@pytest.mark.skipif(not HELM, reason="helm not installed")
+def test_a_directory_named_charts_is_not_a_parent_chart(tmp_path: Path) -> None:
+    app(tmp_path, "deployment/helm/charts/shop")
+    g, skipped = render(tmp_path)
+    assert any(n.kind is NodeKind.WORKLOAD for n in g.nodes.values())
+    assert not skipped
+
+
+def test_a_real_subchart_renders_with_its_parent() -> None:
+    assert _subchart("deploy/shop/charts/redis", {"deploy/shop", "deploy/shop/charts/redis"})
+    assert not _subchart("charts/shop", {"charts/shop"})
+    assert _subchart("charts/redis", {"", "charts/redis"})  # the chart is the repository
+
+
+@pytest.mark.skipif(not HELM, reason="helm not installed")
+def test_a_chart_renders_without_dependencies_that_are_not_committed(tmp_path: Path) -> None:
+    deps = "dependencies:\n  - name: redis\n    version: 1.0.0\n    repository: https://example.com\n"
+    app(tmp_path, "deploy/shop", deps)
+    g, skipped = render(tmp_path)
+    assert any(n.kind is NodeKind.WORKLOAD for n in g.nodes.values())
+    assert skipped == ["deploy/shop: rendered without its dependencies (redis)"]
+
+
+@pytest.mark.skipif(not HELM, reason="helm not installed")
+def test_a_library_chart_deploys_nothing_and_is_no_blind_spot(tmp_path: Path) -> None:
+    write(tmp_path, "lib/Chart.yaml", "apiVersion: v2\nname: lib\nversion: 0.1.0\ntype: library\n")
+    assert render(tmp_path)[1] == []
