@@ -6,6 +6,7 @@ analysis needs and keeps expressions exactly as written.
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -62,6 +63,7 @@ class Workflow:
     jobs: list[Job]
     env: dict[str, Any] = field(default_factory=dict)
     run_after: list[str] = field(default_factory=list)  # workflow_run: names it follows
+    default_push: bool = False  # runs when the default branch or a tag changes
 
     def job_permissions(self, job: Job) -> Any:
         """Effective GITHUB_TOKEN permissions; None means the repository default applies."""
@@ -101,6 +103,18 @@ def _triggers(on: Any) -> set[str]:
     if isinstance(on, dict):
         return set(on)
     return set()
+
+
+def _pushes_default(on: Any) -> bool:
+    """A push to main or master, or a new tag, starts this workflow."""
+    if "push" not in _triggers(on):
+        return False
+    spec = _dict(_dict(on).get("push"))
+    branches = spec.get("branches")
+    if spec.get("tags") or branches is None:
+        return True
+    patterns = [str(b) for b in branches] if isinstance(branches, list) else [str(branches)]
+    return any(fnmatch.fnmatchcase(name, p) for name in ("main", "master") for p in patterns)
 
 
 def parse_workflow(text: str, rel: str) -> Workflow | None:
@@ -156,6 +170,7 @@ def parse_workflow(text: str, rel: str) -> Workflow | None:
         jobs=jobs,
         env=_dict(data.get("env")),
         run_after=_run_after(data.get("on")),
+        default_push=_pushes_default(data.get("on")),
     )
 
 

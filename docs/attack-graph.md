@@ -232,6 +232,21 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## From CI to production
+
+A job an outsider can start doesn't only hold its own secrets. A weapon in that job can also go on
+through what the job's token can write:
+
+- **The default branch.** With `contents: write`, the job can change code that deploy jobs run. Those
+  are jobs started by a push to `main`, `master` or a tag, with a name or environment that says they
+  deploy. The path reaches their secrets and OIDC roles. A push made with `GITHUB_TOKEN` doesn't start
+  a workflow itself, so this takes effect on the next push, which is why the step is medium
+  confidence. A job in a GitHub environment is a lead only: it may require a reviewer, which the
+  repository doesn't show.
+- **The registry.** With `packages: write`, the job can replace a `ghcr.io` image the repository
+  publishes. The path reaches what the workloads running that image can reach. An image pinned to a
+  digest can't be replaced. Other registries aren't modeled.
+
 ## Paths of the same kind
 
 Paths that use the same kind of flaw to reach the same asset are shown as one entry, "and 34 more

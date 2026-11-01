@@ -124,7 +124,9 @@ def _vector(graph: Graph, path: AttackPath) -> frozenset[str]:
         for s in path.steps
         if s.via and not any(w.fingerprint for w in graph.nodes[s.edge.src].has({s.via}))
     }
-    return frozenset(path.weaknesses) | derived
+    # One weapon can also go on through a pipeline stage: a different attack with a different fix.
+    stages = {n for n in path.nodes[1:-1] if graph.nodes[n].attrs.get("stage")}
+    return frozenset(path.weaknesses) | derived | stages
 
 
 def _crossing(node: Node, edge: Edge) -> Step:

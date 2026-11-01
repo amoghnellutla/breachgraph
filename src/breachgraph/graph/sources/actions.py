@@ -9,12 +9,16 @@ in the job (script injection, a pwn request), so every credential edge requires 
   Azure federated credential subject) admits this workflow's token;
 - repository secrets the job references;
 - a GITHUB_TOKEN that can push code or publish packages.
+
+That token also reaches production later. Code pushed with it runs in the deploy jobs of the next
+push, and an image pushed with it runs as the workloads that pull it. See `ActionsSource.delivery`.
 """
 
 from __future__ import annotations
 
 import fnmatch
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +34,7 @@ from breachgraph.graph.model import (
     Graph,
     Node,
     NodeKind,
+    WeaknessClass,
     internet,
 )
 from breachgraph.graph.sources.common import SourceContext
@@ -41,6 +46,23 @@ WRITE_SCOPES = {
     "packages": ("publish packages and images as this repository", 8),
     "actions": ("rewrite workflow caches and runs of this repository", 7),
 }
+
+
+BRANCH_ID = "gha:branch:default"
+_DEPLOY_JOB = re.compile(r"deploy|release|publish|prod|rollout", re.I)
+_DOCKER_PUSH = re.compile(r"\bdocker\s+(?:image\s+)?push\s+(\S+)")
+_EXPR = re.compile(r"\$\{\{\s*([^}]+?)\s*\}\}")
+_TAG = re.compile(r":[^/]*$")
+_INHERITED = (EdgeKind.USES_IDENTITY, EdgeKind.MOUNTS, EdgeKind.CONNECTS_TO)
+
+
+def _deploys(wf: Workflow, job: Job) -> bool:
+    return bool(job.environment or _DEPLOY_JOB.search(f"{wf.name} {wf.path} {job.id}"))
+
+
+def _later(confidence: Confidence) -> Confidence:
+    """Nothing happens until the next run, so a delivery step is at best medium."""
+    return Confidence.LOW if confidence is Confidence.LOW else Confidence.MEDIUM
 
 
 def repository_slug(root: Path) -> str | None:
@@ -81,6 +103,31 @@ def admits(patterns: list[str], slug: str | None, suffixes: list[str]) -> bool:
     return False
 
 
+def oidc_deploy_suffixes(job: Job) -> list[str]:
+    """The `sub` claim of a job a push starts."""
+    if job.environment:
+        return [f"environment:{job.environment}"]
+    return ["ref:refs/heads/main", "ref:refs/heads/master"]
+
+
+def _cloud_steps(wf: Workflow, job: Job) -> list[tuple[Step, str, Any]]:
+    """Cloud logins over OIDC in a job, with their platform and role."""
+    perms = wf.job_permissions(job)
+    if perms != "write-all" and not (isinstance(perms, dict) and perms.get("id-token") == "write"):
+        return []
+    out: list[tuple[Step, str, Any]] = []
+    for step in job.steps:
+        if step.action == "aws-actions/configure-aws-credentials":
+            out.append((step, "aws", step.with_.get("role-to-assume")))
+        elif step.action == "azure/login":
+            out.append((step, "azure", None))
+    return out
+
+
+def _lines(value: Any) -> list[str]:
+    return [x.strip() for x in re.split(r"[\n,]", value) if x.strip()] if isinstance(value, str) else []
+
+
 def _subs(node: Node) -> list[str]:
     raw = node.attrs.get("github_oidc_subs")
     return [str(x) for x in raw] if isinstance(raw, list) else []
@@ -94,6 +141,7 @@ class ActionsSource:
         ctx.skipped.extend(skipped)
         self.slug = repository_slug(ctx.root)
         self.ctx = ctx
+        self.workflows = workflows
         by_name = {wf.name: wf for wf in workflows}
         for wf in workflows:
             for job in wf.jobs:
@@ -146,13 +194,148 @@ class ActionsSource:
         self._secrets(graph, nid, wf, job)
         self._token(graph, nid, wf, job, perms)
 
-    def _grant(self, graph: Graph, src: str, dst: str, ev: Evidence, conf: Confidence, note: str) -> None:
+    def delivery(self, graph: Graph) -> None:
+        """What a write token in an outsider's job reaches on the way to production. Runs once every
+        workload is known. Each route starts with the job's token, which needs a weapon in that job."""
+        holders = [e for e in graph.edges if e.src.startswith("gha:job:")]
+        self._default_branch(graph, [e for e in holders if e.dst == "gha:token:contents"])
+        self._registry(graph, [e for e in holders if e.dst == "gha:token:packages"])
+
+    def _default_branch(self, graph: Graph, writers: list[Edge]) -> None:
+        jobs = [(wf, j) for wf in self.workflows if wf.default_push for j in wf.jobs if _deploys(wf, j)]
+        held = [(wf, j) for wf, j in jobs if job_secrets(wf, j) or _cloud_steps(wf, j)]
+        if not writers or not held:
+            return
+        graph.add_node(
+            Node(
+                id=BRANCH_ID,
+                kind=NodeKind.ENTRYPOINT,
+                name="Default branch of this repository",
+                attrs={"stage": True},
+            )
+        )
+        for e in writers:
+            graph.add_edge(
+                Edge(
+                    src=e.src,
+                    dst=BRANCH_ID,
+                    kind=EdgeKind.COMPROMISES,
+                    requires=CONTROL,
+                    evidence=e.evidence,
+                    confidence=_later(e.confidence),
+                    note="its token can change the code on this branch",
+                )
+            )
+        for wf, job in held:
+            did = f"gha:deploy:{wf.path}:{job.id}"
+            ev = Evidence(path=wf.path, line=job.line, detail=f"job {job.id}", source="github-actions")
+            graph.add_node(
+                Node(
+                    id=did,
+                    kind=NodeKind.ENTRYPOINT,
+                    name=f"Deploy job {wf.name} / {job.id}",
+                    evidence=[ev],
+                )
+            )
+            graph.add_edge(
+                Edge(
+                    src=BRANCH_ID,
+                    dst=did,
+                    kind=EdgeKind.COMPROMISES,
+                    evidence=[ev],
+                    # An environment can require a reviewer, which the repository doesn't show.
+                    confidence=Confidence.LOW if job.environment else Confidence.MEDIUM,
+                    note="runs the branch's code on the next push"
+                    + (f", in environment {job.environment}" if job.environment else ""),
+                )
+            )
+            self._secrets(graph, did, wf, job, requires=[])
+            suffixes = oidc_deploy_suffixes(job)
+            for step, platform, role in _cloud_steps(wf, job):
+                self._cloud(graph, did, wf, job, step, platform, role, suffixes, requires=[])
+
+    def _registry(self, graph: Graph, publishers: list[Edge]) -> None:
+        pushed = self._pushed_images() if publishers else set()
+        for node in list(graph.of_kind(NodeKind.WORKLOAD)):
+            raw = node.attrs.get("images")
+            for image in [str(i) for i in raw] if isinstance(raw, list) else []:
+                # A digest can't be replaced, whatever the token can do.
+                name = _TAG.sub("", image.lower())
+                if "@" in image or not any(fnmatch.fnmatchcase(name, p) for p in pushed):
+                    continue
+                iid = f"image:{image}"
+                graph.add_node(Node(id=iid, kind=NodeKind.IMAGE, name=image, evidence=node.evidence))
+                graph.nodes[iid].attrs["stage"] = True
+                for e in publishers:
+                    graph.add_edge(
+                        Edge(
+                            src=e.src,
+                            dst=iid,
+                            kind=EdgeKind.COMPROMISES,
+                            requires=CONTROL,
+                            evidence=e.evidence,
+                            confidence=_later(e.confidence),
+                            note="its token can replace this image, since the tag isn't pinned to a digest",
+                        )
+                    )
+                for edge in [e for e in graph.edges if e.src == node.id and e.kind in _INHERITED]:
+                    graph.add_edge(
+                        Edge(
+                            src=iid,
+                            dst=edge.dst,
+                            kind=edge.kind,
+                            evidence=edge.evidence,
+                            confidence=edge.confidence,
+                            note=f"{node.name} runs this image the next time it starts",
+                        )
+                    )
+
+    def _pushed_images(self) -> set[str]:
+        """GitHub Packages images this repository's workflows publish, as lowercase name patterns."""
+        found: set[str] = set()
+        for wf in self.workflows:
+            for job in wf.jobs:
+                for step in job.steps:
+                    raw = _DOCKER_PUSH.findall(step.run)
+                    if step.action == "docker/build-push-action":
+                        raw += _lines(step.with_.get("tags"))
+                    elif step.action == "docker/metadata-action":
+                        raw += _lines(step.with_.get("images"))
+                    for text in raw:
+                        name = self._resolve(text, {**wf.env, **job.env, **step.env})
+                        if name and name.lower().startswith("ghcr.io/"):
+                            found.add(_TAG.sub("", name.lower()))
+        return found
+
+    def _resolve(self, text: str, env: dict[str, Any]) -> str | None:
+        """A name with its expressions filled in; None when one depends on the run."""
+        repo = self.slug or f"*/{self.ctx.root.resolve().name}"
+        known = {"github.repository": repo, "github.repository_owner": repo.split("/")[0]}
+        for _ in range(3):
+            for m in _EXPR.finditer(text):
+                expr = m.group(1)
+                value = known.get(expr) or (env.get(expr[4:]) if expr.startswith("env.") else None)
+                if value is None:
+                    return None
+                text = text.replace(m.group(0), str(value))
+        return None if "${{" in text else text
+
+    def _grant(
+        self,
+        graph: Graph,
+        src: str,
+        dst: str,
+        ev: Evidence,
+        conf: Confidence,
+        note: str,
+        requires: list[WeaknessClass] = CONTROL,
+    ) -> None:
         graph.add_edge(
             Edge(
                 src=src,
                 dst=dst,
                 kind=EdgeKind.USES_IDENTITY,
-                requires=CONTROL,
+                requires=requires,
                 evidence=[ev],
                 confidence=conf,
                 note=note,
@@ -160,10 +343,19 @@ class ActionsSource:
         )
 
     def _cloud(
-        self, graph: Graph, nid: str, wf: Workflow, job: Job, step: Step, platform: str, role: Any
+        self,
+        graph: Graph,
+        nid: str,
+        wf: Workflow,
+        job: Job,
+        step: Step,
+        platform: str,
+        role: Any,
+        suffixes: list[str] | None = None,
+        requires: list[WeaknessClass] = CONTROL,
     ) -> None:
         ev = Evidence(path=wf.path, line=step.line, detail=step.uses, source="github-actions")
-        suffixes = oidc_suffixes(wf, job)
+        suffixes = suffixes or oidc_suffixes(wf, job)
         conf = Confidence.HIGH if self.slug else Confidence.MEDIUM
         trusted = {
             n.id: n
@@ -193,11 +385,13 @@ class ActionsSource:
                     ev,
                     Confidence.MEDIUM,
                     "assumed over OIDC (role defined outside this repo)",
+                    requires,
                 )
                 return
             subs = _subs(node)
             if admits(subs, self.slug, suffixes):
-                self._grant(graph, nid, rid, ev, conf, f"assumed over OIDC; trust admits sub {suffixes[0]}")
+                note = f"assumed over OIDC; trust admits sub {suffixes[0]}"
+                self._grant(graph, nid, rid, ev, conf, note, requires)
             else:
                 self.ctx.skipped.append(
                     f"{ev.label()}: job {job.id} cannot assume {m.group(1)} when an outsider triggers it "
@@ -216,6 +410,7 @@ class ActionsSource:
                     ev,
                     Confidence.MEDIUM,
                     f"its OIDC trust admits this workflow ({suffixes[0]})",
+                    requires,
                 )
 
     def _gcp(self, graph: Graph, nid: str, step: Step, wf: Workflow) -> None:
@@ -231,7 +426,14 @@ class ActionsSource:
             graph, nid, gid, ev, Confidence.MEDIUM, "impersonated through Workload Identity Federation"
         )
 
-    def _secrets(self, graph: Graph, nid: str, wf: Workflow, job: Job) -> None:
+    def _secrets(
+        self,
+        graph: Graph,
+        nid: str,
+        wf: Workflow,
+        job: Job,
+        requires: list[WeaknessClass] = CONTROL,
+    ) -> None:
         for name, line in job_secrets(wf, job).items():
             sid = f"gha:secret:{name}"
             ev = Evidence(path=wf.path, line=line, detail=f"secrets.{name}", source="github-actions")
@@ -243,7 +445,7 @@ class ActionsSource:
                     src=nid,
                     dst=sid,
                     kind=EdgeKind.MOUNTS,
-                    requires=CONTROL,
+                    requires=requires,
                     evidence=[ev],
                     note="the job's environment holds this secret",
                 )

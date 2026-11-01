@@ -44,6 +44,7 @@ MAX_SIZE_KB = 1_000_000
 ACTIVE_DAYS = 180
 SCAN_TIMEOUT_S = 1800
 VOLUME = "breachgraph-corpus"
+MODELED = ("routes", "workloads", "cloud_resources", "kubernetes_objects", "ci_jobs", "crown_jewels")
 PUBLISHED = ROOT / "benchmarks" / "results" / "real-world.json"
 PAGE = ROOT / "docs" / "real-world.md"
 # What a release may not exceed. A first scan that blocks most projects teaches people to turn it off.
@@ -129,9 +130,11 @@ def checkout(project: dict[str, Any], image: str) -> str:
     on a large tree, which CI runners don't pay. Returns the path inside the volume."""
     dest = f"/corpus/{slug(project['name'])}"
     script = (
-        f"test -d {dest}/.git && exit 0; rm -rf {dest}; mkdir -p {dest} && cd {dest} && git init -q "
+        # Only a finished checkout counts: an interrupted clone leaves .git behind and no files.
+        f"test -f {dest}.ready && exit 0; rm -rf {dest}; mkdir -p {dest} && cd {dest} && git init -q "
         f"&& git remote add origin {project['repo']} && git fetch -q --depth 1 origin {project['sha']} "
-        "&& git -c advice.detachedHead=false checkout -q --force FETCH_HEAD"
+        "&& git -c advice.detachedHead=false checkout -q --force FETCH_HEAD "
+        f'&& test -n "$(git ls-files | head -n 1)" && touch {dest}.ready'
     )
     for attempt in range(3):  # a long run outlives brief network failures
         try:
@@ -142,7 +145,7 @@ def checkout(project: dict[str, Any], image: str) -> str:
                 ],
                 check=True,
                 capture_output=True,
-                timeout=900,
+                timeout=1800,
             )
             return dest
         except subprocess.SubprocessError:
@@ -199,9 +202,11 @@ def scan(project: dict[str, Any], src: str, image: str) -> dict[str, Any]:
 
 def measure(project: dict[str, Any], report: dict[str, Any], elapsed: float) -> dict[str, Any]:
     ag = report.get("attack_graph") or {}
+    modeled = {k: v for k, v in (ag.get("coverage") or {}).items() if k in MODELED and v}
     return {
         "name": project["name"],
-        "outcome": "ok",
+        # Every project here has source and deployment files, so seeing nothing means no scan happened.
+        "outcome": "ok" if report["findings"] or modeled else "empty",
         "deploy": project["deploy"],
         "wall_time_s": elapsed,
         "tools": {t["name"]: t["status"] for t in report["tools"]},

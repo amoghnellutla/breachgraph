@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Attack paths from a CI job to production: a write token reaches what deploy jobs hold through the
+  default branch, and a package token reaches what a workload can do by replacing its image.
+
 ### Changed
 
 - Attack paths that use the same kind of flaw to reach the same asset are shown as one entry, "and

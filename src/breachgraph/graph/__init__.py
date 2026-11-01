@@ -136,10 +136,12 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
     images.collect(ctx, graph)
     KubernetesSource().collect(ctx, graph)
     TerraformSource().collect(ctx, graph)
-    ActionsSource().collect(ctx, graph)  # after cloud sources: links jobs to their identities
+    actions = ActionsSource()
+    actions.collect(ctx, graph)  # after cloud sources: links jobs to their identities
     HostingSource().collect(ctx, graph)
     routes = RouteSource().collect(ctx)
     application_assets(ctx, graph, collect_imports(ctx), len(routes))
+    actions.delivery(graph)  # once every workload and what it can reach is known
 
     assumed_entries(graph, config.attack_graph.entry_points)
     name = repo_name or PurePosixPath(target.resolve().as_posix()).name
