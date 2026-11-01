@@ -12,6 +12,7 @@ from __future__ import annotations
 import fnmatch
 import posixpath
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,7 @@ from breachgraph.graph.sources.hcl import decode_policy, literal, refs, truthy
 from breachgraph.graph.sources.tfload import Res, code_paths, module_views
 from breachgraph.graph.sources.tfload import list_blocks as _list_blocks
 from breachgraph.graph.sources.tfload import list_of as _list
+from breachgraph.paths import iter_files
 
 ACCOUNT_ADMIN_ID = "aws:account-admin"
 GITHUB_OIDC = "token.actions.githubusercontent.com"
@@ -108,6 +110,11 @@ ESCALATION_SETS: list[tuple[set[str], str]] = [
     ({"iam:PutUserPolicy"}, "can write an inline policy on a user"),
     ({"iam:CreateAccessKey"}, "can mint access keys for other users"),
     ({"iam:UpdateAssumeRolePolicy"}, "can let itself assume any role"),
+    ({"iam:AddUserToGroup"}, "can add a user to any group"),
+    ({"iam:AttachGroupPolicy"}, "can attach any managed policy to a group"),
+    ({"iam:PutGroupPolicy"}, "can write an inline policy on a group"),
+    ({"iam:CreateLoginProfile"}, "can give another user a console password"),
+    ({"iam:UpdateLoginProfile"}, "can change another user's console password"),
     (
         {"iam:PassRole", "lambda:CreateFunction", "lambda:InvokeFunction"},
         "can run code as any passable role via Lambda",
@@ -115,6 +122,15 @@ ESCALATION_SETS: list[tuple[set[str], str]] = [
     ({"iam:PassRole", "ec2:RunInstances"}, "can launch an instance with any passable role"),
     ({"iam:PassRole", "ecs:RunTask"}, "can run an ECS task with any passable role"),
     ({"iam:PassRole", "cloudformation:CreateStack"}, "can deploy a stack with any passable role"),
+    ({"iam:PassRole", "glue:CreateDevEndpoint"}, "can start a Glue endpoint with any passable role"),
+    (
+        {"iam:PassRole", "codebuild:CreateProject", "codebuild:StartBuild"},
+        "can run a build with any passable role",
+    ),
+    (
+        {"iam:PassRole", "sagemaker:CreateNotebookInstance"},
+        "can start a notebook with any passable role",
+    ),
 ]
 
 
@@ -142,6 +158,7 @@ class _State:
 
 # A bucket whose name says it holds what the public is meant to read.
 _MEANT_PUBLIC = re.compile(r"public|static|assets|cdn", re.I)
+_S3_BACKEND = re.compile(r'backend\s+"s3"\s*\{[^}]*?\bbucket\s*=\s*"([^"]+)"', re.S)
 _FILE_CALL = re.compile(r'^\$\{(?:file|templatefile)\(\s*"([^"]+)"')
 
 
@@ -166,10 +183,12 @@ class TerraformSource:
             self._assume_roles(st, graph)
             self._compute(st, graph)
             self._exposure(st, graph)
+            self._code_and_triggers(st, graph)
             skipped += st.unresolved
             AzureTerraform(st.res).collect(graph, skipped)
             GcpTerraform(st.res).collect(graph, skipped)
         ctx.skipped.extend(dict.fromkeys(skipped))  # views overlap: report each blind spot once
+        self._state_buckets(ctx, graph)
 
     # ------------------------------------------------------------------ helpers
 
@@ -729,21 +748,7 @@ class TerraformSource:
         for r in st.res.values():
             if not r.node_id or r.rtype not in DATA_ACTIONS:
                 continue
-            ident = str(graph.nodes[r.node_id].attrs.get("arn_name"))
-            tf_ref = next(k for k, v in st.res.items() if v is r)
-
-            def res_ok(resources: list[str], ident: str = ident, tf_ref: str = tf_ref) -> bool:
-                for x in resources:
-                    if (
-                        x == "*"
-                        or tf_ref in x
-                        or (ident and re.search(rf"[:/]{re.escape(ident)}(/|\*|$)", x))
-                    ):
-                        return True
-                    if x.startswith("arn:") and fnmatch.fnmatchcase(f"arn:aws:s3:::{ident}", x.split("/")[0]):
-                        return True
-                return False
-
+            res_ok = self._on_store(st, graph, r)
             actions, _value, _label = DATA_ACTIONS[r.rtype]
             for action in actions:
                 ok, cond, grant = self._allowed(stmts, action, res_ok)
@@ -762,6 +767,112 @@ class TerraformSource:
                         )
                     )
                     break
+
+    def _on_store(self, st: _State, graph: Graph, r: Res) -> Callable[[list[str]], bool]:
+        """Whether a statement's resources cover this data store."""
+        ident = str(graph.nodes[str(r.node_id)].attrs.get("arn_name"))
+        tf_ref = next(k for k, v in st.res.items() if v is r)
+
+        def res_ok(resources: list[str]) -> bool:
+            for x in resources:
+                if x == "*" or tf_ref in x or (ident and re.search(rf"[:/]{re.escape(ident)}(/|\*|$)", x)):
+                    return True
+                if x.startswith("arn:") and fnmatch.fnmatchcase(f"arn:aws:s3:::{ident}", x.split("/")[0]):
+                    return True
+            return False
+
+        return res_ok
+
+    # ------------------------------------------------------------------ code and events
+
+    def _code_and_triggers(self, st: _State, graph: Graph) -> None:
+        """Ways into a function other than its URL: writing its code, or sending it an event."""
+        for key, r in st.res.items():
+            if r.rtype == "aws_lambda_function" and r.node_id:
+                for e in [e for e in graph.edges if e.src == r.node_id and e.kind is EdgeKind.USES_IDENTITY]:
+                    self._replacers(st, graph, key, r, e.dst)
+        for r in st.res.values():
+            if r.rtype == "aws_s3_bucket_notification":
+                store = self._node_for_ref(st, r.body.get("bucket"), "aws_s3_bucket")
+                for block in _list_blocks(r.body.get("lambda_function")):
+                    fn = self._node_for_ref(st, block.get("lambda_function_arn"), "aws_lambda_function")
+                    self._trigger(st, graph, store, fn, "s3:PutObject", "writing an object", r)
+            elif r.rtype == "aws_lambda_event_source_mapping":
+                store = self._node_for_ref(st, r.body.get("event_source_arn"), "aws_dynamodb_table")
+                fn = self._node_for_ref(st, r.body.get("function_name"), "aws_lambda_function")
+                self._trigger(st, graph, store, fn, "dynamodb:PutItem", "writing an item", r)
+
+    def _replacers(self, st: _State, graph: Graph, key: str, fn: Res, runs_as: str) -> None:
+        name = literal(fn.body.get("function_name")) or fn.name
+
+        def covers(resources: list[str]) -> bool:
+            return any(
+                x == "*" or key in x or re.search(rf":function:{re.escape(name)}(:|\*|$)", x)
+                for x in resources
+            )
+
+        bucket = self._node_for_ref(st, fn.body.get("s3_bucket"), "aws_s3_bucket")
+        for role_id, stmts in st.role_stmts.items():
+            if role_id == runs_as:
+                continue
+            ok, cond, grant = self._allowed(stmts, "lambda:UpdateFunctionCode", covers)
+            if ok:
+                graph.add_edge(
+                    Edge(
+                        src=role_id,
+                        dst=runs_as,
+                        kind=EdgeKind.USES_IDENTITY,
+                        evidence=[grant.evidence] if grant and grant.evidence else [fn.ev],
+                        confidence=Confidence.MEDIUM if cond else Confidence.HIGH,
+                        note=f"can replace the code of Lambda {fn.name}, which runs as this role",
+                    )
+                )
+            elif (
+                bucket
+                and bucket.node_id
+                and self._allowed(stmts, "s3:PutObject", self._on_store(st, graph, bucket))[0]
+            ):
+                graph.add_edge(
+                    Edge(
+                        src=role_id,
+                        dst=runs_as,
+                        kind=EdgeKind.USES_IDENTITY,
+                        evidence=[fn.ev],
+                        confidence=Confidence.LOW,  # Lambda keeps a copy until the next deployment
+                        note=f"can overwrite the code of Lambda {fn.name} in its bucket",
+                    )
+                )
+
+    def _trigger(
+        self, st: _State, graph: Graph, store: Res | None, fn: Res | None, action: str, how: str, r: Res
+    ) -> None:
+        """Whoever can write here reaches the function. Going further still needs a weapon in it."""
+        if store is None or fn is None or not store.node_id or not fn.node_id:
+            return
+        res_ok = self._on_store(st, graph, store)
+        for role_id, stmts in st.role_stmts.items():
+            if self._allowed(stmts, action, res_ok)[0]:
+                graph.add_edge(
+                    Edge(
+                        src=role_id,
+                        dst=fn.node_id,
+                        kind=EdgeKind.EXPOSES,
+                        evidence=[r.ev],
+                        confidence=Confidence.MEDIUM,
+                        note=f"{how} starts Lambda {fn.name}",
+                    )
+                )
+
+    def _state_buckets(self, ctx: SourceContext, graph: Graph) -> None:
+        """The state file holds every secret Terraform manages, in plain text."""
+        names: set[str] = set()
+        for file, rel in iter_files(ctx.root, ctx.exclude):
+            if rel.endswith(".tf"):
+                names |= set(_S3_BACKEND.findall(ctx.read(file) or ""))
+        for node in graph.nodes.values():
+            if node.attrs.get("arn_name") in names and "Terraform state" not in node.name:
+                node.name += " (Terraform state)"
+                node.value = max(node.value, 9)
 
     # ------------------------------------------------------------------ compute
 

@@ -238,6 +238,19 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## Writing what runs
+
+A role can become another role without assuming it, by changing code that runs as that role:
+
+- `lambda:UpdateFunctionCode` on a function reaches the function's role.
+- `s3:PutObject` on the bucket holding a function's code does too, at low confidence, because Lambda
+  keeps its own copy until the next deployment.
+- Writing to a bucket or DynamoDB table that triggers a function reaches the function. That alone
+  gives nothing: going further needs a weapon in the function.
+
+A bucket named as an S3 backend for Terraform counts as a crown jewel, since the state file holds
+every secret Terraform manages in plain text.
+
 ## Services that answer anyone
 
 An exposed stock service can be a way in with no bug in your code. Redis, MongoDB, Memcached,

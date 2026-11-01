@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
 - A password for a hosted database in a settings file is a path from anyone who can read the
   repository. A signing key in the source lifts "needs a login" from guarded routes, since a login
   can be forged. New rule `hardcoded-signing-key` for Python, JavaScript, TypeScript, Java and Go.
+- AWS: `lambda:UpdateFunctionCode` reaches the function's role, and so, at low confidence, does
+  writing to the bucket that holds its code. Writing to a bucket or table that triggers a function
+  reaches that function, though going further still needs a weapon in it. A bucket that holds
+  Terraform state counts as a crown jewel. Eight more IAM escalation methods.
 - Whoever controls a workload also has any open service beside it, within what NetworkPolicy allows,
   and a server-side request reaches one that speaks HTTP.
 - Stock services that answer anyone are a way in with no bug in your code: Redis, MongoDB,
