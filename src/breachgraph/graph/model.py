@@ -15,7 +15,7 @@ from collections import defaultdict
 from collections.abc import Iterator
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class NodeKind(StrEnum):
@@ -126,9 +126,14 @@ class Edge(BaseModel):
     note: str = ""
 
 
+def _edge_key(e: Edge) -> tuple[str, str, EdgeKind, tuple[str, ...]]:
+    return (e.src, e.dst, e.kind, tuple(sorted(e.requires)))
+
+
 class Graph(BaseModel):
     nodes: dict[str, Node] = Field(default_factory=dict)
     edges: list[Edge] = Field(default_factory=list)
+    _edge_keys: dict[tuple[str, str, EdgeKind, tuple[str, ...]], Edge] = PrivateAttr(default_factory=dict)
 
     def add_node(self, node: Node) -> Node:
         existing = self.nodes.get(node.id)
@@ -143,12 +148,14 @@ class Graph(BaseModel):
     def add_edge(self, edge: Edge) -> None:
         # Edges that need different weaknesses are different ways in (e.g. code execution vs SSRF
         # to the same identity), so they are kept apart.
-        key = (edge.src, edge.dst, edge.kind, sorted(edge.requires))
-        for e in self.edges:
-            if (e.src, e.dst, e.kind, sorted(e.requires)) == key:
-                e.evidence.extend(x for x in edge.evidence if x not in e.evidence)
-                return
+        if len(self._edge_keys) != len(self.edges):
+            self._edge_keys = {_edge_key(e): e for e in self.edges}
+        known = self._edge_keys.get(_edge_key(edge))
+        if known is not None:
+            known.evidence.extend(x for x in edge.evidence if x not in known.evidence)
+            return
         self.edges.append(edge)
+        self._edge_keys[_edge_key(edge)] = edge
 
     def out_edges(self) -> dict[str, list[Edge]]:
         adj: dict[str, list[Edge]] = defaultdict(list)

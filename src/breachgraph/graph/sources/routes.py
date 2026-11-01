@@ -148,8 +148,23 @@ def parse_tree(path: Path) -> ts.Tree | None:
         raise ValueError(str(exc)) from exc
 
 
+# A file with none of these declares no route, so it needn't be parsed. Walking every syntax tree
+# in a large frontend (translations, generated data) took minutes and found nothing.
+_MAY_ROUTE = re.compile(
+    rb"\.(?:get|post|put|patch|delete|all|any|head|options|route|handle|handlefunc|api_route|websocket)\s*[(<]"
+    rb"|@(?:Get|Post|Put|Patch|Delete|All|Controller)\b|rocedure\b|\bre_path\(|\bpath\(|\burl\(",
+    re.I,
+)
+
+
 def routes_in_file(path: Path, rel: str) -> list[Route]:
     """Routes declared in one source file. Raises ValueError if the file can't be parsed."""
+    if path.suffix.lower() in (".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx") and not _NEXT_ROUTE.search(rel):
+        try:
+            if not _MAY_ROUTE.search(path.read_bytes()):
+                return []
+        except OSError:
+            return []
     tree = parse_tree(path)
     if tree is None:
         return []
@@ -270,27 +285,26 @@ def _python(root: ts.Node, rel: str) -> list[Route]:
 _NEXT_ROUTE = re.compile(r"(?:^|/)(?:pages/api/(.+?)|app/(.*?)/?route)\.(?:js|jsx|ts|tsx|mjs)$")
 
 
-def _trpc(root: ts.Node, rel: str) -> list[Route]:
+def _trpc(pair: ts.Node, rel: str) -> list[Route]:
     """`getUser: protectedProcedure.input(...).query(async ...)` inside a router."""
-    out: list[Route] = []
-    for pair in (n for n in _walk(root) if n.type == "pair"):
-        value = pair.child_by_field_name("value")
-        if value is None or value.type != "call_expression":
-            continue
-        func = value.child_by_field_name("function")
-        if func is None or func.type != "member_expression":
-            continue
-        verb = _text(func.child_by_field_name("property"))
-        chain = _text(func.child_by_field_name("object"))
-        if verb in ("query", "mutation") and re.search(r"procedure\b", chain, re.I):
-            start, end = _lines(pair)
-            name = _text(pair.child_by_field_name("key")).strip("'\"")
-            out.append(Route("POST", f"/trpc/{name}", rel, start, end, name, "trpc"))
-    return out
+    value = pair.child_by_field_name("value")
+    if value is None or value.type != "call_expression":
+        return []
+    func = value.child_by_field_name("function")
+    if func is None or func.type != "member_expression":
+        return []
+    verb = _text(func.child_by_field_name("property"))
+    if verb not in ("query", "mutation") or not re.search(
+        r"procedure\b", _text(func.child_by_field_name("object")), re.I
+    ):
+        return []
+    start, end = _lines(pair)
+    name = _text(pair.child_by_field_name("key")).strip("'\"")
+    return [Route("POST", f"/trpc/{name}", rel, start, end, name, "trpc")]
 
 
 def _javascript(root: ts.Node, rel: str, path: Path) -> list[Route]:
-    out: list[Route] = _trpc(root, rel)
+    out: list[Route] = []
     m = _NEXT_ROUTE.search(rel)
     if m:
         next_url = "/" + (("api/" + m.group(1)) if m.group(1) else (m.group(2) or ""))
@@ -299,7 +313,9 @@ def _javascript(root: ts.Node, rel: str, path: Path) -> list[Route]:
         out.append(Route("ANY", next_url, rel, start, end, path.stem, "nextjs"))
     controller_prefix = ""
     for n in _walk(root):
-        if n.type == "call_expression":
+        if n.type == "pair":  # one walk, not one per kind of route
+            out += _trpc(n, rel)
+        elif n.type == "call_expression":
             func = n.child_by_field_name("function")
             if func is None or func.type != "member_expression":
                 continue

@@ -74,13 +74,18 @@ def _called(node: ts.Node) -> str:
 
 
 def _functions(root: ts.Node, rel: str) -> list[Function]:
+    """Each named function with the calls in its body. One walk: a call belongs to the innermost
+    named function around it, and an anonymous closure's calls to the function that holds it."""
     out: list[Function] = []
-    for n in _walk(root):
-        name = _function_name(n)
-        if not name:
-            continue
-        calls = {c for c in (_called(x) for x in _walk(n)) if c}
-        out.append(Function(rel, name, n.start_point[0] + 1, n.end_point[0] + 1, calls))
+    stack: list[tuple[ts.Node, Function | None]] = [(root, None)]
+    while stack:
+        node, current = stack.pop()
+        if name := _function_name(node):
+            current = Function(rel, name, node.start_point[0] + 1, node.end_point[0] + 1)
+            out.append(current)
+        elif current is not None and (called := _called(node)):
+            current.calls.add(called)
+        stack.extend((c, current) for c in node.children)
     return out
 
 
@@ -165,6 +170,9 @@ class CallGraph:
             self.modules.setdefault((family, module), []).append(rel)
             self.by_module.setdefault(posixpath.basename(module), []).append(module)
         self.reached: dict[tuple[str, int, int], dict[tuple[str, int], list[str]]] = {}
+        self._visible_of: dict[str, list[str]] = {}
+        self._resolved: dict[tuple[str, str], list[Function]] = {}
+        self._links: dict[tuple[str, int], list[tuple[int, list[str]]]] | None = None
 
     def _load(self, rel: str) -> _File | None:
         if rel not in self.files:
@@ -183,6 +191,12 @@ class CallGraph:
 
     def _visible(self, rel: str) -> list[str]:
         """The file, its package, and what it imports: where a call in it can land."""
+        if rel not in self._visible_of:
+            self._load(rel)
+            self._visible_of[rel] = self._compute_visible(rel)
+        return self._visible_of[rel]
+
+    def _compute_visible(self, rel: str) -> list[str]:
         family = self.family[rel]
         out = [rel, *self.by_dir.get((family, posixpath.dirname(rel)), [])]
         info = self.files.get(rel)
@@ -202,6 +216,12 @@ class CallGraph:
         return list(dict.fromkeys(out))
 
     def _resolve(self, rel: str, name: str) -> list[Function]:
+        key = (rel, name)
+        if key not in self._resolved:
+            self._resolved[key] = self._find(rel, name)
+        return self._resolved[key]
+
+    def _find(self, rel: str, name: str) -> list[Function]:
         found: list[Function] = []
         for other in self._visible(rel):
             info = self._load(other)
@@ -261,6 +281,23 @@ class CallGraph:
         if not holders:
             return None
         return reached[(holders[-1].file, holders[-1].start)]
+
+    def link(self, routes: list[tuple[str, int, int]]) -> None:
+        """Index every route's reach once, so each finding is a lookup, not a walk of all routes."""
+        self._links = {}
+        for i, (rel, start, end) in enumerate(routes):
+            for where, chain in self.reachable(rel, start, end).items():
+                self._links.setdefault(where, []).append((i, chain))
+
+    def routes_reaching(self, path: str, line: int) -> dict[int, list[str]]:
+        """{index in link()'s list: the calls leading to the function holding path:line}."""
+        out: dict[int, list[str]] = {}
+        if self._links is None or path not in self.family:
+            return out
+        for fn in self.functions_at(path, line):  # outermost first, so the innermost wins
+            for i, chain in self._links.get((fn.file, fn.start), []):
+                out[i] = chain
+        return out
 
     def constant_input(self, path: str, line: int, rule: str) -> bool:
         """Whether a code finding's sink only ever sees values built from literals. A rule that

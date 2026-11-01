@@ -161,12 +161,12 @@ def _called_from_routes(
     if cls not in _ROUTE_WEAPONS or not loc.start_line or not loc.in_repo or not_run(loc.path):
         return False
     linked = False
-    for r, node, unit in route_nodes:
-        if unit is None:
-            continue  # nothing deployed behind this route to reach
-        chain = calls.chain_to(r.file, r.start_line, r.end_line, loc.path, loc.start_line)
-        if chain is None:
-            continue
+    if calls._links is None:
+        # Nothing deployed behind a route without a unit, so there is nothing to reach.
+        calls.link([(r.file, r.start_line, r.end_line) for r, _n, unit in route_nodes if unit])
+    served = [(r, node) for r, node, unit in route_nodes if unit]
+    for i, chain in sorted(calls.routes_reaching(loc.path, loc.start_line).items()):
+        r, node = served[i]
         link = " -> ".join([*([r.handler] if r.handler != "<inline>" else []), *chain])
         weakness = _weakness(f, cls)
         weakness.confidence = Confidence.LOW if sure is Confidence.LOW else Confidence.MEDIUM
