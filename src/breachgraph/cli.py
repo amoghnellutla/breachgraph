@@ -1,7 +1,7 @@
 """Command-line interface.
 
-Exit codes: 0 = gate passed, 1 = gate failed, 2 = usage/config error, 3 = scanner error
-(only when ``fail_on.scanner_errors`` is set).
+Exit codes: 0 = gate passed, 1 = gate failed, 2 = usage/config error, 3 = incomplete: a scanner
+failed, so a clean result can't be trusted (``fail_on.scanner_errors: false`` turns this off).
 """
 
 from __future__ import annotations
@@ -316,10 +316,7 @@ def scan_cmd(
 
     if no_fail:
         raise typer.Exit(0)
-    failed_tools = any(t.status is ToolStatus.FAILED for t in result.tools)
-    if config.fail_on.scanner_errors and failed_tools:
-        raise typer.Exit(3)
-    raise typer.Exit(0 if result.gate.passed else 1)
+    raise typer.Exit(result.gate.exit_code or 0)
 
 
 def _parse_priority(value: str) -> Priority:
@@ -498,7 +495,11 @@ def _print_summary(result: ScanResult) -> None:
         )
     for w in result.warnings:
         console.print(f"[yellow]warning:[/] {escape(w)}")
-    if result.gate.passed:
+    if result.gate.verdict == "incomplete":
+        console.print(
+            f"[bold yellow]Incomplete:[/] {'; '.join(result.gate.incomplete)}. Don't read this as a pass."
+        )
+    elif result.gate.passed:
         console.print(f"[bold green]Gate passed[/] ({result.gate.threshold})")
     else:
         console.print(f"[bold red]Gate failed:[/] {'; '.join(result.gate.reasons)} ({result.gate.threshold})")

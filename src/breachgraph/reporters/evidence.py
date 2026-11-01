@@ -108,7 +108,7 @@ def summary(result: ScanResult) -> str:
         "",
         "## Gate decision",
         "",
-        f"**{'Passed' if gate.passed else 'Failed'}**. Threshold: {gate.threshold or 'n/a'}.",
+        f"**{gate.verdict.capitalize()}**. Threshold: {gate.threshold or 'n/a'}.",
         "",
         *[f"- {r}" for r in gate.reasons],
         "",

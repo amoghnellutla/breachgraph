@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -18,9 +19,12 @@ from breachgraph.models import (
     Reachability,
     ScanResult,
     Status,
+    ToolRun,
     ToolStatus,
 )
 from breachgraph.paths import glob_match, matches_any
+
+CORE_SCANNERS = ("semgrep", "gitleaks", "trivy")  # without these, code, secrets or CVEs go unseen
 
 BASELINE_VERSION = 1
 
@@ -191,7 +195,27 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
             reasons.append(f"{len(paths)} {kind}attack path(s) to a crown-jewel asset")
         if config.attack_graph.fail_on_new_path:
             threshold.append("any attack path to a crown jewel")
-    failed_tools = [t.name for t in result.tools if t.status is ToolStatus.FAILED]
-    if failed_tools and rules.scanner_errors:
-        reasons.append("scanner(s) failed: " + ", ".join(failed_tools))
-    return GateResult(passed=not reasons, reasons=reasons, threshold=", ".join(threshold))
+    failed = [t for t in result.tools if t.status is ToolStatus.FAILED]
+    missing = [t for t in result.tools if _core_missing(t)]
+    partial = [t for t in result.tools if t.status is ToolStatus.PARTIAL]
+    incomplete = [f"{t.name} failed" for t in failed]
+    incomplete += [f"{t.name} is not installed" for t in missing]
+    incomplete += [f"{t.name} did not finish" for t in partial]
+    # A laptop trial without every scanner isn't an emergency; a pipeline that shows green is.
+    blocks = bool(failed or (missing and os.environ.get("CI")))
+    code = 1 if reasons else 3 if blocks and rules.scanner_errors else 0
+    return GateResult(
+        passed=code == 0 and not incomplete,
+        reasons=reasons,
+        threshold=", ".join(threshold),
+        incomplete=incomplete,
+        exit_code=code,
+    )
+
+
+def _core_missing(tool: ToolRun) -> bool:
+    return (
+        tool.name in CORE_SCANNERS
+        and tool.status is ToolStatus.SKIPPED
+        and "not found" in (tool.message or "")
+    )

@@ -50,7 +50,7 @@ def _headline(result: ScanResult) -> str:
     opened = new_paths(result)
     if opened:
         return f"breachgraph: {project}: {len(opened)} new attack path(s) to a crown-jewel asset"
-    return f"breachgraph: {project}: security gate {'passed' if result.gate.passed else 'failed'}"
+    return f"breachgraph: {project}: security gate {result.gate.verdict}"
 
 
 def _route(p: AttackPathView) -> str:

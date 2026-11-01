@@ -57,7 +57,7 @@ fail_on:
   kev: true                      # any CVE in CISA's Known Exploited Vulnerabilities catalog
   secrets: true                  # any hardcoded secret
   new_only: true                 # with a baseline, only new findings can fail the gate
-  scanner_errors: false          # true = a crashed scanner fails the run (exit code 3)
+  scanner_errors: true           # false = a failed scanner doesn't change the exit code
 
 suppressions:                    # accepted risk. Every entry needs a reason (and an expiry)
   - rule: CKV_AWS_18             # rule id ("tool:rule" also works)
@@ -172,4 +172,4 @@ Use each tool's native mechanism when a suppression belongs next to the code:
 | 0 | Gate passed (or `--no-fail`) |
 | 1 | Gate failed |
 | 2 | Usage or configuration error |
-| 3 | A scanner failed and `fail_on.scanner_errors` is true |
+| 3 | Incomplete: a scanner failed (or, in CI, Semgrep, Trivy or Gitleaks isn't installed) and nothing else failed the gate. A clean result from a broken scanner isn't a pass. `fail_on.scanner_errors: false` keeps the exit code at 0, and the report still says incomplete. |

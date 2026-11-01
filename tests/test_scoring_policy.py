@@ -171,9 +171,37 @@ def test_suppression_requires_reason_and_selector() -> None:
 def test_scanner_error_policy() -> None:
     result = _result([])
     result.tools = [ToolRun(name="trivy", status=ToolStatus.FAILED, message="boom")]
-    assert evaluate_gate(result, Config()).passed
-    cfg = Config.model_validate({"fail_on": {"scanner_errors": True}})
-    assert not evaluate_gate(result, cfg).passed
+    gate = evaluate_gate(result, Config())
+    assert not gate.passed and gate.verdict == "incomplete" and gate.exit_code == 3
+    assert gate.incomplete == ["trivy failed"]
+    # Opting out changes the exit code, never what the report says.
+    gate = evaluate_gate(result, Config.model_validate({"fail_on": {"scanner_errors": False}}))
+    assert gate.verdict == "incomplete" and gate.exit_code == 0
+
+
+def test_real_findings_outrank_a_failed_scanner() -> None:
+    result = _result([])
+    result.tools = [ToolRun(name="trivy", status=ToolStatus.FAILED, message="boom")]
+    gate = evaluate_gate(result, Config())
+    gate.reasons.append("x")
+    assert gate.verdict == "failed"
+
+
+def test_a_missing_core_scanner_blocks_only_in_ci(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = _result([])
+    result.tools = [ToolRun(name="semgrep", status=ToolStatus.SKIPPED, message="semgrep not found on PATH")]
+    monkeypatch.delenv("CI", raising=False)
+    gate = evaluate_gate(result, Config())
+    assert gate.verdict == "incomplete" and gate.exit_code == 0
+    monkeypatch.setenv("CI", "true")
+    assert evaluate_gate(result, Config()).exit_code == 3
+
+
+def test_a_clean_run_passes() -> None:
+    result = _result([])
+    result.tools = [ToolRun(name="semgrep", status=ToolStatus.OK)]
+    gate = evaluate_gate(result, Config())
+    assert gate.passed and gate.verdict == "passed" and gate.exit_code == 0
 
 
 def test_drop_excluded_keeps_non_repo_locations() -> None:

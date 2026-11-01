@@ -231,6 +231,10 @@ runs:
         CODE: ${{ steps.scan.outputs.exit_code }}
       run: |
         if [[ "${CODE:-1}" != "0" ]]; then
-          echo "::error title=breachgraph::Security gate failed (exit ${CODE:-unknown}). See the job summary and breachgraph-report artifact."
+          if [[ "${CODE:-}" == "3" ]]; then
+            echo "::error title=breachgraph::Incomplete: a scanner failed, so a clean result can't be trusted. See the job summary."
+          else
+            echo "::error title=breachgraph::Security gate failed (exit ${CODE:-unknown}). See the job summary and breachgraph-report artifact."
+          fi
           exit "${CODE:-1}"
         fi

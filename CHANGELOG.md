@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- **The gate no longer fails open.** A scan where a scanner failed used to report "gate passed" and
+  exit 0. It now says incomplete and exits 3, unless real findings already failed it (exit 1).
+  `fail_on.scanner_errors` now defaults to true; setting it false keeps the exit code at 0, but the
+  report still says incomplete. In CI, a core scanner that isn't installed counts the same.
+
 ### Added
 
 - `cicd/agent-prompt-injection`: an AI agent (Claude Code, Gemini CLI, Codex, GitHub AI Inference,

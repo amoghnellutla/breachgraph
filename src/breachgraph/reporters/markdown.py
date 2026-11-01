@@ -260,10 +260,16 @@ def _ai_md(findings: list[Finding], link_base: str | None, limit: int = 10) -> l
 
 def render(result: ScanResult, link_base: str | None = None, details_url: str | None = None) -> str:
     gate = result.gate
-    head = "Security gate passed" if gate.passed else "Security gate failed"
+    head = {
+        "passed": "Security gate passed",
+        "failed": "Security gate failed",
+        "incomplete": "Security gate incomplete",
+    }[gate.verdict]
     out = [MARKER, f"## breachgraph: {head}", ""]
     if gate.reasons:
         out.append("> " + "; ".join(gate.reasons) + f" (threshold: {gate.threshold})")
+    if gate.incomplete:
+        out.append("> **Not a pass:** " + "; ".join(gate.incomplete) + ". Findings from these are missing.")
     else:
         out.append(f"> No findings at or above the threshold ({gate.threshold}).")
     out.append("")

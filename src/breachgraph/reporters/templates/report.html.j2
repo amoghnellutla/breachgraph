@@ -228,8 +228,9 @@ ul.warn { margin: 0; padding-left: 18px; }
     <h1>Security report: {{ target_name }}</h1>
     <div class="meta">{{ result.target }} · {{ result.started_at.strftime("%Y-%m-%d %H:%M UTC") }} · breachgraph {{ result.breachgraph_version }}</div>
     <div class="verdict {{ 'pass' if result.gate.passed else 'fail' }}" role="status">
-      {{ "Gate passed" if result.gate.passed else "Gate failed" }}
+      {{ {"passed": "Gate passed", "failed": "Gate failed", "incomplete": "Incomplete: not a pass"}[result.gate.verdict] }}
     </div>
+    {% if result.gate.incomplete %}<p class="verdict-reasons">{{ result.gate.incomplete | join("; ") }}</p>{% endif %}
     {% if result.gate.reasons %}<p class="verdict-reasons">{{ result.gate.reasons | join("; ") }}</p>{% endif %}
     <p class="verdict-reasons muted">Threshold: {{ result.gate.threshold }}{% if result.baseline_used %} · compared with a baseline: only new findings and paths gate{% endif %}</p>
     <div class="tiles">

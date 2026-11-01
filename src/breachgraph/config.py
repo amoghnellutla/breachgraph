@@ -100,7 +100,9 @@ class FailOn(_Strict):
     kev: bool = True  # any finding with a CISA KEV CVE fails the gate
     secrets: bool = True  # any verified-format secret fails regardless of priority
     new_only: bool = True  # with a baseline, only findings not in it can fail the gate
-    scanner_errors: bool = False  # a crashed scanner fails the gate (exit 3)
+    # A clean result from a broken scanner isn't a pass: it's reported as incomplete and exits 3.
+    # False keeps the exit code at 0; the report still says incomplete.
+    scanner_errors: bool = True
 
 
 class Suppression(_Strict):

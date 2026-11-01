@@ -232,6 +232,17 @@ class GateResult(BaseModel):
     passed: bool
     reasons: list[str] = Field(default_factory=list)
     threshold: str = ""
+    incomplete: list[str] = Field(default_factory=list)  # what didn't run: a clean result can't be trusted
+    exit_code: int | None = None  # None on reports from versions that didn't record it
+
+    @property
+    def verdict(self) -> str:
+        """failed, incomplete or passed. Never "passed" while a scanner that should have run didn't."""
+        if self.reasons:
+            return "failed"
+        if self.incomplete:
+            return "incomplete"
+        return "passed" if self.passed else "failed"
 
 
 class AttackStep(BaseModel):
