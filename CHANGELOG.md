@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows
   write, `escalate` with a role it can edit, `serviceaccounts/token`, `nodes/proxy`, `pods/attach`
   and `pods/ephemeralcontainers`. Writing a binding alone isn't flagged, because the API server
   refuses it. The attack classes follow KubeHound's documented list.
+- Stock services that answer anyone are a way in with no bug in your code: Redis, MongoDB,
+  Memcached, Elasticsearch, Grafana, MinIO, Jupyter and a Docker registry, judged from their own
+  defaults and settings. In Compose these are leads, since a Compose file may only be for a laptop.
 
 ### Changed
 

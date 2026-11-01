@@ -35,6 +35,7 @@ from breachgraph.graph.model import (
     internet,
 )
 from breachgraph.graph.sources.common import SourceContext, line_of
+from breachgraph.graph.sources.services import mark_open, open_service
 from breachgraph.paths import iter_files
 
 WORKLOAD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job", "CronJob", "Pod"}
@@ -838,6 +839,13 @@ class KubernetesSource:
                 evidence=[ev],
             )
         )
+
+        for c in containers:
+            env = {str(e.get("name")): str(e.get("value") or "") for e in c.get("env") or []}
+            run = " ".join(str(x) for x in [*(c.get("command") or []), *(c.get("args") or [])])
+            found = open_service(str(c.get("image") or ""), env, run)
+            if found:
+                mark_open(graph, node, found, ev)
 
         # --- isolation weaknesses (each is a container-to-node escape condition)
         reasons: list[str] = []

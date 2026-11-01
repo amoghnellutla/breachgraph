@@ -24,6 +24,7 @@ from breachgraph.graph.model import (
     not_run,
 )
 from breachgraph.graph.sources.common import SourceContext
+from breachgraph.graph.sources.services import mark_open, open_service
 from breachgraph.paths import iter_files
 
 
@@ -88,6 +89,8 @@ class ImageSource:
                 if exposed:
                     node.attrs["published_ports"] = exposed
                     _expose(graph, node.id, f"publishes port {exposed[0]}", rel, svc, project)
+            elif image:
+                _stock_service(graph, rel, str(svc), spec, str(image), project)
         # A reverse proxy that publishes ports forwards the internet to the services it fronts.
         for svc, spec in (doc.get("services") or {}).items() if isinstance(doc, dict) else []:
             if not isinstance(spec, dict) or spec.get("build") or not _PROXY.search(str(spec.get("image"))):
@@ -117,6 +120,40 @@ def _expose(graph: Graph, node_id: str, why: str, rel: str, svc: str, project: s
             note=f"compose {why}; assumed reachable from the internet",
         )
     )
+
+
+def _stock_service(
+    graph: Graph, rel: str, svc: str, spec: dict[str, object], image: str, project: str
+) -> None:
+    """A published service that answers anyone. A compose file may only be for a laptop, which the
+    repository can't rule out, so this is reported and doesn't block a merge."""
+    exposed = _ports_public(spec.get("ports"))
+    found = open_service(image, _environment(spec.get("environment")), _command(spec.get("command")))
+    if not exposed or not found:
+        return
+    ev = Evidence(path=rel, detail=f"service {svc}", source="images")
+    node = graph.add_node(
+        Node(
+            id=f"compose:service:{svc}",
+            kind=NodeKind.WORKLOAD,
+            name=f"compose service {svc}",
+            attrs={"platform": "compose", "images": [image], "published_ports": exposed},
+            evidence=[ev],
+        )
+    )
+    _expose(graph, node.id, f"publishes port {exposed[0]}", rel, svc, project)
+    mark_open(graph, node, found, ev, Confidence.LOW)
+
+
+def _environment(raw: object) -> dict[str, str]:
+    if isinstance(raw, dict):
+        return {str(k): str(v if v is not None else "") for k, v in raw.items()}
+    pairs = [str(x).partition("=") for x in raw] if isinstance(raw, list) else []
+    return {k: v for k, _, v in pairs}
+
+
+def _command(raw: object) -> str:
+    return " ".join(str(x) for x in raw) if isinstance(raw, list) else str(raw or "")
 
 
 def _join(base: str, rel: str) -> str:

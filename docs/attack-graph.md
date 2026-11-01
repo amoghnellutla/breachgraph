@@ -232,6 +232,17 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## Services that answer anyone
+
+An exposed stock service can be a way in with no bug in your code. Redis, MongoDB, Memcached,
+Elasticsearch, Grafana, MinIO, Jupyter and a Docker registry are recognized by image, and judged by
+their own defaults and the settings shown: MongoDB with a root user isn't open, Elasticsearch 8 is
+secure unless security is turned off, and Redis started from a config file gets no verdict because
+that file can't be read.
+
+A Kubernetes service reached through an Ingress, LoadBalancer or NodePort can block a merge. A
+published port in a Compose file is a lead, since the file may only be for a laptop.
+
 ## Kubernetes permissions that become more
 
 RBAC grants that look narrow can turn into wider ones. A service account token reaches:
