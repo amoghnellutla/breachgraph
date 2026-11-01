@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **A repository isn't failed for debt it already has.** A P1 dependency CVE or misconfiguration
+  blocks a change that adds it, compared with a baseline or `--compare`, not a first scan. KEV CVEs,
+  attack paths and real secrets always block. `fail_on.existing_debt: true` restores the old gate.
 - The HTML report answers more on its own: what a breached node would reach, spreading hop by hop;
   the smallest set of fixes that closes every path, applied one at a time; the vulnerable line and
   the real patch with its proof, inside the path; each path in plain English with "Copy as ticket";

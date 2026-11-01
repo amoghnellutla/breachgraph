@@ -241,3 +241,23 @@ def test_urgent_is_what_blocks_is_exploited_or_is_on_a_path() -> None:
     path = AttackPathView(target="t", target_kind="k", score=1, confidence="low", length=1, weaknesses=["2"])
     result.attack_graph = AttackGraphSummary(paths=[path])
     assert result.urgent() == [blocks, kev, on_path]
+
+
+def test_existing_debt_does_not_fail_a_repository_but_new_debt_fails_a_change() -> None:
+    finding = make_finding(path="package-lock.json")
+    finding.category = Category.SCA
+    finding.priority = Priority.P1
+    result = _result([finding])
+    assert evaluate_gate(result, Config()).passed
+    assert not evaluate_gate(result, Config.model_validate({"fail_on": {"existing_debt": True}})).passed
+    result.baseline_used = True
+    assert not evaluate_gate(result, Config()).passed
+    finding.status = Status.BASELINE
+    assert evaluate_gate(result, Config()).passed
+
+
+def test_kev_blocks_even_as_existing_debt() -> None:
+    finding = make_finding(path="package-lock.json")
+    finding.category = Category.SCA
+    finding.enrichment.kev = True
+    assert not evaluate_gate(_result([finding]), Config()).passed

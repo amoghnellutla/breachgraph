@@ -165,6 +165,19 @@ _MANIFEST_FAMILY = {
     "build.gradle": "java",
 }
 _SOURCE_FAMILY = {".py": "py", ".go": "go", ".java": "java"}
+_BUILD_TOOLS = {
+    "vite",
+    "webpack",
+    "esbuild",
+    "rollup",
+    "eslint",
+    "prettier",
+    "jest",
+    "vitest",
+    "babel",
+    "tsup",
+}
+_TOOLING_DIR = re.compile(r"(?:^|/)(?:scripts|tools|hack|dev|ci)/")
 
 
 def _other_language(
@@ -179,6 +192,12 @@ def _other_language(
         if u is unit
     }
     return bool(family and served and family not in served)
+
+
+def _not_shipped(f: Finding) -> bool:
+    """A build tool, or a manifest for the repository's own scripts: not what the service runs."""
+    name = (f.package.name if f.package else "").lower().rsplit("/", 1)[-1]
+    return name in _BUILD_TOOLS or bool(_TOOLING_DIR.search(f.location.path))
 
 
 def _expands_trusted_text(f: Finding, root: Path) -> bool:
@@ -303,7 +322,7 @@ def attach(
                 and tf[2]
                 and tf[1] <= loc.start_line <= tf[2]
             ):
-                node.weaknesses.append(_weakness(f, cls))
+                node.weaknesses.append(_weakness(f, cls, sure))
                 hit = True
         if hit:
             continue
@@ -320,7 +339,9 @@ def attach(
                 unreached = cls in _ROUTE_WEAPONS and served and calls is not None and not linked
                 # The whole-repository stand-in can't say which service ships a dependency.
                 guessed = cls is WeaknessClass.VULNERABLE_DEPENDENCY and (
-                    APP_ID in unit.workloads or _other_language(loc.path, unit, route_nodes)
+                    APP_ID in unit.workloads
+                    or _other_language(loc.path, unit, route_nodes)
+                    or _not_shipped(f)
                 )
                 sure_here = Confidence.LOW if unreached or guessed else sure
                 for wid in unit.workloads:

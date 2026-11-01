@@ -58,6 +58,7 @@ fail_on:
   secrets: true                  # any hardcoded secret
   new_only: true                 # with a baseline, only new findings can fail the gate
   scanner_errors: true           # false = a failed scanner doesn't change the exit code
+  existing_debt: false           # true = P1 dependency CVEs and misconfigurations you already have also block
 
 suppressions:                    # accepted risk. Every entry needs a reason (and an expiry)
   - rule: CKV_AWS_18             # rule id ("tool:rule" also works)

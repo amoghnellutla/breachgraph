@@ -31,13 +31,13 @@ healthy control. Every path it reported was checked by hand.
 | [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 548 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 601 | 1 | 1 |
 | [awsgoat](https://github.com/ine-labs/AWSGoat) | 514 | 3 | 3 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | 414 | 2 | 2 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | 409 | 2 | 2 |
 | [gcpgoat](https://github.com/ine-labs/GCPGoat) | 412 | 5 | 4 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | 272 | 4 | 3 |
 | [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 622 | 0 | 0 |
-| **Total** | **4,060** | **17** | **15** |
+| **Total** | **4,055** | **17** | **15** |
 
-4,060 findings come down to 17 attack paths, and 15 of them are real chains an
+4,055 findings come down to 17 attack paths, and 15 of them are real chains an
 attacker could use (88% precision). Of the 15 that block a merge, 15 are real;
 the rest are low confidence and only reported. The control project gets none.
 <!-- benchmark-table:end -->

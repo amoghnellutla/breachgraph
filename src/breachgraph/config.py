@@ -103,6 +103,10 @@ class FailOn(_Strict):
     # gate separately below.
     priority: Priority | None = Priority.P1
     severity: Severity | None = None  # alternatively/additionally fail on raw severity
+    # Dependency CVEs and misconfigurations a repository already has don't fail it on priority
+    # alone: only a change that adds one does, against a baseline or --compare. KEV CVEs and attack
+    # paths always gate. True restores blocking on all of them.
+    existing_debt: bool = False
     kev: bool = True  # any finding with a CISA KEV CVE fails the gate
     secrets: bool = True  # any verified-format secret fails regardless of priority
     new_only: bool = True  # with a baseline, only findings not in it can fail the gate

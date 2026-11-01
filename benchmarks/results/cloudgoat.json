@@ -4,15 +4,15 @@
   "sha": "63c65bd26edc6919499adfa20b176c450e35c33c",
   "kind": "vulnerable",
   "breachgraph_version": "0.6.0",
-  "breachgraph_commit": "9a0cdfe",
-  "wall_time_s": 153.0,
+  "breachgraph_commit": "8002404",
+  "wall_time_s": 292.1,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 34,
-      "duration_s": 89.81,
+      "duration_s": 144.91,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 17,
-      "duration_s": 4.52,
+      "duration_s": 8.83,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 484,
-      "duration_s": 139.27,
+      "duration_s": 273.53,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 66,
-      "duration_s": 1.73,
+      "duration_s": 3.7,
       "message": null
     },
     {
@@ -44,7 +44,7 @@
       "status": "ok",
       "version": "0.6.0",
       "findings": 0,
-      "duration_s": 0.16,
+      "duration_s": 15.43,
       "message": null
     }
   ],

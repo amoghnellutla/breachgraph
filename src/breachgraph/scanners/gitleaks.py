@@ -50,6 +50,9 @@ _GUESSES = {
     "jwt-base64",
     "kubernetes-secret-yaml",
 }
+# Named for a provider, but matched by a nearby word and any token, not by the provider's format.
+_WEAK_FORMAT = re.compile(r"client-(?:secret|id)|discord|sentry|dropbox|linkedin|twitter|facebook", re.I)
+_HASH_NAME = re.compile(r"sha-?\d+|checksum|digest|integrity", re.I)
 _LOCK_FILE = re.compile(
     r"(?:^|/)(?:[^/]*\.lock|[^/]*-lock\.(?:json|ya?ml)|go\.sum|npm-shrinkwrap\.json|uv\.lock|Gemfile\.lock)$",
     re.I,
@@ -57,7 +60,8 @@ _LOCK_FILE = re.compile(
 _HASH = re.compile(r"(?<![0-9a-zA-Z])(?:[0-9a-f]{32}|[0-9a-f]{40}|[0-9a-f]{64})(?![0-9a-zA-Z])")
 _NAMED_SECRET = re.compile(r"key|token|secret|passw|credential|auth", re.I)
 _NOT_REAL_FILE = re.compile(
-    r"\.(?:example|sample|template|dist|tmpl)(?:\.|$)|\.mdx?$|\.rst$"
+    r"\.(?:example|sample|template|dist|tmpl|demo)(?:\.|$)|\.mdx?$|\.rst$|(?:^|/)google-services\.json$"
+    r"|(?:^|/)\.?examples?/"
     r"|(?:^|[/._-])(?:test\w*|mock\w*|fake\w*|fixtures?|benchmarks?|localhost\w*|devcontainer|stacktraces)"
     r"(?:[/._-]|$)",
     re.I,
@@ -91,9 +95,27 @@ def verdict(rule: str, rel: str, line: str) -> str:
     guess = rule in _GUESSES or rule.startswith("generic")
     if guess and _HASH.search(line) and not _NAMED_SECRET.search(line):
         return "drop"  # a checksum: many real API keys are hex too, so the line has to not say so
-    if guess or not_run(rel) or _NOT_REAL_FILE.search(rel) or _NOT_REAL_VALUE.search(line):
+    if guess or _WEAK_FORMAT.search(rule) or _HASH_NAME.search(line):
         return "report"
+    if not_run(rel) or _NOT_REAL_FILE.search(rel) or _NOT_REAL_VALUE.search(line):
+        return "report"
+    if rule == "vault-service-token" and "hvs." not in line:
+        return "report"  # the rule's other form is `s.` and 24 letters: any Go field chain
     return "block"
+
+
+def _real_key(target: Path, rel: str, start: int) -> bool:
+    """Whether a PEM block holds a key, not code that builds or matches one."""
+    try:
+        text = (target / rel).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return True  # can't tell: keep the stricter answer
+    lines = text.splitlines()[max(start - 1, 0) :]
+    body = "".join(lines[:80])
+    m = re.search(r"-----BEGIN[^-]*PRIVATE KEY[^-]*-----(.*?)-----END", body, re.S)
+    inner = m.group(1) if m else body
+    inner = inner.replace("\\n", "").replace(" ", "")
+    return bool(re.fullmatch(r"[\"'+,\w/=]{200,}", inner)) and "${" not in inner
 
 
 class GitleaksScanner(Scanner):
@@ -133,7 +155,10 @@ class GitleaksScanner(Scanner):
         for r in raw:
             rule = str(r.get("RuleID", "secret"))
             rel = str(r.get("File", ""))
-            decision = verdict(rule, rel, _line(ctx.target, rel, int(r.get("StartLine") or 0)))
+            start = int(r.get("StartLine") or 0)
+            decision = verdict(rule, rel, _line(ctx.target, rel, start))
+            if decision == "block" and rule == "private-key" and not _real_key(ctx.target, rel, start):
+                decision = "report"
             if decision == "drop":
                 continue
             critical = any(m in rule.lower() for m in _CRITICAL_MARKERS)

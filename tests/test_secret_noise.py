@@ -71,3 +71,33 @@ def test_a_real_key_blocks(tmp_path: Path) -> None:
     assert f.confidence is Confidence.HIGH and f.severity is Severity.CRITICAL
     assert not evaluate_gate(_result([f]), Config()).passed
     assert isinstance(f.location, Location)
+
+
+@pytest.mark.parametrize(
+    ("rule", "rel", "line", "expected"),
+    [
+        ("linkedin-client-secret", "src/a.ts", "x", "report"),
+        ("discord-api-token", "release.env", "SHA256='abc'", "report"),
+        ("vault-service-token", "internal/t.go", "s.someVeryLongFieldNameHere", "report"),
+        ("vault-service-token", "internal/t.go", "token := hvs.abcdef", "block"),
+        ("gcp-api-key", "clients/app/google-services.json", "x", "report"),
+        ("private-key", ".examples/mtls/certs/client.key", "x", "report"),
+        ("private-key", "client/src/api/constellation.demo.tsx", "x", "report"),
+    ],
+)
+def test_more_verdicts(rule: str, rel: str, line: str, expected: str) -> None:
+    assert verdict(rule, rel, line) == expected
+
+
+def test_code_that_handles_a_key_is_not_a_key(tmp_path: Path) -> None:
+    code = "const pem = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----`\n"
+    [f] = parse(tmp_path, "src/jwt.ts", code, "private-key")
+    assert f.confidence is Confidence.LOW
+    body = "\n".join(["MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7"] * 6)
+    [f] = parse(
+        tmp_path,
+        "deploy/id.pem",
+        f"-----BEGIN PRIVATE KEY-----\n{body}\n-----END PRIVATE KEY-----\n",
+        "private-key",
+    )
+    assert f.confidence is Confidence.HIGH

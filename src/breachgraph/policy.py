@@ -168,6 +168,8 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
             why = "known exploited (KEV)"
         elif rules.secrets and f.category is Category.SECRETS and f.confidence is not Confidence.LOW:
             why = "secret"
+        elif _existing_debt(f, result) and not rules.existing_debt:
+            why = None
         elif rules.priority and f.priority.rank >= rules.priority.rank:
             why = f"priority {f.priority.value}"
         elif rules.severity and f.severity.rank >= rules.severity.rank:
@@ -212,6 +214,11 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
         incomplete=incomplete,
         exit_code=code,
     )
+
+
+def _existing_debt(f: Finding, result: ScanResult) -> bool:
+    """A dependency or configuration issue, with nothing to say this change introduced it."""
+    return f.category in (Category.SCA, Category.CONTAINER, Category.IAC) and not result.baseline_used
 
 
 def _core_missing(tool: ToolRun) -> bool:

@@ -9,11 +9,16 @@ rules:
       cwe: ["CWE-78: OS Command Injection"]
       confidence: HIGH
     pattern-sources: &js-request
-      - pattern: $REQ.body
-      - pattern: $REQ.query
-      - pattern: $REQ.params
-      - pattern: $REQ.headers
-      - pattern: $REQ.cookies
+      - patterns:
+          - pattern-either:
+              - pattern: $REQ.body
+              - pattern: $REQ.query
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+          - metavariable-regex: # `client.query` is not request data
+              metavariable: $REQ
+              regex: (?i)^_?(req|request|httpRequest|incoming)$
       - pattern: $CTX.request.body
       - pattern: $CTX.request.query
     pattern-sinks: &js-command
