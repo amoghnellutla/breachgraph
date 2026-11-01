@@ -108,20 +108,31 @@ def install_binary(tool: str, spec: dict[str, Any], key: str) -> Path:
     return dest
 
 
+def lock_file(tool: str) -> Path:
+    """The packaged lock, or requirements/ when running from a source checkout."""
+    package = Path(__file__).resolve().parent
+    for candidate in (
+        package / "locks" / f"{tool}.txt",
+        package.parent.parent / "requirements" / f"{tool}.txt",
+    ):
+        if candidate.is_file():
+            return candidate
+    raise SetupError(f"no lock file for {tool}")
+
+
 def install_python(tool: str) -> Path:
     venv = tools_dir() / tool
     python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if not python.is_file():
         subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True, capture_output=True)
-    with resources.as_file(resources.files("breachgraph").joinpath(f"locks/{tool}.txt")) as lock:
-        proc = subprocess.run(
-            [str(python), "-m", "pip", "install", "--quiet", "--require-hashes", "-r", str(lock)],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
+    proc = subprocess.run(
+        [str(python), "-m", "pip", "install", "--quiet", "--require-hashes", "-r", str(lock_file(tool))],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
     if proc.returncode != 0:
         raise SetupError(f"{tool}: pip failed: {proc.stderr.strip()[-400:]}")
     return venv

@@ -6,6 +6,7 @@ environment (GH_TOKEN / GITHUB_TOKEN), as zizmor decides; without one it audits 
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -56,7 +57,16 @@ class ZizmorScanner(Scanner):
                     message="no GitHub Actions workflows or actions",
                 )
             )
-        return super().run(ctx)
+        outcome = super().run(ctx)
+        if outcome.run.status is not ToolStatus.FAILED:
+            return outcome
+        # An expired token or GitHub Enterprise breaks only the online audits: keep the rest.
+        offline = ctx.config.model_copy(deep=True)
+        offline.scanners.zizmor.extra_args = [*offline.scanners.zizmor.extra_args, "--offline"]
+        retry = super().run(replace(ctx, config=offline))
+        if retry.run.status is ToolStatus.OK:
+            retry.run.message = "online audits failed, so only offline audits ran"
+        return retry
 
     def accept_exit(self, code: int) -> bool:
         return code == 0  # --no-exit-codes: non-zero means zizmor itself failed

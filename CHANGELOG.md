@@ -28,6 +28,12 @@ All notable changes to this project are documented here. The format follows
   findings. On 32 real projects the old behaviour produced 6,030 blocking secrets, 5,757 of them
   from the generic rule, and failed every project.
 
+### Fixed
+
+- A failed online audit no longer loses every zizmor finding: it reruns offline and says so.
+- A scanner failure is one readable line in the report, not a stack trace.
+- `breachgraph setup` works from a source checkout.
+
 ### Added
 
 - `cicd/agent-prompt-injection`: an AI agent (Claude Code, Gemini CLI, Codex, GitHub AI Inference,

@@ -86,3 +86,8 @@ def test_installed_tools_come_after_what_the_user_has(monkeypatch: pytest.Monkey
     monkeypatch.setenv("PATH", "first")
     tools.add_to_path()
     assert os.environ["PATH"].split(os.pathsep) == ["first", str(tools.bin_dir())]
+
+
+def test_locks_resolve_from_a_source_checkout() -> None:
+    for tool in tools.PYTHON_TOOLS:
+        assert tools.lock_file(tool).is_file()

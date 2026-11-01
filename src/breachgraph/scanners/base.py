@@ -30,6 +30,18 @@ class ScanContext:
     files: list[str] | None = None  # incremental scan: only these repo-relative files
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_ERROR_LINE = re.compile(r"\b(?:error|fatal|failed|panic(?:ked)?|exception)\b", re.I)
+
+
+def _reason(output: str | None) -> str:
+    """One line a person can read, not a stack trace pasted into a report."""
+    lines = [ln.strip() for ln in _ANSI.sub("", output or "").splitlines() if ln.strip()]
+    if not lines:
+        return "no output"
+    return next((ln for ln in lines if _ERROR_LINE.search(ln)), lines[-1])[:300]
+
+
 @dataclass
 class Step:
     cmd: list[str]
@@ -128,8 +140,7 @@ class Scanner(ABC):
                 if step.stdout_to_output and proc.stdout:
                     step.output.write_text(proc.stdout, encoding="utf-8")
                 if not self.accept_exit(proc.returncode) or not step.output.exists():
-                    tail = (proc.stderr or proc.stdout or "").strip()[-1500:]
-                    raise ScannerError(f"exit code {proc.returncode}: {tail}")
+                    raise ScannerError(f"exit code {proc.returncode}: {_reason(proc.stderr or proc.stdout)}")
                 if step.parse:
                     findings.extend(self.parse(load_json(step.output), ctx))
                 done += 1
