@@ -137,6 +137,9 @@ rules:
               - pattern: $DB.Exec($Q, ...)
               - pattern: $DB.QueryContext($CTX, $Q, ...)
               - pattern: $DB.ExecContext($CTX, $Q, ...)
+          - metavariable-regex: # gin's ctx.Query reads a URL parameter: it is not a database
+              metavariable: $DB
+              regex: (?i)(.*(db|conn|pool|sql|stmt|database)|tx)$
           - focus-metavariable: $Q
   - id: breachgraph.go.sql-injection-parameter
     mode: taint
@@ -152,12 +155,16 @@ rules:
               func $F(..., $P string, ...) { ... }
           - focus-metavariable: $P
     pattern-sinks:
-      - pattern-either:
-          - pattern: $DB.Query(fmt.Sprintf(...), ...)
-          - pattern: $DB.QueryRow(fmt.Sprintf(...), ...)
-          - pattern: $DB.Exec(fmt.Sprintf(...), ...)
-          - pattern: $DB.Query("..." + $X, ...)
-          - pattern: $DB.Exec("..." + $X, ...)
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.Query(fmt.Sprintf(...), ...)
+              - pattern: $DB.QueryRow(fmt.Sprintf(...), ...)
+              - pattern: $DB.Exec(fmt.Sprintf(...), ...)
+              - pattern: $DB.Query("..." + $X, ...)
+              - pattern: $DB.Exec("..." + $X, ...)
+          - metavariable-regex:
+              metavariable: $DB
+              regex: (?i)(.*(db|conn|pool|sql|stmt|database)|tx)$
   - id: breachgraph.go.ssrf-tainted
     mode: taint
     languages: [go]

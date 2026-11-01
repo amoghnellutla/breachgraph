@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from breachgraph.cicd import UNTRUSTED_CONTEXT
 from breachgraph.graph.callgraph import CallGraph
 from breachgraph.graph.model import (
     Confidence,
@@ -149,6 +150,50 @@ _ROUTE_WEAPONS = {
 }
 
 
+_MANIFEST_FAMILY = {
+    "package-lock.json": "js",
+    "package.json": "js",
+    "yarn.lock": "js",
+    "pnpm-lock.yaml": "js",
+    "requirements.txt": "py",
+    "poetry.lock": "py",
+    "Pipfile.lock": "py",
+    "uv.lock": "py",
+    "go.mod": "go",
+    "go.sum": "go",
+    "pom.xml": "java",
+    "build.gradle": "java",
+}
+_SOURCE_FAMILY = {".py": "py", ".go": "go", ".java": "java"}
+
+
+def _other_language(
+    path: str, unit: CodeUnit, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
+) -> bool:
+    """A dependency of a language none of the service's routes are written in. A frontend's
+    package isn't what a Go backend runs, whatever the repository layout."""
+    family = _MANIFEST_FAMILY.get(PurePosixPath(path).name)
+    served = {
+        _SOURCE_FAMILY.get(PurePosixPath(r.file).suffix.lower(), "js")
+        for r, _n, u in route_nodes
+        if u is unit
+    }
+    return bool(family and served and family not in served)
+
+
+def _expands_trusted_text(f: Finding, root: Path) -> bool:
+    """A template-injection finding whose line expands nothing an outsider writes: a workflow
+    input, a category slug or a repository name."""
+    if "template-injection" not in f.rule_id or not f.location.start_line:
+        return False
+    try:
+        lines = (root / f.location.path).read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return False
+    line = lines[f.location.start_line - 1] if f.location.start_line <= len(lines) else ""
+    return "${{" in line and not UNTRUSTED_CONTEXT.search(line)
+
+
 def _called_from_routes(
     f: Finding,
     cls: WeaknessClass,
@@ -233,7 +278,8 @@ def attach(
         )
         # A guessed secret (see scanners/gitleaks.py) can't carry a path that gates either.
         guess = f.category is Category.SECRETS and f.confidence.value == "low"
-        sure = Confidence.LOW if constant or guess else Confidence.HIGH
+        harmless = calls is not None and _expands_trusted_text(f, calls.root)
+        sure = Confidence.LOW if constant or guess or harmless else Confidence.HIGH
         # 1. code findings inside a route handler
         hit = False
         for r, node, _unit in route_nodes:
@@ -273,7 +319,9 @@ def attach(
                 served = any(u is unit for _r, _n, u in route_nodes)
                 unreached = cls in _ROUTE_WEAPONS and served and calls is not None and not linked
                 # The whole-repository stand-in can't say which service ships a dependency.
-                guessed = cls is WeaknessClass.VULNERABLE_DEPENDENCY and APP_ID in unit.workloads
+                guessed = cls is WeaknessClass.VULNERABLE_DEPENDENCY and (
+                    APP_ID in unit.workloads or _other_language(loc.path, unit, route_nodes)
+                )
                 sure_here = Confidence.LOW if unreached or guessed else sure
                 for wid in unit.workloads:
                     if ci and graph.nodes[wid].attrs.get("platform") != "github-actions":

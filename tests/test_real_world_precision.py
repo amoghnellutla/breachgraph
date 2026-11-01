@@ -158,3 +158,29 @@ def test_a_dependency_on_the_whole_repository_stand_in_does_not_gate(tmp_path: P
     res = build_attack_graph(tmp_path, [f], JEWEL)
     weak = [w for n in res.graph.nodes.values() for w in n.weaknesses]
     assert weak and all(w.confidence is Confidence.LOW for w in weak)
+
+
+def test_a_dependency_in_another_language_does_not_gate(tmp_path: Path) -> None:
+    from breachgraph.graph.correlate import CodeUnit, _other_language
+    from breachgraph.graph.model import Node, NodeKind
+    from breachgraph.graph.sources.routes import Route
+
+    unit = CodeUnit("", ["w"], Confidence.HIGH)
+    route = Route("GET", "/x", "cmd/server/main.go", 1, 2, "h", "go")
+    nodes = [(route, Node(id="r", kind=NodeKind.ROUTE, name="r"), unit)]
+    assert _other_language("website/package-lock.json", unit, nodes)
+    assert not _other_language("go.mod", unit, nodes)
+    assert not _other_language("Dockerfile", unit, nodes)
+
+
+def test_expanding_trusted_text_is_not_a_weapon(tmp_path: Path) -> None:
+    from breachgraph.graph.correlate import _expands_trusted_text
+
+    write(tmp_path, "w.yml", "- run: echo ${{ inputs.n }}\n- run: echo ${{ github.event.issue.title }}\n")
+    trusted = cmd_injection("w.yml", 1)
+    trusted.rule_id = "template-injection"
+    outsider = cmd_injection("w.yml", 2)
+    outsider.rule_id = "template-injection"
+    assert _expands_trusted_text(trusted, tmp_path)
+    assert not _expands_trusted_text(outsider, tmp_path)
+    assert not _expands_trusted_text(cmd_injection("w.yml", 1), tmp_path)

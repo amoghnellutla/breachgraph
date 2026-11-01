@@ -95,6 +95,9 @@ rules:
               - pattern: $DB.raw($Q, ...)
               - pattern: $DB.$queryRawUnsafe($Q, ...)
               - pattern: $DB.$executeRawUnsafe($Q, ...)
+          - metavariable-regex: # not every .query or .execute is a database
+              metavariable: $DB
+              regex: (?i)(.*(sequelize|knex|pool|client|db|conn|connection|prisma|mysql|pg)|tx)$
           - focus-metavariable: $Q
   - id: breachgraph.javascript.sql-injection-parameter
     mode: search

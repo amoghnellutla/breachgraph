@@ -140,7 +140,11 @@ rules:
               - pattern: httpx.$M($U, ...)
               - pattern: urllib.request.urlopen($U, ...)
               - pattern: urlopen($U, ...)
-              - pattern: $S.get($U, ...)
+              - patterns: # a session: any other .get is a dictionary lookup
+                  - pattern: $S.get($U, ...)
+                  - metavariable-regex:
+                      metavariable: $S
+                      regex: (?i).*(session|client|http)$
           - focus-metavariable: $U
   - id: breachgraph.python.ssrf-parameter
     mode: taint
