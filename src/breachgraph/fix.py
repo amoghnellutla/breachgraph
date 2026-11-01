@@ -35,6 +35,8 @@ class Fix:
     notes: list[str] = field(default_factory=list)
     reason: str = ""  # why no fix was made (files is empty)
     paths_cut: int = 0
+    removed: int | None = None  # attack paths gone when the graph is rebuilt with the fix applied
+    added: int = 0
 
 
 def plan(result: ScanResult, target: Path, top: int = 3) -> list[Fix]:
@@ -314,6 +316,15 @@ def pr_body(fix: Fix, result: ScanResult) -> str:
         *[f"- {' → '.join(['Internet', *(s.dst for s in p.steps)])}" for p in paths[:10]],
         "",
         fix.summary + ".",
+        *(
+            [
+                "",
+                f"Proof: with this change the attack graph was rebuilt: {fix.removed} path(s) removed, "
+                f"{fix.added} added.",
+            ]
+            if fix.removed is not None
+            else []
+        ),
         *(["", *fix.notes] if fix.notes else []),
         "",
         "Opened by `breachgraph fix`. Review it like any other change.",

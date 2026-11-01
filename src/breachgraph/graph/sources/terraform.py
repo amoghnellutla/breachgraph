@@ -285,15 +285,20 @@ class TerraformSource:
                 if b:
                     pab[b.name] = r.body
         for r in st.res.values():
-            if r.rtype not in ("aws_s3_bucket_policy", "aws_s3_bucket_acl"):
+            if r.rtype not in ("aws_s3_bucket_policy", "aws_s3_bucket_acl", "aws_s3_bucket"):
                 continue
-            b = self._node_for_ref(st, r.body.get("bucket"), "aws_s3_bucket")
+            # The ACL can be its own resource or, in older configurations, set on the bucket.
+            b = (
+                r
+                if r.rtype == "aws_s3_bucket"
+                else self._node_for_ref(st, r.body.get("bucket"), "aws_s3_bucket")
+            )
             if b is None or b.node_id is None:
                 continue
             block = pab.get(b.name, {})
             public = False
             why = ""
-            if r.rtype == "aws_s3_bucket_acl" and str(r.body.get("acl", "")) in (
+            if r.rtype != "aws_s3_bucket_policy" and str(r.body.get("acl", "")) in (
                 "public-read",
                 "public-read-write",
             ):

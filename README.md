@@ -156,8 +156,10 @@ Boutique that takes 8 to 9 seconds, with exactly the findings and paths a full s
   claim), its secrets, a token that can push code. See [docs/cicd.md](docs/cicd.md).
 - **The cheapest fix is named, and often written for you.** Each path lists the findings it needs,
   and the report ranks the fixes that break the most paths. `breachgraph fix` writes the safe ones
-  (a dependency upgrade to its fixed version, the `env:` fix for a GitHub Actions script injection)
-  and with `--pr` opens one pull request per fix. Anything it can't fix safely gets a reason.
+  (a dependency upgrade, the `env:` fix for a GitHub Actions script injection, a setting such as a
+  public ACL, an `allUsers` grant or IMDSv1) and with `--pr` opens one pull request per fix. Each
+  fix is proved: the graph is rebuilt with it applied, and the pull request says how many paths it
+  removes and adds. Anything it can't fix safely gets a reason.
 - **It helps before there's a bug.** Most repositories have no complete path. "One bug away" lists
   what a single new bug at each public entry would reach and what to change, and a pull request
   is told when it widens that. This is advice and never fails a build.

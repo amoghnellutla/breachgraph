@@ -17,6 +17,11 @@ All notable changes to this project are documented here. The format follows
   JavaScript/TypeScript, Java and Go. A weakness in a helper is on every route that reaches it,
   so an SSRF one call away from a handler now makes a path. A call resolves only within the file,
   its package or what it imports; a chain is medium confidence at most and is shown as evidence.
+- `breachgraph fix` now proves its fixes. Each one is applied to a throwaway copy and the attack
+  graph is rebuilt, so the output and the pull request state how many paths it removes and adds;
+  a change that removes none is dropped. It also writes setting fixes for what a path rests on: a
+  public ACL, an `allUsers` grant, `publicly_accessible`, public blob access, IMDSv1, privileged
+  pods. These cover 10 of the 14 real paths in the benchmark, each removing one path and adding none.
 - One bug away: for each public service or outsider-started CI job, what a single new bug there
   would reach, with the setting to change. Every later step must already be possible, so it never
   assumes two bugs. It is hardening advice and never gates. A pull request is told when it widens
@@ -30,6 +35,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- An `acl = "public-read"` set directly on an `aws_s3_bucket` now counts as public, as the
+  separate ACL resource always did.
 - An attack path step shows where the weakness is, not where the route is declared.
 - File digests are computed only when they will be used (CI, `--compare`, `--incremental`). On a
   Docker bind mount from Windows or macOS they took more than 10 minutes on a 33,000-file project.

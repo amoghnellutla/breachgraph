@@ -595,6 +595,7 @@ def fix_cmd(
     import difflib
 
     from breachgraph import fix as fixer
+    from breachgraph.settings_fix import prove, proved_settings
 
     target = path.resolve()
     if report is None and not (target / "breachgraph-report" / "breachgraph.json").is_file():
@@ -608,11 +609,17 @@ def fix_cmd(
             console.print(f"[red]error:[/] cannot read {report} ({exc}). Run: breachgraph scan {path}")
             raise typer.Exit(2) from exc
     fixes = fixer.plan(result, target, top)
-    if not fixes:
+    config = load_config(find_config(target))
+    settings = proved_settings(result, target, config, top)
+    if not fixes and not settings:
         console.print("No attack paths, so nothing to fix first.")
         raise typer.Exit(0)
+    fixes = prove(fixes, result, target, config)
+    fixes = sorted([*fixes, *settings], key=lambda f: (not f.files, -(f.removed or 0)))
     for f in fixes:
         cut = f" (breaks {f.paths_cut} path(s))" if f.paths_cut else ""
+        if f.removed is not None and f.files:
+            cut = f" (rebuilt graph: {f.removed} path(s) removed, {f.added} added)"
         if not f.files:
             console.print(f"[yellow]skip[/] {f.finding.title}{cut}: {f.reason}")
             continue
