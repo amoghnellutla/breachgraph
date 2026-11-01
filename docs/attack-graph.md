@@ -246,6 +246,10 @@ their own defaults and the settings shown: MongoDB with a root user isn't open, 
 secure unless security is turned off, and Redis started from a config file gets no verdict because
 that file can't be read.
 
+An open service doesn't ask who is connecting, so whoever controls a workload beside it has it too,
+within what NetworkPolicy allows. SSRF reaches Elasticsearch, Jupyter and a registry this way, since
+they speak HTTP. Redis isn't counted for SSRF: it drops requests that look like HTTP.
+
 A Kubernetes service reached through an Ingress, LoadBalancer or NodePort can block a merge. A
 published port in a Compose file is a lead, since the file may only be for a laptop.
 

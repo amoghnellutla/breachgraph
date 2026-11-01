@@ -18,6 +18,7 @@ from breachgraph.graph.sources.common import SourceContext
 from breachgraph.graph.sources.hosting import HostingSource
 from breachgraph.graph.sources.images import ImageSource
 from breachgraph.graph.sources.kubernetes import KubernetesSource, admits
+from breachgraph.graph.sources.peers import reach_from_peers
 from breachgraph.graph.sources.routes import RouteSource
 from breachgraph.graph.sources.terraform import TerraformSource
 from breachgraph.models import Finding
@@ -139,6 +140,7 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
     actions = ActionsSource()
     actions.collect(ctx, graph)  # after cloud sources: links jobs to their identities
     HostingSource().collect(ctx, graph)
+    reach_from_peers(graph)
     routes = RouteSource().collect(ctx)
     application_assets(ctx, graph, collect_imports(ctx), len(routes))
     actions.delivery(graph)  # once every workload and what it can reach is known

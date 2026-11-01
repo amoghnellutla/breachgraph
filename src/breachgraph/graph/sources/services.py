@@ -30,16 +30,17 @@ class OpenService:
     why: str  # why it answers anyone
     holds: str  # what the attacker gets
     value: int
+    http: bool = False  # speaks HTTP, so a server-side request can use it
 
 
 _REDIS = OpenService("Redis", "has no password", "Data in Redis", 8)
 _MONGO = OpenService("MongoDB", "has no root user", "Data in MongoDB", 9)
 _MEMCACHED = OpenService("Memcached", "has no authentication", "Data in Memcached", 7)
-_ELASTIC = OpenService("Elasticsearch", "has security turned off", "Data in Elasticsearch", 9)
+_ELASTIC = OpenService("Elasticsearch", "has security turned off", "Data in Elasticsearch", 9, http=True)
 _GRAFANA = OpenService("Grafana", "keeps the default admin password", "Grafana and its data sources", 8)
 _MINIO = OpenService("MinIO", "keeps the default root login", "Buckets in MinIO", 9)
-_JUPYTER = OpenService("Jupyter", "has its token turned off", "A shell on the notebook server", 9)
-_REGISTRY = OpenService("Docker registry", "has no authentication", "Images in this registry", 8)
+_JUPYTER = OpenService("Jupyter", "has its token turned off", "A shell on the notebook server", 9, http=True)
+_REGISTRY = OpenService("Docker registry", "has no authentication", "Images in this registry", 8, http=True)
 
 _NAME = re.compile(r"(?:^|/)([a-z0-9._-]+?)(?::([^@]+))?(?:@sha256:[0-9a-f]+)?$")
 _OLD_ELASTIC = re.compile(r"^[1-7]\.")
@@ -105,6 +106,7 @@ def mark_open(
             kind=NodeKind.DATASTORE,
             name=f"{found.holds} ({node.name})",
             value=found.value,
+            attrs={"http_open": found.http},
             evidence=[evidence],
         )
     )

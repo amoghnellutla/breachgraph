@@ -442,6 +442,20 @@ def _unlock(graph: Graph, route_nodes: list[tuple[Route, Node, CodeUnit | None]]
                             + ("" if imdsv1 else f" ({header or 'IMDSv2'} reduces this risk)"),
                         )
                     )
+            # SSRF -> an open service beside it that speaks HTTP.
+            for e in privilege:
+                if graph.nodes[e.dst].attrs.get("http_open"):
+                    graph.add_edge(
+                        Edge(
+                            src=route.id,
+                            dst=e.dst,
+                            kind=EdgeKind.CONNECTS_TO,
+                            requires=[WeaknessClass.SSRF],
+                            evidence=route.evidence,
+                            confidence=Confidence.MEDIUM,
+                            note="a server-side request reaches this service from inside the network",
+                        )
+                    )
             # File read -> any mounted secret file.
             for e in privilege:
                 if e.kind is EdgeKind.MOUNTS:

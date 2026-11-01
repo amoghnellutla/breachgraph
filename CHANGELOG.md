@@ -17,6 +17,8 @@ All notable changes to this project are documented here. The format follows
 - A password for a hosted database in a settings file is a path from anyone who can read the
   repository. A signing key in the source lifts "needs a login" from guarded routes, since a login
   can be forged. New rule `hardcoded-signing-key` for Python, JavaScript, TypeScript, Java and Go.
+- Whoever controls a workload also has any open service beside it, within what NetworkPolicy allows,
+  and a server-side request reaches one that speaks HTTP.
 - Stock services that answer anyone are a way in with no bug in your code: Redis, MongoDB,
   Memcached, Elasticsearch, Grafana, MinIO, Jupyter and a Docker registry, judged from their own
   defaults and settings. In Compose these are leads, since a Compose file may only be for a laptop.
