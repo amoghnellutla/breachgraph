@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows
   JavaScript/TypeScript, Java and Go. A weakness in a helper is on every route that reaches it,
   so an SSRF one call away from a handler now makes a path. A call resolves only within the file,
   its package or what it imports; a chain is medium confidence at most and is shown as evidence.
+- `breachgraph setup` installs every scanner without Docker, at the versions the image pins: binaries
+  checked against recorded SHA-256 values, Python scanners from the hash-pinned locks. Tools already
+  on your PATH keep being used.
 - `breachgraph fix` now proves its fixes. Each one is applied to a throwaway copy and the attack
   graph is rebuilt, so the output and the pull request state how many paths it removes and adds;
   a change that removes none is dropped. It also writes setting fixes for what a path rests on: a

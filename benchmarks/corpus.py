@@ -126,12 +126,22 @@ def checkout(project: dict[str, Any], image: str) -> str:
         f"&& git remote add origin {project['repo']} && git fetch -q --depth 1 origin {project['sha']} "
         "&& git -c advice.detachedHead=false checkout -q --force FETCH_HEAD"
     )
-    subprocess.run(
-        ["docker", "run", "--rm", "-v", f"{VOLUME}:/corpus", "--entrypoint", "sh", image, "-c", script],
-        check=True,
-        capture_output=True,
-        timeout=900,
-    )
+    for attempt in range(3):  # a long run outlives brief network failures
+        try:
+            subprocess.run(
+                [
+                    *("docker", "run", "--rm", "-v", f"{VOLUME}:/corpus"),
+                    *("--entrypoint", "sh", image, "-c", script),
+                ],
+                check=True,
+                capture_output=True,
+                timeout=900,
+            )
+            return dest
+        except subprocess.SubprocessError:
+            if attempt == 2:
+                raise
+            time.sleep(60)
     return dest
 
 

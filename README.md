@@ -90,8 +90,11 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" \
   -v ~/.cache/breachgraph:/tmp/breachgraph-cache ghcr.io/amoghnellutla/breachgraph scan .
 ```
 
-The report lands in `breachgraph-report/` (HTML, JSON, SARIF, Markdown). `pip install breachgraph`
-works too; it runs whichever scanners are installed and `breachgraph doctor` lists them. There is a
+The report lands in `breachgraph-report/` (HTML, JSON, SARIF, Markdown).
+
+Without Docker, `pip install breachgraph && breachgraph setup` installs every scanner at the same
+pinned versions, checksum-verified, into breachgraph's cache directory. `breachgraph doctor` lists
+what it found. There is a
 GitLab CI template that comments on merge requests ([docs/gitlab.md](docs/gitlab.md)) and more
 GitHub recipes in [docs/github-action.md](docs/github-action.md).
 

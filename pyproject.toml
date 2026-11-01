@@ -66,8 +66,13 @@ Issues = "https://github.com/amoghnellutla/breachgraph/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["src/breachgraph"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"requirements/semgrep.txt" = "breachgraph/locks/semgrep.txt"
+"requirements/checkov.txt" = "breachgraph/locks/checkov.txt"
+"requirements/zizmor.txt" = "breachgraph/locks/zizmor.txt"
+
 [tool.hatch.build.targets.sdist]
-include = ["src/breachgraph", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["src/breachgraph", "requirements", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

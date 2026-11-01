@@ -10,11 +10,13 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Annotated
 
+import httpx
 import typer
 from pydantic import ValidationError
 from rich.console import Console
@@ -32,6 +34,7 @@ from breachgraph.pipeline import PipelineError, ScanOptions, scan
 from breachgraph.policy import evaluate_gate, write_baseline
 from breachgraph.reporters import FORMATS, markdown, write_reports
 from breachgraph.scanners import SCANNERS
+from breachgraph.setup_tools import add_to_path
 
 app = typer.Typer(
     add_completion=False,
@@ -68,6 +71,7 @@ def main(
     ] = False,
 ) -> None:
     """breachgraph: one security gate for your CI."""
+    add_to_path()
 
 
 @app.command("scan")
@@ -325,8 +329,7 @@ def _missing_scanners_hint(result: ScanResult) -> None:
         return
     console.print(
         f"[yellow]{len(missing)} scanner(s) not installed ({', '.join(missing)}).[/] "
-        "The Docker image has all of them: "
-        'docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" ghcr.io/amoghnellutla/breachgraph scan .',
+        "Run [bold]breachgraph setup[/] to install them, or use the Docker image.",
         markup=True,
         highlight=False,
     )
@@ -575,6 +578,43 @@ def graph_cmd(
     raise typer.Exit(1 if summary.gating_paths else 0)
 
 
+@app.command("setup")
+def setup_cmd(
+    only: Annotated[
+        list[str] | None, typer.Option("--only", help="Install just this one (repeatable).")
+    ] = None,
+) -> None:
+    """Install every scanner into breachgraph's cache directory, at the versions the Docker image
+    pins, checked against recorded checksums. A scanner already on your PATH keeps being used."""
+    import breachgraph.setup_tools as tools
+
+    wanted = only or tools.targets()
+    unknown = sorted(set(wanted) - set(tools.targets()))
+    if unknown:
+        console.print(
+            f"[red]error:[/] unknown: {', '.join(unknown)}. Choose from {', '.join(tools.targets())}."
+        )
+        raise typer.Exit(2)
+    key = tools.platform_key()
+    binaries = tools.pins()["binaries"]
+    failed = 0
+    for name in wanted:
+        try:
+            if name in binaries:
+                console.print(f"  {name} {binaries[name]['version']}...")
+                tools.install_binary(name, binaries[name], key)
+            else:
+                console.print(f"  {name}...")
+                tools.install_python(name)
+        except (tools.SetupError, OSError, httpx.HTTPError, subprocess.SubprocessError) as exc:
+            failed += 1
+            console.print(f"  [yellow]{name} not installed:[/] {escape(str(exc))}")
+    if failed:
+        console.print(f"[yellow]{failed} of {len(wanted)} not installed.[/] The rest are ready.")
+        raise typer.Exit(1)
+    console.print(f"[green]Ready.[/] Installed under {tools.tools_dir()}. Try [bold]breachgraph doctor[/].")
+
+
 @app.command("fix")
 def fix_cmd(
     path: Annotated[Path, typer.Argument(help="Repository the report was made from.")] = Path(),
@@ -682,10 +722,10 @@ def doctor_cmd() -> None:
             table.add_row(name, "[green]yes[/]", s.version() or exe)
         else:
             missing += 1
-            table.add_row(name, "[red]no[/]", f"install `{s.binary}` or use the breachgraph Docker image")
+            table.add_row(name, "[red]no[/]", "run `breachgraph setup`, or use the Docker image")
     console.print(table)
     if missing:
-        console.print("[dim]Missing scanners are skipped. The Docker image ships all of them pinned.[/]")
+        console.print("[dim]Missing scanners are skipped. `breachgraph setup` installs them, pinned.[/]")
 
 
 _INIT_CONFIG = """\

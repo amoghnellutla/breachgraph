@@ -2,6 +2,7 @@
 
     python scripts/refresh_binaries.py          # update the Dockerfile in place
     python scripts/refresh_binaries.py --check  # only print what would change
+    python scripts/refresh_binaries.py --pins   # rewrite pins.json from the current Dockerfile
 
 A release is taken only when it is at least COOLDOWN_DAYS old and not a prerelease, so a
 compromised or broken release has time to be noticed and pulled first. The SHA-256 values come
@@ -23,6 +24,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "Dockerfile"
+PINS = ROOT / "src" / "breachgraph" / "pins.json"
 COOLDOWN_DAYS = 14
 # ARG prefix -> (repository, checksums: a release file name, or a URL per file ending in
 # .sha256sum, {arch: release file}, release tag); {v} is the version.
@@ -123,13 +125,78 @@ def refresh(text: str, now: datetime) -> tuple[str, list[str]]:
     return text, changes
 
 
+# {platform: release file} for `breachgraph setup`, which runs outside the Linux image.
+PLATFORMS: dict[str, dict[str, str]] = {
+    "TRIVY": {
+        "linux-amd64": "trivy_{v}_Linux-64bit.tar.gz",
+        "linux-arm64": "trivy_{v}_Linux-ARM64.tar.gz",
+        "darwin-amd64": "trivy_{v}_macOS-64bit.tar.gz",
+        "darwin-arm64": "trivy_{v}_macOS-ARM64.tar.gz",
+        "windows-amd64": "trivy_{v}_windows-64bit.zip",
+    },
+    "GITLEAKS": {
+        "linux-amd64": "gitleaks_{v}_linux_x64.tar.gz",
+        "linux-arm64": "gitleaks_{v}_linux_arm64.tar.gz",
+        "darwin-amd64": "gitleaks_{v}_darwin_x64.tar.gz",
+        "darwin-arm64": "gitleaks_{v}_darwin_arm64.tar.gz",
+        "windows-amd64": "gitleaks_{v}_windows_x64.zip",
+    },
+    "HELM": {
+        "linux-amd64": "helm-v{v}-linux-amd64.tar.gz",
+        "linux-arm64": "helm-v{v}-linux-arm64.tar.gz",
+        "darwin-amd64": "helm-v{v}-darwin-amd64.tar.gz",
+        "darwin-arm64": "helm-v{v}-darwin-arm64.tar.gz",
+        "windows-amd64": "helm-v{v}-windows-amd64.zip",
+    },
+    "KUSTOMIZE": {
+        "linux-amd64": "kustomize_v{v}_linux_amd64.tar.gz",
+        "linux-arm64": "kustomize_v{v}_linux_arm64.tar.gz",
+        "darwin-amd64": "kustomize_v{v}_darwin_amd64.tar.gz",
+        "darwin-arm64": "kustomize_v{v}_darwin_arm64.tar.gz",
+        "windows-amd64": "kustomize_v{v}_windows_amd64.zip",
+    },
+}
+
+
+def write_pins(text: str) -> None:
+    """src/breachgraph/pins.json: the Dockerfile's versions, for every platform."""
+    out: dict[str, Any] = {}
+    for prefix, (repo, sums_file, _files, tag) in TOOLS.items():
+        found = re.search(rf"^ARG {prefix}_VERSION=(\S+)$", text, re.M)
+        if found is None:
+            continue
+        version = found.group(1)
+        names = {k: v.format(v=version) for k, v in PLATFORMS[prefix].items()}
+        sums = checksums(repo, version, sums_file, list(names.values()), tag)
+        files: dict[str, dict[str, str]] = {}
+        for key, name in names.items():
+            if name not in sums:
+                print(f"{prefix.lower()}: no checksum for {name}, leaving {key} out")
+                continue
+            if prefix == "HELM":
+                url = f"https://get.helm.sh/{name}"
+            else:
+                release = urllib.parse.quote(tag.format(v=version), safe="")
+                url = f"https://github.com/{repo}/releases/download/{release}/{name}"
+            files[key] = {"url": url, "sha256": sums[name]}
+        out[prefix.lower()] = {"version": version, "files": files}
+    PINS.write_text(json.dumps({"binaries": out}, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     text = DOCKERFILE.read_text(encoding="utf-8")
+    if "--pins" in sys.argv[1:]:  # only rewrite pins.json from the versions pinned now
+        write_pins(text)
+        return 0
     updated, changes = refresh(text, datetime.now(UTC))
     for change in changes:
         print(change)
-    if updated != text and "--check" not in sys.argv[1:]:
+    if "--check" in sys.argv[1:]:
+        return 0
+    if updated != text:
         DOCKERFILE.write_text(updated, encoding="utf-8")
+    if changes:
+        write_pins(updated)
     return 0
 
 
