@@ -64,3 +64,19 @@ def test_a_first_batch_timeout_is_a_failure(tmp_path: Path) -> None:
 
 def test_report_status_round_trips() -> None:
     assert json.dumps(ToolStatus.PARTIAL.value) == '"partial"'
+
+
+def test_compatibility_rules_are_not_findings(tmp_path: Path) -> None:
+    raw = {
+        "results": [
+            {
+                "check_id": "python.lang.compatibility.python37.python37-compatibility-importlib2",
+                "path": "a.py",
+                "start": {"line": 1},
+                "end": {"line": 1},
+                "extra": {"message": "needs 3.7", "severity": "ERROR", "metadata": {}},
+            }
+        ]
+    }
+    ctx = ScanContext(target=tmp_path, work_dir=tmp_path, config=Config())
+    assert SemgrepScanner().parse(raw, ctx) == []

@@ -83,6 +83,8 @@ class SemgrepScanner(Scanner):
             return []
         findings: list[Finding] = []
         for r in raw.get("results", []):
+            if ".compatibility." in r["check_id"]:
+                continue  # "this needs Python 3.7" says nothing about security
             extra = r.get("extra", {})
             meta = extra.get("metadata", {}) or {}
             path = r["path"]

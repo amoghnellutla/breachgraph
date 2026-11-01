@@ -64,6 +64,7 @@ All notable changes to this project are documented here. The format follows
 - The graph build scales to projects with thousands of routes. Files with nothing resembling a
   route aren't parsed, edge lookup no longer grows with the graph, and a finding is matched to
   routes by lookup. A 10,000-file project that spent over 6 minutes here now takes well under one.
+- Semgrep's language-compatibility rules are dropped: they say nothing about security.
 - File digests are computed only when they will be used (CI, `--compare`, `--incremental`). On a
   Docker bind mount from Windows or macOS they took more than 10 minutes on a 33,000-file project.
 
