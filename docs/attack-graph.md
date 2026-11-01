@@ -232,6 +232,20 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## Kubernetes permissions that become more
+
+RBAC grants that look narrow can turn into wider ones. A service account token reaches:
+
+- **Full control of its scope** with `impersonate`, with `bind` on a role plus write access to a
+  binding, or with `escalate` on a role it can also edit.
+- **Other service accounts** with `create` on `serviceaccounts/token`.
+- **The worker nodes** with `nodes/proxy`, through the kubelet API.
+- **Other workloads** with `pods/exec`, `pods/attach` or `pods/ephemeralcontainers`.
+
+Write access to a binding on its own isn't a path: the API server refuses a binding to rights the
+token doesn't hold. [KubeHound](https://github.com/DataDog/KubeHound) documents these attack classes
+against a live cluster; here they come from the manifests in the repository.
+
 ## From CI to production
 
 A job an outsider can start doesn't only hold its own secrets. A weapon in that job can also go on

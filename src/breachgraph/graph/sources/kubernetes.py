@@ -625,6 +625,7 @@ class KubernetesSource:
                     continue
                 for rule in rules:
                     self._rule_edges(graph, said, rule, scope, ev, workloads)
+                self._privilege_moves(graph, said, rules, scope, ev)
 
     def _rule_edges(
         self,
@@ -659,7 +660,8 @@ class KubernetesSource:
                     note=f"RBAC grants {'/'.join(sorted(verbs))} on secrets",
                 )
             )
-        execs = (anyres or "pods/exec" in resources) and verbs & {"create", "*"}
+        interactive = {"pods/exec", "pods/attach", "pods/ephemeralcontainers"}
+        execs = (anyres or interactive & resources) and verbs & {"create", "patch", "update", "*"}
         creates = (anyres or {"pods", "deployments", "daemonsets", "jobs"} & resources) and verbs & {
             "create",
             "patch",
@@ -704,6 +706,88 @@ class KubernetesSource:
                         "can create pods; a privileged pod reaches the node unless "
                         "Pod Security Admission enforces 'restricted'"
                     ),
+                )
+            )
+
+    def _privilege_moves(
+        self, graph: Graph, said: str, rules: list[dict[str, Any]], scope: str, ev: Evidence
+    ) -> None:
+        """Permissions that turn into other permissions. A wildcard role already reaches secrets and
+        workloads above, so these matter for the narrow grants that look harmless in a review."""
+
+        def allowed(verbs: set[str], resources: set[str]) -> bool:
+            return any(
+                {str(v) for v in r.get("verbs") or []} & (verbs | {"*"})
+                and {str(x) for x in r.get("resources") or []} & resources
+                for r in rules
+            )
+
+        where = "the whole cluster" if scope == "*" else f"namespace {scope}"
+        roles = {"roles", "clusterroles"}
+        # The API server refuses a binding to rights the token lacks, unless it holds `bind`, and an
+        # edit to a role that adds rights, unless it holds `escalate`. Write access alone is no move.
+        binds = allowed({"bind"}, roles) and allowed(
+            {"create", "update", "patch"}, {"rolebindings", "clusterrolebindings"}
+        )
+        escalates = allowed({"escalate"}, roles) and allowed({"update", "patch"}, roles)
+        impersonates = allowed({"impersonate"}, {"users", "groups", "serviceaccounts"})
+        how = next(
+            (
+                text
+                for text, holds in (
+                    ("bind a role with more rights", binds),
+                    ("add rights to a role it uses", escalates),
+                    ("impersonate another user or service account", impersonates),
+                )
+                if holds
+            ),
+            "",
+        )
+        if how:
+            aid = f"k8s:admin:{scope}"
+            graph.add_node(
+                Node(id=aid, kind=NodeKind.IDENTITY, name=f"Full control of {where}", value=9, evidence=[ev])
+            )
+            graph.add_edge(
+                Edge(
+                    src=said,
+                    dst=aid,
+                    kind=EdgeKind.USES_IDENTITY,
+                    evidence=[ev],
+                    note=f"RBAC allows this token to {how}",
+                )
+            )
+        if allowed({"create"}, {"serviceaccounts/token"}):
+            for other in list(graph.of_kind(NodeKind.IDENTITY)):
+                ns = other.id.removeprefix("k8s:serviceaccount:").split("/")[0]
+                if other.id.startswith("k8s:serviceaccount:") and other.id != said and scope in ("*", ns):
+                    graph.add_edge(
+                        Edge(
+                            src=said,
+                            dst=other.id,
+                            kind=EdgeKind.USES_IDENTITY,
+                            evidence=[ev],
+                            note="RBAC allows this token to mint a token for this service account",
+                        )
+                    )
+        if scope == "*" and allowed({"get", "create"}, {"nodes/proxy"}):
+            graph.add_node(
+                Node(
+                    id="k8s:host:nodes",
+                    kind=NodeKind.HOST,
+                    name="Kubernetes worker nodes",
+                    value=HOST_VALUE,
+                    evidence=[ev],
+                )
+            )
+            graph.add_edge(
+                Edge(
+                    src=said,
+                    dst="k8s:host:nodes",
+                    kind=EdgeKind.RUNS_ON,
+                    evidence=[ev],
+                    confidence=Confidence.MEDIUM,
+                    note="nodes/proxy reaches the kubelet API, which runs commands in any pod on the node",
                 )
             )
 

@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 - Attack paths from a CI job to production: a write token reaches what deploy jobs hold through the
   default branch, and a package token reaches what a workload can do by replacing its image.
+- Kubernetes RBAC grants that turn into more: `impersonate`, `bind` with a binding the token can
+  write, `escalate` with a role it can edit, `serviceaccounts/token`, `nodes/proxy`, `pods/attach`
+  and `pods/ephemeralcontainers`. Writing a binding alone isn't flagged, because the API server
+  refuses it. The attack classes follow KubeHound's documented list.
 
 ### Changed
 
