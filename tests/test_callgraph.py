@@ -326,3 +326,13 @@ def test_a_compose_file_in_a_test_directory_is_not_a_deployment(tmp_path: Path) 
     assert not [n for n in build_attack_graph(tmp_path, [], Config()).graph.nodes if n.startswith("compose:")]
     write(tmp_path, "docker-compose.yml", compose)
     assert [n for n in build_attack_graph(tmp_path, [], Config()).graph.nodes if n.startswith("compose:")]
+
+
+def test_a_parameter_match_through_a_chain_is_a_lead(tmp_path: Path) -> None:
+    python_app(tmp_path)
+    finding = cmd_injection("api/services/shell.py", 4)
+    finding.rule_id = "breachgraph.python.command-injection-parameter"
+    res = build_attack_graph(tmp_path, [finding], JEWEL)
+    [weak] = route_weak(res, "GET /run")
+    assert weak.confidence is PathConfidence.LOW
+    assert all(p.confidence is PathConfidence.LOW for p in res.paths)

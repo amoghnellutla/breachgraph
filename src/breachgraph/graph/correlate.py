@@ -170,7 +170,10 @@ def _called_from_routes(
         r, node = served[i]
         link = " -> ".join([*([r.handler] if r.handler != "<inline>" else []), *chain])
         weakness = _weakness(f, cls)
-        weakness.confidence = Confidence.LOW if sure is Confidence.LOW else Confidence.MEDIUM
+        # A parameter rule doesn't show that request data arrives, and a name-only chain doesn't
+        # prove the call: together they're a lead to report, not grounds to block a merge.
+        lead = sure is Confidence.LOW or f.rule_id.endswith("-parameter")
+        weakness.confidence = Confidence.LOW if lead else Confidence.MEDIUM
         weakness.evidence.detail = f"{f.rule_id}, reached from the handler by {link}"
         node.weaknesses.append(weakness)
         linked = True
