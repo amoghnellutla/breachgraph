@@ -95,6 +95,7 @@ class Weakness(BaseModel):
     fingerprint: str | None = None  # links back to a Finding
     title: str
     evidence: Evidence
+    confidence: Confidence = Confidence.HIGH  # lower when the link to this node is indirect
 
 
 class Node(BaseModel):

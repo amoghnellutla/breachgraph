@@ -14,6 +14,7 @@ from breachgraph.graph.model import (
     INTERNET_ID,
     Confidence,
     Edge,
+    Evidence,
     Graph,
     Node,
     WeaknessClass,
@@ -40,6 +41,8 @@ class Step:
     edge: Edge
     via: WeaknessClass | None  # the weakness used to cross, if any
     weakness_title: str | None
+    via_confidence: Confidence = Confidence.HIGH
+    via_evidence: Evidence | None = None  # where the weakness is, and how the route reaches it
 
 
 @dataclass
@@ -98,10 +101,10 @@ def find_paths(
         for edge in adj.get(current, []):
             if edge.dst in node_ids:  # no cycles
                 continue
-            via, title = _crossing(node, edge)
-            if edge.requires and via is None:
+            step = _crossing(node, edge)
+            if edge.requires and step.via is None:
                 continue
-            stack.append(([*node_ids, edge.dst], [*steps, Step(edge, via, title)]))
+            stack.append(([*node_ids, edge.dst], [*steps, step]))
 
     found = sorted(best_by_vector.values(), key=lambda p: (-p.score, p.length))
     return found[:max_paths]
@@ -119,14 +122,12 @@ def _vector(graph: Graph, path: AttackPath) -> frozenset[str]:
     return frozenset(path.weaknesses) | derived
 
 
-def _crossing(node: Node, edge: Edge) -> tuple[WeaknessClass | None, str | None]:
-    if not edge.requires:
-        return None, None
-    matches = node.has(set(edge.requires))
+def _crossing(node: Node, edge: Edge) -> Step:
+    matches = node.has(set(edge.requires)) if edge.requires else []
     if not matches:
-        return None, None
-    w = matches[0]
-    return w.cls, w.title
+        return Step(edge, None, None)
+    w = max(matches, key=lambda m: _CONF_RANK[m.confidence])  # the most direct evidence
+    return Step(edge, w.cls, w.title, w.confidence, w.evidence)
 
 
 def _make_path(graph: Graph, steps: list[Step]) -> AttackPath:
@@ -142,7 +143,7 @@ def _make_path(graph: Graph, steps: list[Step]) -> AttackPath:
 
 def _score(path: AttackPath) -> None:
     confs = [s.edge.confidence for s in path.steps]
-    path.confidence = min(confs, key=lambda c: _CONF_RANK[c])
+    path.confidence = min([*confs, *(s.via_confidence for s in path.steps)], key=lambda c: _CONF_RANK[c])
     reachability = 1.0
     for c in confs:
         reachability *= _CONF_WEIGHT[c]

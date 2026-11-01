@@ -21,7 +21,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from breachgraph.cicd.workflows import Job, Step, Workflow, job_secrets, load_workflows
+from breachgraph.cicd.workflows import SECRET_RE, Job, Step, Workflow, job_secrets, load_workflows
 from breachgraph.models import Category, Confidence, Finding, Location, Severity
 from breachgraph.paths import iter_files
 
@@ -389,6 +389,11 @@ _AGENT_SHELL = re.compile(
 # Token scopes that reach code, releases or other workflows. `issues: write` alone is what a
 # triage bot needs: an attacker gains spam, and the action's own docs recommend that setup.
 _AGENT_STRONG_SCOPES = {"contents", "packages", "actions", "workflows", "deployments", "pull-requests"}
+# `id-token: write` is routine for agent actions; it matters when the job logs in to a cloud.
+_CLOUD_LOGIN = {"aws-actions/configure-aws-credentials", "azure/login", "google-github-actions/auth"}
+# Inputs and variables that hold the model's own key, whatever the secret behind them is called.
+_MODEL_INPUT = re.compile(r"api[-_]?key|oauth_token|^ANTHROPIC_|^OPENAI_|^GEMINI_", re.I)
+_DENIED_TOOLS = re.compile(r"--disallowed-?tools[ =](?:\"[^\"]*\"|'[^']*'|\\\"[^\"]*\"|\S+)", re.I)
 # What the agent needs to run at all: not extra access an attacker gains.
 _MODEL_KEY = re.compile(r"ANTHROPIC|CLAUDE|OPENAI|GEMINI|GOOGLE_API_KEY|CODEX", re.I)
 
@@ -399,6 +404,20 @@ def _agent(step: Step) -> str:
     if m := _AGENT_CLI.search(step.run):
         return m.group("cli").removeprefix("@").split("/")[-1]
     return ""
+
+
+def _agent_secrets(wf: Workflow, job: Job, step: Step) -> list[str]:
+    """Secrets the agent's own step can see, beyond the model's key. Another step's are out of
+    its reach: GitHub passes them to that step's process only."""
+    model = {
+        m.group(1)
+        for values in (step.with_, step.env)
+        for key, value in values.items()
+        if _MODEL_INPUT.search(key)
+        for m in SECRET_RE.finditer(str(value))
+    }
+    seen = {m.group(1) for m in SECRET_RE.finditer(repr((step.with_, step.env, step.run, job.env, wf.env)))}
+    return sorted(s for s in seen - model if s != "GITHUB_TOKEN" and not _MODEL_KEY.search(s))
 
 
 def _agent_prompt_injection(wf: Workflow, job: Job) -> list[Finding]:
@@ -419,11 +438,11 @@ def _agent_prompt_injection(wf: Workflow, job: Job) -> list[Finding]:
         perms = wf.job_permissions(job)
         scopes = perms if isinstance(perms, dict) else {}
         granted = {k for k, v in scopes.items() if v == "write"}
-        if "anthropic_federation_rule_id" in step.with_:
-            granted.discard("id-token")  # exchanged for the model key
+        if not any(s.action in _CLOUD_LOGIN for s in job.steps):
+            granted.discard("id-token")
         write = perms == "write-all" or bool(granted & (_AGENT_STRONG_SCOPES | {"id-token"}))
-        secrets = sorted(s for s in job_secrets(wf, job) if not _MODEL_KEY.search(s))
-        shell = bool(_AGENT_SHELL.search(repr((step.with_, step.run))))
+        secrets = _agent_secrets(wf, job, step)
+        shell = bool(_AGENT_SHELL.search(_DENIED_TOOLS.sub(" ", repr((step.with_, step.run)))))
         if not (shell or secrets or write or granted):
             continue  # it can be talked into a wrong answer, and nothing more
         gate = gated(wf, job, step)

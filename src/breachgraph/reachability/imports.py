@@ -6,6 +6,7 @@ makes it cheap, which other first-party modules it imports (for entry-point reac
 
 from __future__ import annotations
 
+import posixpath
 import re
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
@@ -125,8 +126,7 @@ def _js(root: ts.Node, fi: FileImports, rel: str) -> None:
 
 
 def _resolve_js_relative(rel: str, spec: str) -> str:
-    base = PurePosixPath(rel).parent
-    target = (base / spec).as_posix()
+    target = posixpath.normpath(posixpath.join(posixpath.dirname(rel), spec))
     return re.sub(r"\.(js|ts|jsx|tsx|mjs|cjs)$", "", target).rstrip("/")
 
 

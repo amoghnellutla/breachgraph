@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from breachgraph.graph.callgraph import CallGraph
 from breachgraph.graph.model import (
     Confidence,
     Edge,
@@ -70,9 +71,10 @@ def weakness_class(f: Finding) -> WeaknessClass | None:
     return None
 
 
-def _weakness(f: Finding, cls: WeaknessClass) -> Weakness:
+def _weakness(f: Finding, cls: WeaknessClass, sure: Confidence = Confidence.HIGH) -> Weakness:
     return Weakness(
         cls=cls,
+        confidence=sure,
         fingerprint=f.fingerprint,
         title=f.title,
         evidence=Evidence(path=f.location.path, line=f.location.start_line, detail=f.rule_id, source=f.tool),
@@ -136,7 +138,47 @@ def code_units(
     return units
 
 
-def attach(graph: Graph, findings: list[Finding], routes: list[Route], units: list[CodeUnit]) -> None:
+# What a request can trigger: a weakness of these in a helper a handler calls is on that route.
+_ROUTE_WEAPONS = {
+    WeaknessClass.CODE_EXECUTION,
+    WeaknessClass.SSRF,
+    WeaknessClass.INJECTION_DATA,
+    WeaknessClass.FILE_READ,
+    WeaknessClass.AUTH_BYPASS,
+}
+
+
+def _called_from_routes(
+    f: Finding,
+    cls: WeaknessClass,
+    route_nodes: list[tuple[Route, Node, CodeUnit | None]],
+    calls: CallGraph,
+    sure: Confidence,
+) -> None:
+    """Attach a weakness in a helper to every route whose handler reaches it, with the chain."""
+    loc = f.location
+    if cls not in _ROUTE_WEAPONS or not loc.start_line or not loc.in_repo or not_run(loc.path):
+        return
+    for r, node, unit in route_nodes:
+        if unit is None:
+            continue  # nothing deployed behind this route to reach
+        chain = calls.chain_to(r.file, r.start_line, r.end_line, loc.path, loc.start_line)
+        if chain is None:
+            continue
+        link = " -> ".join([*([r.handler] if r.handler != "<inline>" else []), *chain])
+        weakness = _weakness(f, cls)
+        weakness.confidence = Confidence.LOW if sure is Confidence.LOW else Confidence.MEDIUM
+        weakness.evidence.detail = f"{f.rule_id}, reached from the handler by {link}"
+        node.weaknesses.append(weakness)
+
+
+def attach(
+    graph: Graph,
+    findings: list[Finding],
+    routes: list[Route],
+    units: list[CodeUnit],
+    calls: CallGraph | None = None,
+) -> None:
     """Route nodes + weaknesses from findings, then the edges that weaknesses unlock."""
     route_nodes: list[tuple[Route, Node, CodeUnit | None]] = []
     for r in routes:
@@ -174,14 +216,25 @@ def attach(graph: Graph, findings: list[Finding], routes: list[Route], units: li
         if cls is None or f.status.value == "suppressed":
             continue
         loc = f.location
+        # A sink fed only by literals is still reported, at a confidence that doesn't gate a merge.
+        constant = bool(
+            calls is not None
+            and cls in _ROUTE_WEAPONS
+            and loc.start_line
+            and calls.constant_input(loc.path, loc.start_line, f.rule_id)
+        )
+        sure = Confidence.LOW if constant else Confidence.HIGH
         # 1. code findings inside a route handler
         hit = False
         for r, node, _unit in route_nodes:
             if loc.path == r.file and loc.start_line and r.start_line <= loc.start_line <= r.end_line:
-                node.weaknesses.append(_weakness(f, cls))
+                node.weaknesses.append(_weakness(f, cls, sure))
                 hit = True
         if hit:
             continue
+        # A helper the handler calls: the same weapon, one or more calls away.
+        if calls is not None:
+            _called_from_routes(f, cls, route_nodes, calls, sure)
         # 2. infrastructure findings inside a Terraform resource that became a node
         for node in graph.nodes.values():
             tf = node.attrs.get("tf_range")
@@ -207,7 +260,7 @@ def attach(graph: Graph, findings: list[Finding], routes: list[Route], units: li
                 for wid in unit.workloads:
                     if ci and graph.nodes[wid].attrs.get("platform") != "github-actions":
                         continue
-                    graph.nodes[wid].weaknesses.append(_weakness(f, cls))
+                    graph.nodes[wid].weaknesses.append(_weakness(f, cls, sure))
 
     _unlock(graph, route_nodes)
 

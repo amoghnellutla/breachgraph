@@ -136,6 +136,52 @@ jobs:
     assert f.severity is Severity.MEDIUM and "limited to issues" in f.description
 
 
+def triage(with_lines: str, extra_steps: str = "", scopes: str = "issues: write") -> str:
+    return f"""on: issues
+permissions:
+  {scopes}
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          allowed_non_write_users: "*"
+{with_lines}
+{extra_steps}
+"""
+
+
+def test_a_denied_shell_is_not_a_shell(tmp_path: Path) -> None:
+    args = '          claude_args: --disallowedTools "Bash,WebFetch"'
+    write(tmp_path, ".github/workflows/t.yml", triage(args))
+    [f] = agents(tmp_path)
+    assert f.severity is Severity.MEDIUM and "CWE-94" not in f.cwe
+
+
+def test_a_secret_in_another_step_is_out_of_reach(tmp_path: Path) -> None:
+    other = "      - run: ./report.sh\n        env:\n          STATS: ${{ secrets.STATS_KEY }}"
+    write(tmp_path, ".github/workflows/t.yml", triage("", other))
+    [f] = agents(tmp_path)
+    assert f.severity is Severity.MEDIUM and "STATS_KEY" not in f.description
+
+
+def test_a_model_key_under_any_name_is_not_extra_access(tmp_path: Path) -> None:
+    key = "          anthropic_api_key: ${{ secrets.LLM_GATEWAY_TOKEN }}"
+    write(tmp_path, ".github/workflows/t.yml", triage(key))
+    [f] = agents(tmp_path)
+    assert f.severity is Severity.MEDIUM and "LLM_GATEWAY_TOKEN" not in f.description
+
+
+def test_id_token_counts_only_with_a_cloud_login(tmp_path: Path) -> None:
+    scopes = "issues: write\n  id-token: write"
+    write(tmp_path, ".github/workflows/t.yml", triage("", scopes=scopes))
+    assert agents(tmp_path)[0].severity is Severity.MEDIUM
+    login = "      - uses: aws-actions/configure-aws-credentials@v4"
+    write(tmp_path, ".github/workflows/t.yml", triage("", login, scopes))
+    assert agents(tmp_path)[0].severity is Severity.HIGH
+
+
 def test_cli_in_a_run_step_counts(tmp_path: Path) -> None:
     text = """on: issue_comment
 jobs:

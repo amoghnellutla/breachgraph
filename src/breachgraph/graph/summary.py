@@ -157,8 +157,10 @@ def export_graph(result: AttackGraphResult, views: list[AttackPathView]) -> Grap
 
 def _step(path: AttackPath, i: int, graph: Graph) -> AttackStep:
     s = path.steps[i]
-    ev = s.edge.evidence[0] if s.edge.evidence else None
+    ev = s.via_evidence or (s.edge.evidence[0] if s.edge.evidence else None)
     src, dst = graph.nodes[s.edge.src], graph.nodes[s.edge.dst]
+    detail = s.via_evidence.detail if s.via_evidence else ""
+    chain = detail.split(", ", 1)[1] if ", reached" in detail else ""
     return AttackStep(
         src=src.name,
         dst=dst.name,
@@ -167,7 +169,7 @@ def _step(path: AttackPath, i: int, graph: Graph) -> AttackStep:
         kind=s.edge.kind.value,
         via=s.via.value if s.via else None,
         weakness_title=s.weakness_title,
-        note=s.edge.note,
+        note=f"{s.edge.note} ({chain})" if chain else s.edge.note,
         confidence=s.edge.confidence.value if isinstance(s.edge.confidence, Confidence) else "high",
         evidence_path=ev.path if ev else None,
         evidence_line=ev.line if ev else None,

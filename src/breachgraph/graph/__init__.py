@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
 from breachgraph.config import Config
+from breachgraph.graph.callgraph import CallGraph
 from breachgraph.graph.correlate import attach, code_units
 from breachgraph.graph.model import CONTROL, INTERNET_ID, Edge, EdgeKind, Graph, Node, NodeKind, internet
 from breachgraph.graph.paths import AttackPath, ChokePoint, choke_points, find_paths
@@ -141,7 +142,7 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
     assumed_entries(graph, config.attack_graph.entry_points)
     name = repo_name or PurePosixPath(target.resolve().as_posix()).name
     units = code_units(graph, list(images.dockerfile_dirs), name, target)
-    attach(graph, findings, routes, units)
+    attach(graph, findings, routes, units, CallGraph(target, config.exclude_paths))
     mark_crown_jewels(graph, config)
 
     paths = find_paths(
