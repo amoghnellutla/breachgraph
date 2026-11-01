@@ -15,13 +15,13 @@ listed as misses.
 | [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 560 | 548 | 0 | 0 | 0 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 601 | 601 | 0 | 1 | 1 | 0 | 0 |
 | [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 583 | 514 | 10 | 3 | 3 | 0 | 0 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 496 | 413 | 8 | 2 | 2 | 0 | 0 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 492 | 409 | 8 | 2 | 2 | 0 | 0 |
 | [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 481 | 412 | 8 | 5 | 4 | 1 | 0 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 272 | 272 | 2 | 4 | 3 | 1 | 0 |
 | [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 629 | 622 | 1 | 0 | 0 | 0 | 0 |
-| **Total** | | **4,337** | **4,059** | **34** | **17** | **15** | **2** | **0** |
+| **Total** | | **4,333** | **4,055** | **34** | **17** | **15** | **2** | **0** |
 
-**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,059 deduplicated findings reduce to **17 attack paths** to review first.
+**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,055 deduplicated findings reduce to **17 attack paths** to review first.
 
 Of the 15 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 5 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
 
@@ -160,4 +160,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Run with breachgraph at commit `559d31b`. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `182f9e1`. Scanner versions are recorded per run in `benchmarks/results/`.

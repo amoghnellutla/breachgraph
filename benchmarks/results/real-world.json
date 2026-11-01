@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-01",
+  "commit": "182f9e1",
+  "projects": 51,
+  "crashes": 0,
+  "median_seconds": 27.9,
+  "max_seconds": 254.3,
+  "over_5_minutes": 0,
+  "findings": 15664,
+  "paths": 72,
+  "projects_with_paths": 17,
+  "gating_paths": 2,
+  "real_gating_paths": 2,
+  "false_gating_paths": 0,
+  "projects_passing": 48,
+  "blocking_findings": 2,
+  "median_blocking_findings": 0,
+  "max_blocking_findings": 1,
+  "projects_one_bug_away": 30,
+  "projects_modeling_nothing": 7
+}

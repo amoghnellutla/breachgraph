@@ -31,13 +31,13 @@ healthy control. Every path it reported was checked by hand.
 | [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 548 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 601 | 1 | 1 |
 | [awsgoat](https://github.com/ine-labs/AWSGoat) | 514 | 3 | 3 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | 413 | 2 | 2 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | 409 | 2 | 2 |
 | [gcpgoat](https://github.com/ine-labs/GCPGoat) | 412 | 5 | 4 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | 272 | 4 | 3 |
 | [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 622 | 0 | 0 |
-| **Total** | **4,059** | **17** | **15** |
+| **Total** | **4,055** | **17** | **15** |
 
-4,059 findings come down to 17 attack paths, and 15 of them are real chains an
+4,055 findings come down to 17 attack paths, and 15 of them are real chains an
 attacker could use (88% precision). Of the 15 that block a merge, 15 are real;
 the rest are low confidence and only reported. The control project gets none.
 <!-- benchmark-table:end -->
@@ -47,7 +47,8 @@ what it finds from a leaked key or a foothold inside the cluster are in
 [docs/benchmark.md](docs/benchmark.md). Anyone can rerun it.
 
 The CI/CD checks were also run on 3,659 workflows from popular, well-maintained projects, where a
-false alarm costs a real team's time: [docs/ci-survey.md](docs/ci-survey.md).
+false alarm costs a real team's time: [docs/ci-survey.md](docs/ci-survey.md). What a first scan
+gives real projects is in [docs/real-world.md](docs/real-world.md).
 
 <p align="center"><img src="docs/img/attack-paths.png" alt="The HTML report's attack-graph explorer with one path selected, from the internet through an injectable CI job and its deploy role to a customer-data bucket" width="860"></p>
 

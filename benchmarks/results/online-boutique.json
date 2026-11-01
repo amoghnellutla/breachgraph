@@ -4,7 +4,7 @@
   "sha": "38e7348eb289eb5b87c0c6e8cb19ced0449dc389",
   "kind": "control",
   "breachgraph_version": "0.6.0",
-  "breachgraph_commit": "559d31b",
+  "breachgraph_commit": "182f9e1",
   "wall_time_s": 47.9,
   "tools": [
     {
@@ -12,7 +12,7 @@
       "status": "ok",
       "version": "1.179.0",
       "findings": 0,
-      "duration_s": 21.79,
+      "duration_s": 20.96,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 0,
-      "duration_s": 2.14,
+      "duration_s": 2.2,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 569,
-      "duration_s": 37.97,
+      "duration_s": 38.08,
       "message": null
     },
     {
@@ -36,7 +36,7 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 59,
-      "duration_s": 1.06,
+      "duration_s": 1.02,
       "message": null
     },
     {
@@ -44,7 +44,7 @@
       "status": "ok",
       "version": "0.6.0",
       "findings": 1,
-      "duration_s": 0.41,
+      "duration_s": 0.31,
       "message": null
     }
   ],

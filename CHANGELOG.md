@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-01
+
 ### Security
 
 - **The gate no longer fails open.** A scan where a scanner failed used to report "gate passed" and
@@ -461,7 +463,8 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.3.0...v0.4.0
