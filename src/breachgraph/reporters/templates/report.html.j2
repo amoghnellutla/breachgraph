@@ -95,6 +95,8 @@ h1.clear em { color: var(--ok); }
 .row:focus-visible { outline-offset: -2px; }
 .row[aria-pressed="true"] { background: var(--sunken); box-shadow: inset 2px 0 0 var(--ink); }
 .row .n { font: 12px/20px var(--mono); color: var(--muted); }
+.more { display: block; width: 100%; text-align: left; padding: 0 var(--s3) var(--s2) calc(var(--s3) + 20px + var(--s2)); font: inherit; font-size: 12px; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.more:hover { color: var(--ink); }
 .row .t { font-weight: 500; overflow-wrap: anywhere; line-height: 20px; }
 .row .m { grid-column: 2; font-size: 12px; color: var(--muted); }
 .row .m b { font-weight: 500; color: var(--signal); }
@@ -888,14 +890,15 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
     drawPaths(); drawFixes();
   }
 
+  var opened = {};
   function drawPaths() {
     var box = $("paths"); box.textContent = "";
     var size = {}, led = {};
     data.paths.forEach(function (p) { size[p.group] = (size[p.group] || 0) + 1; });
     data.paths.forEach(function (p, i) {
-      // A group is one row until the reader is inside it.
+      // A group is one row until the reader opens it, or the keyboard lands inside it.
       var lead = !led[p.group]; led[p.group] = true;
-      if (!lead && !(cur && cur.group === p.group)) return;
+      if (!lead && !opened[p.group] && cur !== p) return;
       var b = h("button", "row" + (alive(p) ? "" : " closed")); b.type = "button";
       b.setAttribute("aria-pressed", String(cur === p));
       b.appendChild(h("span", "n", String(i + 1)));
@@ -911,9 +914,15 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
       b.appendChild(m);
       var at = p.steps.map(function (s) { return s.via; }).indexOf(p.steps.filter(function (s) { return s.via; }).map(function (s) { return s.via; })[0]);
       if (at >= 0) b.appendChild(h("span", "m", words(p.steps[at].via) + " at " + node(p.nodes[at]).name));
-      if (lead && size[p.group] > 1) b.appendChild(h("span", "m", "and " + (size[p.group] - 1) + " more like it"));
       b.addEventListener("click", function () { clearBlast(); selectPath(p, true); });
       box.appendChild(b);
+      if (lead && size[p.group] > 1) {
+        var more = h("button", "more", opened[p.group] ? "show fewer" : "and " + (size[p.group] - 1) + " more like it");
+        more.type = "button";
+        more.setAttribute("aria-expanded", String(!!opened[p.group]));
+        more.addEventListener("click", function () { opened[p.group] = !opened[p.group]; drawPaths(); });
+        box.appendChild(more);
+      }
     });
   }
 
