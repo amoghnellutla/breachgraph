@@ -70,7 +70,8 @@ READ_FILES = [*CONTROL, WeaknessClass.FILE_READ]
 
 # Code that a service does not run: tests, fixtures, examples and docs.
 _NOT_RUN = re.compile(
-    r"(?:^|/)(?:tests?|__tests__|spec|e2e|fixtures?|examples?|samples?|docs?)/|\.(?:test|spec)\.[a-z]+$"
+    r"(?:^|/)(?:tests?|__tests__|__mocks__|testdata|spec|e2e|cypress|playwright|fixtures?|examples?|samples?|docs?)/"
+    r"|\.(?:test|spec|stories)\.[a-z]+$|(?:^|/)(?:conftest\.py|test_[^/]+\.py|[^/]+_test\.(?:py|go))$"
 )
 # Code that may ship but is weaker evidence than the application's own source.
 _INCIDENTAL = re.compile(r"(?:^|/)(?:static|vendor|third_party)/")

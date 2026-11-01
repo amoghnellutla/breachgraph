@@ -35,6 +35,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Fewer false paths on real projects. When a service has known routes and none of them reaches a
+  weakness (a management command, a build step), it is reported at low confidence and doesn't
+  gate. Compose files under test directories aren't treated as deployments, and pytest
+  `conftest.py`, `test_*.py` and `*_test.go` files aren't treated as part of the service.
 - Semgrep no longer loses everything on a large monorepo. Past 4,000 source files it skips test
   code and runs in batches, server code first, and the time limit covers the whole run. If time
   runs out, finished batches stand, the scanner is shown as `partial` and the coverage line says

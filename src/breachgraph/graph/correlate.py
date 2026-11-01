@@ -154,11 +154,13 @@ def _called_from_routes(
     route_nodes: list[tuple[Route, Node, CodeUnit | None]],
     calls: CallGraph,
     sure: Confidence,
-) -> None:
-    """Attach a weakness in a helper to every route whose handler reaches it, with the chain."""
+) -> bool:
+    """Attach a weakness in a helper to every route whose handler reaches it, with the chain.
+    Returns whether any did."""
     loc = f.location
     if cls not in _ROUTE_WEAPONS or not loc.start_line or not loc.in_repo or not_run(loc.path):
-        return
+        return False
+    linked = False
     for r, node, unit in route_nodes:
         if unit is None:
             continue  # nothing deployed behind this route to reach
@@ -170,6 +172,8 @@ def _called_from_routes(
         weakness.confidence = Confidence.LOW if sure is Confidence.LOW else Confidence.MEDIUM
         weakness.evidence.detail = f"{f.rule_id}, reached from the handler by {link}"
         node.weaknesses.append(weakness)
+        linked = True
+    return linked
 
 
 def attach(
@@ -233,8 +237,7 @@ def attach(
         if hit:
             continue
         # A helper the handler calls: the same weapon, one or more calls away.
-        if calls is not None:
-            _called_from_routes(f, cls, route_nodes, calls, sure)
+        linked = calls is not None and _called_from_routes(f, cls, route_nodes, calls, sure)
         # 2. infrastructure findings inside a Terraform resource that became a node
         for node in graph.nodes.values():
             tf = node.attrs.get("tf_range")
@@ -257,10 +260,15 @@ def attach(
             continue
         for unit in units:
             if loc.in_repo and _contains(unit.root, loc.path):
+                # With routes to go on, a weapon none of them reaches (a management command, a
+                # build script) isn't shown to be reachable by a request: reported, but no gate.
+                served = any(u is unit for _r, _n, u in route_nodes)
+                unreached = cls in _ROUTE_WEAPONS and served and calls is not None and not linked
+                sure_here = Confidence.LOW if unreached else sure
                 for wid in unit.workloads:
                     if ci and graph.nodes[wid].attrs.get("platform") != "github-actions":
                         continue
-                    graph.nodes[wid].weaknesses.append(_weakness(f, cls, sure))
+                    graph.nodes[wid].weaknesses.append(_weakness(f, cls, sure_here))
 
     _unlock(graph, route_nodes)
 

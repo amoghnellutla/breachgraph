@@ -21,6 +21,7 @@ from breachgraph.graph.model import (
     Node,
     NodeKind,
     internet,
+    not_run,
 )
 from breachgraph.graph.sources.common import SourceContext
 from breachgraph.paths import iter_files
@@ -38,7 +39,9 @@ class ImageSource:
             name = path.name.lower()
             if name == "dockerfile" or name.startswith("dockerfile."):
                 self.dockerfile_dirs.setdefault(str(PurePosixPath(rel).parent).replace(".", ""), None)
-            elif name in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"):
+            elif name in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml") and (
+                not not_run(rel)  # a test harness is not a deployment
+            ):
                 self._compose(ctx, path, rel, graph)
 
     def _compose(self, ctx: SourceContext, path: object, rel: str, graph: Graph) -> None:

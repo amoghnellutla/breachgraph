@@ -301,3 +301,28 @@ def test_a_constant_sink_is_reported_without_gating(tmp_path: Path) -> None:
     [weak] = route_weak(res, "GET /captcha")
     assert weak.confidence is PathConfidence.LOW
     assert {p.confidence for p in res.paths} == {PathConfidence.LOW}
+
+
+def test_a_weapon_no_route_reaches_does_not_gate(tmp_path: Path) -> None:
+    """A SQL string in a management command is real code, but no request runs it."""
+    python_app(tmp_path)
+    write(tmp_path, "api/management/anonymize.py", "import os\n\ndef run(table):\n    os.system(table)\n")
+    res = build_attack_graph(tmp_path, [cmd_injection("api/management/anonymize.py", 4)], JEWEL)
+    weak = [w for n in res.graph.nodes.values() for w in n.weaknesses]
+    assert weak and all(w.confidence is PathConfidence.LOW for w in weak)
+    assert all(p.confidence is PathConfidence.LOW for p in res.paths)
+
+
+def test_test_helpers_are_not_part_of_the_service(tmp_path: Path) -> None:
+    python_app(tmp_path)
+    write(tmp_path, "api/conftest.py", "import os\n\ndef pytest_configure(config):\n    os.system('x')\n")
+    res = build_attack_graph(tmp_path, [cmd_injection("api/conftest.py", 4)], JEWEL)
+    assert not [w for n in res.graph.nodes.values() for w in n.weaknesses]
+
+
+def test_a_compose_file_in_a_test_directory_is_not_a_deployment(tmp_path: Path) -> None:
+    compose = "services:\n  web:\n    build: .\n    ports: ['80:80']\n"
+    write(tmp_path, "e2e/docker-compose.yml", compose)
+    assert not [n for n in build_attack_graph(tmp_path, [], Config()).graph.nodes if n.startswith("compose:")]
+    write(tmp_path, "docker-compose.yml", compose)
+    assert [n for n in build_attack_graph(tmp_path, [], Config()).graph.nodes if n.startswith("compose:")]
