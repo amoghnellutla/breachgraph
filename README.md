@@ -6,8 +6,6 @@
 vulnerable platform (Flask on EKS, Terraform, GitHub Actions). Click a path to trace it, or mark a
 finding as fixed and watch the paths it breaks disappear. Nothing to install.
 
-Step through a real attack, then mark a fix and watch what closes.
-
 [![ci](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/amoghnellutla/breachgraph/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/amoghnellutla/breachgraph/badge)](https://scorecard.dev/viewer/?uri=github.com/amoghnellutla/breachgraph)
 [![PyPI](https://img.shields.io/pypi/v/breachgraph.svg)](https://pypi.org/project/breachgraph/)
