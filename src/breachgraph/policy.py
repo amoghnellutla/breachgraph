@@ -14,6 +14,7 @@ import yaml
 from breachgraph.config import Config, Suppression
 from breachgraph.models import (
     Category,
+    Confidence,
     Finding,
     GateResult,
     Reachability,
@@ -165,7 +166,7 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
         why = None
         if rules.kev and f.enrichment.kev:
             why = "known exploited (KEV)"
-        elif rules.secrets and f.category is Category.SECRETS:
+        elif rules.secrets and f.category is Category.SECRETS and f.confidence is not Confidence.LOW:
             why = "secret"
         elif rules.priority and f.priority.rank >= rules.priority.rank:
             why = f"priority {f.priority.value}"

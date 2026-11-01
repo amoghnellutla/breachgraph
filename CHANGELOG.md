@@ -13,6 +13,14 @@ All notable changes to this project are documented here. The format follows
   `fail_on.scanner_errors` now defaults to true; setting it false keeps the exit code at 0, but the
   report still says incomplete. In CI, a core scanner that isn't installed counts the same.
 
+### Changed
+
+- **Secrets block only when they're real.** Only a key in a provider's own format, in code that
+  runs, gates a merge. Gitleaks' generic-api-key rule, JWTs, `.env.example`, tests, docs, and
+  placeholder or test-mode values are reported at low confidence. Checksums and lock files aren't
+  findings. On 32 real projects the old behaviour produced 6,030 blocking secrets, 5,757 of them
+  from the generic rule, and failed every project.
+
 ### Added
 
 - `cicd/agent-prompt-injection`: an AI agent (Claude Code, Gemini CLI, Codex, GitHub AI Inference,

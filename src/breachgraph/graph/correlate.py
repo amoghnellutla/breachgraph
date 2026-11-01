@@ -228,7 +228,9 @@ def attach(
             and loc.start_line
             and calls.constant_input(loc.path, loc.start_line, f.rule_id)
         )
-        sure = Confidence.LOW if constant else Confidence.HIGH
+        # A guessed secret (see scanners/gitleaks.py) can't carry a path that gates either.
+        guess = f.category is Category.SECRETS and f.confidence.value == "low"
+        sure = Confidence.LOW if constant or guess else Confidence.HIGH
         # 1. code findings inside a route handler
         hit = False
         for r, node, _unit in route_nodes:
