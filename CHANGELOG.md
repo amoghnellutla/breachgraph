@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Attack paths that use the same kind of flaw to reach the same asset are shown as one entry, "and
+  34 more like it", in the console, pull request comment and HTML report. They stay separate paths
+  in JSON, the gate and comparisons.
+
+### Fixed
+
+- `attack_graph.max_paths` could drop a path that blocks a merge in favor of low-confidence leads,
+  because the score doesn't weigh how sure a weakness is. Leads now rank last, and reports say how
+  many paths were left out.
+
 ## [0.7.0] - 2026-11-01
 
 ### Security

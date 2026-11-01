@@ -890,7 +890,12 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
 
   function drawPaths() {
     var box = $("paths"); box.textContent = "";
+    var size = {}, led = {};
+    data.paths.forEach(function (p) { size[p.group] = (size[p.group] || 0) + 1; });
     data.paths.forEach(function (p, i) {
+      // A group is one row until the reader is inside it.
+      var lead = !led[p.group]; led[p.group] = true;
+      if (!lead && !(cur && cur.group === p.group)) return;
       var b = h("button", "row" + (alive(p) ? "" : " closed")); b.type = "button";
       b.setAttribute("aria-pressed", String(cur === p));
       b.appendChild(h("span", "n", String(i + 1)));
@@ -906,6 +911,7 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
       b.appendChild(m);
       var at = p.steps.map(function (s) { return s.via; }).indexOf(p.steps.filter(function (s) { return s.via; }).map(function (s) { return s.via; })[0]);
       if (at >= 0) b.appendChild(h("span", "m", words(p.steps[at].via) + " at " + node(p.nodes[at]).name));
+      if (lead && size[p.group] > 1) b.appendChild(h("span", "m", "and " + (size[p.group] - 1) + " more like it"));
       b.addEventListener("click", function () { clearBlast(); selectPath(p, true); });
       box.appendChild(b);
     });

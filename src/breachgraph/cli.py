@@ -441,17 +441,24 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
             console.print(f"[dim]{escape(ag.coverage.line())}[/]")
         _print_exposures(result)
         return
-    console.print(f"\n[bold red]{len(ag.paths)} attack path(s) to crown-jewel assets[/]")
+    groups = ag.grouped()
+    kinds = f", {len(groups)} kind(s)" if len(groups) < len(ag.paths) else ""
+    console.print(f"\n[bold red]{len(ag.paths)} attack path(s) to crown-jewel assets[/]{kinds}")
     if ag.coverage:
         console.print(f"[dim]{escape(ag.coverage.line())}[/]")
-    for i, p in enumerate(ag.paths[:limit], 1):
+    for i, (p, *rest) in enumerate(groups[:limit], 1):
         flag = " [bold red]BLOCKS[/]" if p.gating else ""
         hops = ["Internet"]
         for s in p.steps:
             hops.append(f"[bold red]{escape(s.dst)}[/]({s.via})" if s.via else escape(s.dst))
         login = " (needs a login)" if p.needs_login else ""
-        console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}{login}")
+        more = f", and {len(rest)} more like it" if rest else ""
+        console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}{login}{more}")
         console.print("     " + " → ".join(hops))
+    if ag.stats.get("paths_not_shown"):
+        console.print(
+            f"  [dim]{ag.stats['paths_not_shown']} lower-ranked path(s) over attack_graph.max_paths[/]"
+        )
     if ag.choke_points:
         console.print("  [bold]Fix first:[/]")
         for c in ag.choke_points[:5]:

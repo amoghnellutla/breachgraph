@@ -68,7 +68,7 @@ def _target_value(node: Node) -> int:
 
 
 def find_paths(
-    graph: Graph, crown_value: int = 7, max_depth: int = 12, max_paths: int = 40
+    graph: Graph, crown_value: int = 7, max_depth: int = 12, max_paths: int | None = 40
 ) -> list[AttackPath]:
     if INTERNET_ID not in graph.nodes:
         return []
@@ -107,7 +107,11 @@ def find_paths(
                 continue
             stack.append(([*node_ids, edge.dst], [*steps, step]))
 
-    found = sorted(best_by_vector.values(), key=lambda p: (-p.score, p.length))
+    # Leads go last: a limit must never trade a path that blocks a merge for one that can't.
+    found = sorted(
+        best_by_vector.values(),
+        key=lambda p: (p.confidence is Confidence.LOW, -p.score, p.length),
+    )
     return found[:max_paths]
 
 

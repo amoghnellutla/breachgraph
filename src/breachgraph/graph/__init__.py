@@ -147,12 +147,13 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
     attach(graph, findings, routes, units, CallGraph(target, config.exclude_paths))
     mark_crown_jewels(graph, config)
 
-    paths = find_paths(
+    every_path = find_paths(
         graph,
         crown_value=config.attack_graph.crown_value,
         max_depth=config.attack_graph.max_depth,
-        max_paths=config.attack_graph.max_paths,
+        max_paths=None,
     )
+    paths = every_path[: config.attack_graph.max_paths]
     chokes = choke_points(graph, paths)
     stats = {
         "nodes": len(graph.nodes),
@@ -161,6 +162,7 @@ def _build(target: Path, findings: list[Finding], config: Config, repo_name: str
         "workloads": sum(1 for _ in graph.of_kind(NodeKind.WORKLOAD)),
         "crown_jewels": sum(1 for n in graph.nodes.values() if n.value >= config.attack_graph.crown_value),
         "paths": len(paths),
+        "paths_not_shown": len(every_path) - len(paths),
     }
     exposures = one_bug_away(graph, config.attack_graph.crown_value, paths)
     return AttackGraphResult(

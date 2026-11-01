@@ -232,6 +232,15 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## Paths of the same kind
+
+Paths that use the same kind of flaw to reach the same asset are shown as one entry, "and 34 more
+like it". Each is still its own path with its own fix, so the JSON report, the gate and comparisons
+treat them separately.
+
+`attack_graph.max_paths` limits what is reported. Leads go last, so the limit can never drop a path
+that blocks a merge in favor of one that can't, and reports say how many paths were left out.
+
 ## From a route to the code it runs
 
 A finding inside a handler is on that route. A finding in a function the handler calls, directly or

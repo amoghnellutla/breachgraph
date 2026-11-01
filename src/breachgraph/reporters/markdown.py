@@ -199,7 +199,7 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         "Bold steps need a real vulnerability; fix any one and the path breaks."
     )
     out.append("")
-    for i, p in enumerate(ag.paths[:8], 1):
+    for i, (p, *rest) in enumerate(ag.grouped()[:8], 1):
         flag = " · **blocks merge**" if p.gating else ""
         tag = "" if p.is_new or not result.baseline_used else " _(pre-existing)_"
         out.append(
@@ -214,10 +214,16 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
             else:
                 chain.append(_cell(s.dst, 40))
         out.append("`Internet` → " + " → ".join(chain))
+        if rest:
+            places = [f"`{s.evidence_path}:{s.evidence_line}`" for r in rest for s in r.steps if s.via][:5]
+            shown = f": {', '.join(places)}" if places else ""
+            out += ["", f"And {len(rest)} more like it, each its own fix{shown}."]
         if p.techniques:
             out.append("")
             out.append("MITRE ATT&CK: " + ", ".join(f"[{t}]({technique_url(t)})" for t in p.techniques))
         out.append("")
+    if ag.stats.get("paths_not_shown"):
+        out += [f"{ag.stats['paths_not_shown']} lower-ranked path(s) are over `attack_graph.max_paths`.", ""]
     if ag.choke_points:
         out.append("**Fix these first (each breaks the most paths):**")
         for c in ag.choke_points[:5]:

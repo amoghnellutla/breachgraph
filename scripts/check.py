@@ -41,6 +41,7 @@ def tail(text: str) -> str:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]  # tool output on Windows
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--fix", action="store_true", help="run ruff format and ruff check --fix first")
     ap.add_argument("--fast", action="store_true", help="skip mypy")

@@ -261,6 +261,7 @@ class AttackStep(BaseModel):
 
 class AttackPathView(BaseModel):
     id: str = ""  # stable across runs: entry, target and the findings it needs (see graph.summary)
+    group: str = ""  # shared by paths using the same kind of flaw to reach the same asset
     node_ids: list[str] = Field(default_factory=list)
     target: str
     target_kind: str
@@ -370,6 +371,14 @@ class AttackGraphSummary(BaseModel):
     @property
     def gating_paths(self) -> list[AttackPathView]:
         return [p for p in self.paths if p.gating]
+
+    def grouped(self) -> list[list[AttackPathView]]:
+        """Paths by kind of flaw and asset, best first; a blocking path leads its group. Reports from
+        older versions have no group, so each of their paths stands alone."""
+        groups: dict[str, list[AttackPathView]] = {}
+        for i, p in enumerate(self.paths):
+            groups.setdefault(p.group or f"{p.id}:{i}", []).append(p)
+        return [sorted(g, key=lambda p: not p.gating) for g in groups.values()]
 
 
 class Comparison(BaseModel):

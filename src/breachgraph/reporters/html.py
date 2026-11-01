@@ -43,6 +43,7 @@ def explorer_payload(result: ScanResult) -> dict[str, Any] | None:
         "paths": [
             {
                 "id": p.id or str(i),
+                "group": p.group or p.id or str(i),
                 "target": p.target,
                 "confidence": p.confidence,
                 "gating": p.gating,

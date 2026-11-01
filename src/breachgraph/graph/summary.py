@@ -41,6 +41,13 @@ def path_id(path: AttackPath) -> str:
     return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
 
 
+def group_id(path: AttackPath) -> str:
+    """Paths that use the same kind of flaw to reach the same asset, whichever route or line. They
+    are separate fixes, so they stay separate paths, but a reader wants to see them as one thing."""
+    weapons = [f"{s.via}|{s.weakness_title}" for s in path.steps if s.via]
+    return hashlib.sha256("|".join([path.target.id, *weapons]).encode()).hexdigest()[:16]
+
+
 def summarize(
     result: AttackGraphResult,
     findings: list[Finding],
@@ -68,6 +75,7 @@ def summarize(
         views.append(
             AttackPathView(
                 id=pid,
+                group=group_id(p),
                 node_ids=p.nodes,
                 target=p.target.name,
                 target_kind=p.target.kind.value,
