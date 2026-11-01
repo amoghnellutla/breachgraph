@@ -12,7 +12,7 @@ version: 1
 scanners:
   semgrep:
     enabled: true
-    config: ["p/default"]        # registry rulesets or local paths: ["p/owasp-top-ten", "./rules"]
+    config: ["breachgraph"]      # the rules in this package; add "p/default" (needs semgrep.dev) or "./rules"]
     timeout: 900                 # seconds (default: top-level `timeout`)
     extra_args: []               # passed straight to the tool
   gitleaks:

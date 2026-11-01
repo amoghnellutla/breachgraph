@@ -29,7 +29,7 @@ def flat(ctx: ScanContext, name: str) -> list[str]:
 def test_semgrep_command(ctx: ScanContext) -> None:
     cmd = flat(ctx, "semgrep")
     assert "--metrics=off" in cmd and cmd[-1] == "."
-    assert cmd[cmd.index("--config") + 1] == "p/default"
+    assert cmd[cmd.index("--config") + 1].endswith("rules")  # the package's own, nothing downloaded
     excludes = [cmd[i + 1] for i, a in enumerate(cmd) if a == "--exclude"]
     assert "node_modules" in excludes and "examples/legacy" in excludes
     assert "**/*.min.js" not in excludes  # globs are filtered by breachgraph afterwards

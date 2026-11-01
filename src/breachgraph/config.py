@@ -54,7 +54,10 @@ class ScannerConfig(_Strict):
 
 
 class SemgrepConfig(ScannerConfig):
-    config: list[str] = Field(default_factory=lambda: ["p/default"])
+    # "breachgraph" is the rule set in this package: the weaknesses attack paths need, pinned with
+    # the release, nothing downloaded. Add "p/default" for Semgrep's registry rules, which need
+    # semgrep.dev at scan time and change over time.
+    config: list[str] = Field(default_factory=lambda: ["breachgraph"])
 
 
 class GitleaksConfig(ScannerConfig):

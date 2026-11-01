@@ -1,0 +1,166 @@
+# breachgraph's own rules, written for this project (Apache-2.0). See python.yaml for how they work.
+rules:
+  - id: breachgraph.javascript.command-injection-tainted
+    mode: taint
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Data from the request reaches a shell command.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: HIGH
+    pattern-sources: &js-request
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+    pattern-sinks: &js-command
+      - pattern: exec($X, ...)
+      - pattern: execSync($X, ...)
+      - pattern: child_process.exec($X, ...)
+      - pattern: child_process.execSync($X, ...)
+      - pattern: $CP.exec($X, ...)
+      - patterns:
+          - pattern: "spawn($X, ..., {shell: true, ...})"
+          - focus-metavariable: $X
+  - id: breachgraph.javascript.command-injection-parameter
+    mode: taint
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A function's parameter reaches a shell command. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: MEDIUM
+    pattern-sources: &js-parameter
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  function $F(..., $P, ...) { ... }
+              - pattern-inside: |
+                  async function $F(..., $P, ...) { ... }
+              - pattern-inside: |
+                  (..., $P, ...) => { ... }
+          - focus-metavariable: $P
+    pattern-sinks: *js-command
+
+  - id: breachgraph.javascript.code-injection-tainted
+    mode: taint
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Data from the request is evaluated as code, or deserialized into objects.
+    metadata:
+      cwe: ["CWE-94: Code Injection"]
+      confidence: HIGH
+    pattern-sources: *js-request
+    pattern-sinks: &js-code
+      - pattern: eval($X)
+      - pattern: new Function(..., $X)
+      - pattern: vm.runInNewContext($X, ...)
+      - pattern: vm.runInThisContext($X, ...)
+      - pattern: serialize.unserialize($X)
+      - pattern: unserialize($X)
+      - pattern: notevil($X)
+      - pattern: safeEval($X, ...)
+  - id: breachgraph.javascript.code-injection-parameter
+    mode: taint
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A function's parameter is evaluated as code. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-94: Code Injection"]
+      confidence: MEDIUM
+    pattern-sources: *js-parameter
+    pattern-sinks: *js-code
+
+  - id: breachgraph.javascript.sql-injection-tainted
+    mode: taint
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Data from the request is built into a SQL statement.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: HIGH
+    pattern-sources: *js-request
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.query($Q, ...)
+              - pattern: $DB.execute($Q, ...)
+              - pattern: $DB.raw($Q, ...)
+              - pattern: $DB.$queryRawUnsafe($Q, ...)
+              - pattern: $DB.$executeRawUnsafe($Q, ...)
+          - focus-metavariable: $Q
+  - id: breachgraph.javascript.sql-injection-parameter
+    mode: search
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A value is interpolated into a SQL statement. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: $DB.query(`...${$X}...`, ...)
+          - pattern: $DB.raw(`...${$X}...`, ...)
+          - pattern: $DB.$queryRawUnsafe(`...${$X}...`, ...)
+          - pattern: $DB.query("..." + $X, ...)
+          - pattern: $DB.query($X + "...", ...)
+      - metavariable-regex:
+          metavariable: $DB
+          regex: (?i).*(sequelize|knex|pool|client|db|conn|connection|prisma|mysql|pg)$
+
+  - id: breachgraph.javascript.ssrf-tainted
+    mode: taint
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: A URL from the request is fetched by the server.
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery"]
+      confidence: HIGH
+    pattern-sources: *js-request
+    pattern-sinks: &js-ssrf
+      - patterns:
+          - pattern-either:
+              - pattern: fetch($U, ...)
+              - pattern: axios($U, ...)
+              - pattern: axios.$M($U, ...)
+              - pattern: got($U, ...)
+              - pattern: got.$M($U, ...)
+              - pattern: http.get($U, ...)
+              - pattern: https.get($U, ...)
+              - pattern: http.request($U, ...)
+              - pattern: https.request($U, ...)
+          - focus-metavariable: $U
+  - id: breachgraph.javascript.ssrf-parameter
+    mode: taint
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A function's parameter is used as a URL to fetch. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery"]
+      confidence: MEDIUM
+    pattern-sources: *js-parameter
+    pattern-sinks: *js-ssrf
+
+  - id: breachgraph.javascript.path-traversal-tainted
+    mode: taint
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: A file path from the request is opened by the server.
+    metadata:
+      cwe: ["CWE-22: Path Traversal"]
+      confidence: HIGH
+    pattern-sources: *js-request
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: fs.readFile($P, ...)
+              - pattern: fs.readFileSync($P, ...)
+              - pattern: fs.createReadStream($P, ...)
+              - pattern: $RES.sendFile($P, ...)
+              - pattern: $RES.download($P, ...)
+          - focus-metavariable: $P
+    pattern-sanitizers:
+      - pattern: path.basename(...)

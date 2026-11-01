@@ -1,0 +1,182 @@
+# breachgraph's own rules, written for this project (Apache-2.0).
+#
+# Each covers one way a request becomes an attacker's step on a path. "tainted" rules start from
+# request data. "parameter" rules start from a function's parameters: they find a sink inside a
+# helper, and the attack graph's call graph then decides whether any route reaches it.
+rules:
+  - id: breachgraph.python.command-injection-tainted
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: Data from the request reaches a shell command.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: HIGH
+    pattern-sources: &py-request
+      - pattern: flask.request.$X
+      - pattern: request.$X
+      - pattern: self.request.$X
+    pattern-sinks: &py-command
+      - pattern: os.system($X)
+      - pattern: os.popen($X)
+      - patterns:
+          - pattern: subprocess.$F($X, ..., shell=True, ...)
+          - focus-metavariable: $X
+  - id: breachgraph.python.command-injection-parameter
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: A function's parameter reaches a shell command. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: MEDIUM
+    pattern-sources: &py-parameter
+      - patterns:
+          - pattern-inside: |
+              def $F(..., $P, ...):
+                ...
+          - focus-metavariable: $P
+    pattern-sinks: *py-command
+
+  - id: breachgraph.python.code-injection-tainted
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: Data from the request is evaluated as code, or deserialized into objects.
+    metadata:
+      cwe: ["CWE-94: Code Injection"]
+      confidence: HIGH
+    pattern-sources: *py-request
+    pattern-sinks: &py-code
+      - pattern: eval($X)
+      - pattern: exec($X)
+      - pattern: pickle.loads($X)
+      - pattern: marshal.loads($X)
+      - pattern: yaml.unsafe_load($X)
+      - pattern: flask.render_template_string($X, ...)
+      - pattern: render_template_string($X, ...)
+      - pattern: jinja2.Template($X, ...)
+  - id: breachgraph.python.code-injection-parameter
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: A function's parameter is evaluated as code. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-94: Code Injection"]
+      confidence: MEDIUM
+    pattern-sources: *py-parameter
+    pattern-sinks: *py-code
+
+  - id: breachgraph.python.sql-injection-tainted
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: Data from the request is built into a SQL statement.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: HIGH
+    pattern-sources: *py-request
+    pattern-sinks: &py-sql
+      - patterns:
+          - pattern-either:
+              - pattern: $C.execute($Q, ...)
+              - pattern: $C.executemany($Q, ...)
+              - pattern: $C.raw($Q, ...)
+              - pattern: sqlalchemy.text($Q)
+              - pattern: text($Q)
+          - focus-metavariable: $Q
+  - id: breachgraph.python.sql-injection-parameter
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: A function's parameter is built into a SQL statement. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: MEDIUM
+    pattern-sources: *py-parameter
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $C.execute(f"...", ...)
+              - pattern: $C.execute("..." % $A, ...)
+              - pattern: $C.execute("..." + $A, ...)
+              - pattern: $C.execute($S.format(...), ...)
+              - pattern: text(f"...")
+
+  - id: breachgraph.python.sql-string-parameter
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: A function's parameter is concatenated into a SQL statement. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: MEDIUM
+    pattern-sources: *py-parameter
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  "$SQL" + $X
+              - pattern: |
+                  "$SQL" + $X + ...
+          - metavariable-regex:
+              metavariable: $SQL
+              regex: (?is)^\s*(select|insert|update|delete)\s.*
+          - focus-metavariable: $X
+
+  - id: breachgraph.python.ssrf-tainted
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: A URL from the request is fetched by the server.
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery"]
+      confidence: HIGH
+    pattern-sources: *py-request
+    pattern-sinks: &py-ssrf
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$M($U, ...)
+              - pattern: httpx.$M($U, ...)
+              - pattern: urllib.request.urlopen($U, ...)
+              - pattern: urlopen($U, ...)
+              - pattern: $S.get($U, ...)
+          - focus-metavariable: $U
+  - id: breachgraph.python.ssrf-parameter
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: A function's parameter is used as a URL to fetch. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery"]
+      confidence: MEDIUM
+    pattern-sources: *py-parameter
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$M($U, ...)
+              - pattern: httpx.$M($U, ...)
+              - pattern: urllib.request.urlopen($U, ...)
+              - pattern: urlopen($U, ...)
+          - focus-metavariable: $U
+
+  - id: breachgraph.python.path-traversal-tainted
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: A file path from the request is opened by the server.
+    metadata:
+      cwe: ["CWE-22: Path Traversal"]
+      confidence: HIGH
+    pattern-sources: *py-request
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: open($P, ...)
+              - pattern: send_file($P, ...)
+              - pattern: flask.send_file($P, ...)
+              - pattern: FileResponse($P, ...)
+          - focus-metavariable: $P
+    pattern-sanitizers:
+      - pattern: secure_filename(...)
+      - pattern: os.path.basename(...)

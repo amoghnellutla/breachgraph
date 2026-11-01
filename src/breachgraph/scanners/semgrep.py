@@ -9,16 +9,20 @@ runs out of time costs only what was left.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
+from pathlib import Path
 from typing import Any, ClassVar, cast
 
 from breachgraph.config import SemgrepConfig
 from breachgraph.graph.model import not_run
-from breachgraph.models import Category, Confidence, Finding, Location, Severity
+from breachgraph.models import Category, Confidence, Finding, Location, Severity, ToolStatus
 from breachgraph.paths import iter_files
 from breachgraph.scanners._util import first_sentence, read_snippet, simple_dir_excludes
-from breachgraph.scanners.base import ScanContext, Scanner, Step, as_list
+from breachgraph.scanners.base import ScanContext, Scanner, ScannerOutcome, Step, as_list
 
 _CONFIDENCE = {c.value: c for c in Confidence}
+_UNREACHABLE = re.compile(r"semgrep\.dev|Failed to download|Failed to connect|ConnectionError|SSLError", re.I)
+BUNDLED = "breachgraph"
 LARGE_REPO = 4000
 BATCH = 1500
 _SOURCE = re.compile(r"\.(?:py|js|jsx|mjs|cjs|ts|tsx|vue|java|kt|go|rb|php|cs|rs|scala|c|cc|cpp|h)$", re.I)
@@ -29,6 +33,10 @@ _SERVER = re.compile(
     r"(?:^|/)(?:api|server|backend|routes?|controllers?|services?|handlers?|cli|core|cmd)/", re.I
 )
 _CLIENT = re.compile(r"(?:^|/)(?:frontend|web|ui|editor-ui|client|components|design-system|apps?/web)/", re.I)
+
+
+def bundled_rules() -> str:
+    return str(Path(__file__).resolve().parent.parent / "rules")
 
 
 def batches(files: list[str]) -> list[list[str]]:
@@ -60,7 +68,7 @@ class SemgrepScanner(Scanner):
             "--quiet",
         ]
         for rules in settings.config:
-            cmd += ["--config", rules]
+            cmd += ["--config", bundled_rules() if rules == BUNDLED else rules]
         for name in simple_dir_excludes(ctx.config.exclude_paths):
             cmd += ["--exclude", name]
         cmd += settings.extra_args
@@ -78,13 +86,33 @@ class SemgrepScanner(Scanner):
             return steps
         return [Step([*cmd, *(ctx.files if ctx.files is not None else ["."])], out)]
 
+    def run(self, ctx: ScanContext) -> ScannerOutcome:
+        outcome = super().run(ctx)
+        settings = cast(SemgrepConfig, self.settings(ctx.config))
+        registry = [c for c in settings.config if c != BUNDLED]
+        message = outcome.run.message or ""
+        if outcome.run.status is not ToolStatus.FAILED or not registry or not _UNREACHABLE.search(message):
+            return outcome
+        # A firewall in front of semgrep.dev costs its rules, not ours.
+        narrowed = ctx.config.model_copy(deep=True)
+        narrowed.scanners.semgrep.config = [BUNDLED]
+        retry = super().run(replace(ctx, config=narrowed))
+        retry.run.status = ToolStatus.PARTIAL
+        retry.run.message = f"couldn't download {', '.join(registry)}, so only breachgraph's own rules ran"
+        return retry
+
     def parse(self, raw: Any, ctx: ScanContext) -> list[Finding]:
         if not isinstance(raw, dict):
             return []
         findings: list[Finding] = []
-        for r in raw.get("results", []):
+        results = raw.get("results", [])
+        # Our tainted and parameter rules can both match one sink; request data is the stronger claim.
+        traced = {(r["path"], r["start"]["line"]) for r in results if r["check_id"].endswith("-tainted")}
+        for r in results:
             if ".compatibility." in r["check_id"]:
                 continue  # "this needs Python 3.7" says nothing about security
+            if r["check_id"].endswith("-parameter") and (r["path"], r["start"]["line"]) in traced:
+                continue
             extra = r.get("extra", {})
             meta = extra.get("metadata", {}) or {}
             path = r["path"]

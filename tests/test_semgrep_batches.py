@@ -80,3 +80,50 @@ def test_compatibility_rules_are_not_findings(tmp_path: Path) -> None:
     }
     ctx = ScanContext(target=tmp_path, work_dir=tmp_path, config=Config())
     assert SemgrepScanner().parse(raw, ctx) == []
+
+
+def test_a_tainted_match_replaces_the_parameter_match(tmp_path: Path) -> None:
+    def hit(rule: str) -> dict[str, object]:
+        return {
+            "check_id": rule,
+            "path": "a.py",
+            "start": {"line": 3},
+            "end": {"line": 3},
+            "extra": {"message": "m", "severity": "ERROR", "metadata": {}},
+        }
+
+    raw = {"results": [hit("breachgraph.python.ssrf-parameter"), hit("breachgraph.python.ssrf-tainted")]}
+    ctx = ScanContext(target=tmp_path, work_dir=tmp_path, config=Config())
+    assert [f.rule_id for f in SemgrepScanner().parse(raw, ctx)] == ["breachgraph.python.ssrf-tainted"]
+
+
+def test_an_unreachable_registry_falls_back_to_our_rules(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from breachgraph.models import ToolRun
+    from breachgraph.scanners import base
+
+    seen: list[list[str]] = []
+
+    def fake(self, ctx):  # type: ignore[no-untyped-def]
+        seen.append(ctx.config.scanners.semgrep.config)
+        status = ToolStatus.FAILED if len(seen) == 1 else ToolStatus.OK
+        message = "Failed to download configuration from semgrep.dev" if len(seen) == 1 else None
+        return base.ScannerOutcome(ToolRun(name="semgrep", status=status, message=message))
+
+    monkeypatch.setattr(base.Scanner, "run", fake)
+    config = Config.model_validate({"scanners": {"semgrep": {"config": ["breachgraph", "p/default"]}}})
+    outcome = SemgrepScanner().run(ScanContext(target=tmp_path, work_dir=tmp_path, config=config))
+    assert seen[1] == ["breachgraph"] and outcome.run.status is ToolStatus.PARTIAL
+    assert "only breachgraph's own rules ran" in (outcome.run.message or "")
+
+
+def test_the_bundled_rules_are_ours() -> None:
+    import yaml
+
+    from breachgraph.scanners.semgrep import bundled_rules
+
+    files = list(Path(bundled_rules()).glob("*.yaml"))
+    ids = [r["id"] for f in files for r in yaml.safe_load(f.read_text(encoding="utf-8"))["rules"]]
+    assert len(ids) >= 25 and all(i.startswith("breachgraph.") for i in ids)
+    assert all(
+        r["metadata"]["cwe"] for f in files for r in yaml.safe_load(f.read_text(encoding="utf-8"))["rules"]
+    )

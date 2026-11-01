@@ -1,0 +1,193 @@
+# breachgraph's own rules, written for this project (Apache-2.0). See python.yaml for how they work.
+rules:
+  - id: breachgraph.java.command-injection-tainted
+    mode: taint
+    languages: [java]
+    severity: ERROR
+    message: Data from the request reaches a command the server runs.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: HIGH
+    pattern-sources: &java-request
+      - pattern: (HttpServletRequest $R).$M(...)
+      - patterns:
+          - pattern-either:
+              - pattern: "@RequestParam $T $P"
+              - pattern: "@PathVariable $T $P"
+              - pattern: "@RequestBody $T $P"
+              - pattern: "@QueryParam(...) $T $P"
+              - pattern: "@PathParam(...) $T $P"
+          - focus-metavariable: $P
+    pattern-sinks:
+      - pattern: Runtime.getRuntime().exec(...)
+      - pattern: new ProcessBuilder(...)
+  - id: breachgraph.java.sql-injection-tainted
+    mode: taint
+    languages: [java]
+    severity: ERROR
+    message: Data from the request is built into a SQL statement.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: HIGH
+    pattern-sources: *java-request
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: (java.sql.Statement $S).executeQuery($Q)
+              - pattern: (java.sql.Statement $S).execute($Q)
+              - pattern: $S.createQuery($Q, ...)
+              - pattern: $S.createNativeQuery($Q, ...)
+              - pattern: $J.queryForObject($Q, ...)
+              - pattern: $J.queryForList($Q, ...)
+              - pattern: $C.prepareStatement($Q, ...)
+          - focus-metavariable: $Q
+  - id: breachgraph.java.ssrf-tainted
+    mode: taint
+    languages: [java]
+    severity: ERROR
+    message: A URL from the request is fetched by the server.
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery"]
+      confidence: HIGH
+    pattern-sources: *java-request
+    pattern-sinks:
+      - pattern: new URL(...)
+      - pattern: URI.create(...)
+      - pattern: $T.getForObject(...)
+      - pattern: $T.getForEntity(...)
+  - id: breachgraph.java.path-traversal-tainted
+    mode: taint
+    languages: [java]
+    severity: ERROR
+    message: A file path from the request is opened by the server.
+    metadata:
+      cwe: ["CWE-22: Path Traversal"]
+      confidence: HIGH
+    pattern-sources: *java-request
+    pattern-sinks:
+      - pattern: new File(...)
+      - pattern: new FileInputStream(...)
+      - pattern: Paths.get(...)
+      - pattern: Files.readAllBytes(...)
+  - id: breachgraph.java.deserialization-tainted
+    mode: taint
+    languages: [java]
+    severity: ERROR
+    message: Data from the request is deserialized into objects.
+    metadata:
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      confidence: HIGH
+    pattern-sources: *java-request
+    pattern-sinks:
+      - pattern: new ObjectInputStream(...)
+      - pattern: new Yaml().load(...)
+
+  - id: breachgraph.go.command-injection-tainted
+    mode: taint
+    languages: [go]
+    severity: ERROR
+    message: Data from the request reaches a command the server runs.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: HIGH
+    pattern-sources: &go-request
+      - pattern: "($R : *http.Request).URL.Query().Get(...)"
+      - pattern: "($R : *http.Request).FormValue(...)"
+      - pattern: "($R : *http.Request).PostFormValue(...)"
+      - pattern: "($R : *http.Request).Body"
+      - pattern: "($C : *gin.Context).Query(...)"
+      - pattern: "($C : *gin.Context).Param(...)"
+      - pattern: "($C : *gin.Context).PostForm(...)"
+      - pattern: "($C : echo.Context).QueryParam(...)"
+      - pattern: "($C : echo.Context).Param(...)"
+      - pattern: "($C : echo.Context).FormValue(...)"
+      - pattern: chi.URLParam(...)
+      - pattern: mux.Vars(...)
+    pattern-sinks: &go-command
+      - pattern: exec.Command(...)
+      - pattern: exec.CommandContext(...)
+  - id: breachgraph.go.command-injection-parameter
+    mode: taint
+    languages: [go]
+    severity: WARNING
+    message: A function's parameter reaches a command the server runs. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: MEDIUM
+    pattern-sources: &go-parameter
+      - patterns:
+          - pattern-inside: |
+              func $F(..., $P string, ...) { ... }
+          - focus-metavariable: $P
+    pattern-sinks: *go-command
+  - id: breachgraph.go.sql-injection-tainted
+    mode: taint
+    languages: [go]
+    severity: ERROR
+    message: Data from the request is built into a SQL statement.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: HIGH
+    pattern-sources: *go-request
+    pattern-sinks: &go-sql
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.Query($Q, ...)
+              - pattern: $DB.QueryRow($Q, ...)
+              - pattern: $DB.Exec($Q, ...)
+              - pattern: $DB.QueryContext($CTX, $Q, ...)
+              - pattern: $DB.ExecContext($CTX, $Q, ...)
+          - focus-metavariable: $Q
+  - id: breachgraph.go.sql-injection-parameter
+    mode: taint
+    languages: [go]
+    severity: WARNING
+    message: A function's parameter is built into a SQL statement. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: MEDIUM
+    pattern-sources:
+      - patterns:
+          - pattern-inside: |
+              func $F(..., $P string, ...) { ... }
+          - focus-metavariable: $P
+    pattern-sinks:
+      - pattern-either:
+          - pattern: $DB.Query(fmt.Sprintf(...), ...)
+          - pattern: $DB.QueryRow(fmt.Sprintf(...), ...)
+          - pattern: $DB.Exec(fmt.Sprintf(...), ...)
+          - pattern: $DB.Query("..." + $X, ...)
+          - pattern: $DB.Exec("..." + $X, ...)
+  - id: breachgraph.go.ssrf-tainted
+    mode: taint
+    languages: [go]
+    severity: ERROR
+    message: A URL from the request is fetched by the server.
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery"]
+      confidence: HIGH
+    pattern-sources: *go-request
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: http.Get($U)
+              - pattern: http.Post($U, ...)
+              - pattern: http.NewRequest($M, $U, ...)
+              - pattern: http.NewRequestWithContext($CTX, $M, $U, ...)
+          - focus-metavariable: $U
+  - id: breachgraph.go.path-traversal-tainted
+    mode: taint
+    languages: [go]
+    severity: ERROR
+    message: A file path from the request is opened by the server.
+    metadata:
+      cwe: ["CWE-22: Path Traversal"]
+      confidence: HIGH
+    pattern-sources: *go-request
+    pattern-sinks:
+      - pattern: os.Open(...)
+      - pattern: os.ReadFile(...)
+      - pattern: ioutil.ReadFile(...)
+      - pattern: http.ServeFile(...)
+    pattern-sanitizers:
+      - pattern: filepath.Base(...)

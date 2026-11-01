@@ -832,7 +832,7 @@ version: 1
 
 scanners:
   semgrep:
-    config: ["p/default"]      # any Semgrep registry ruleset or local rules dir
+    config: ["breachgraph"]    # our rules; add a registry ruleset ("p/default") or a local rules dir
   gitleaks:
     scan_history: false        # true = scan every commit (finds secrets removed later)
   trivy:

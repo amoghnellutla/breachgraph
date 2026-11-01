@@ -15,6 +15,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **Semgrep runs breachgraph's own rules by default.** They are written for this project
+  (Apache-2.0), ship in the package and the image, and cover what attack paths need: command, code,
+  SQL and path injection, SSRF and deserialization, in Python, JavaScript/TypeScript, Java and Go. A
+  scan downloads nothing, works behind a firewall, and gives the same result next week. The
+  registry rules can't be bundled, because their license doesn't allow distributing them. Add
+  `p/default` to `scanners.semgrep.config` to use them too; if semgrep.dev can't be reached the
+  scan continues with our rules and says so.
 - **Secrets block only when they're real.** Only a key in a provider's own format, in code that
   runs, gates a merge. Gitleaks' generic-api-key rule, JWTs, `.env.example`, tests, docs, and
   placeholder or test-mode values are reported at low confidence. Checksums and lock files aren't
