@@ -177,3 +177,37 @@ def test_rescanned_member_of_a_carried_cluster_is_not_duplicated(tmp_path: Path)
     carried.fingerprints = [carried.fingerprint, fingerprint_of(fresh)]  # as dedupe recorded it
     result = pipeline.process([fresh], [], Config(), tmp_path, ScanOptions(offline=True), carried=[carried])
     assert [x.fingerprint for x in result.findings] == ["checkov:main.tf:public-bucket"]
+
+
+def test_reuse_saves_work_without_comparing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = tmp_path / "repo"
+    write(repo, "app.py", "print(1)\n")
+    sem = [f("semgrep", "app.py", "sqli")]
+    monkeypatch.setattr(pipeline, "SCANNERS", {"semgrep": Recorder("semgrep", sem)})
+    monkeypatch.setenv("CI", "true")
+    base = scan(repo, Config(), ScanOptions(offline=True), tmp_path / "w1")
+    report = tmp_path / "base.json"
+    report.write_text(base.model_dump_json(), encoding="utf-8")
+
+    Recorder.seen.clear()
+    again = scan(repo, Config(), ScanOptions(offline=True, reuse=report), tmp_path / "w2")
+    assert Recorder.seen == {}  # nothing changed, so nothing ran
+    assert len(again.findings) == 1 and again.comparison is None  # and it isn't a comparison
+    assert again.metadata["full_scan_at"] == base.metadata["full_scan_at"]
+
+
+def test_reuse_runs_a_full_scan_when_overdue(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = tmp_path / "repo"
+    write(repo, "app.py", "print(1)\n")
+    monkeypatch.setattr(pipeline, "SCANNERS", {"semgrep": Recorder("semgrep", [])})
+    monkeypatch.setenv("CI", "true")
+    base = scan(repo, Config(), ScanOptions(offline=True), tmp_path / "w1")
+    base.metadata["full_scan_at"] = "2020-01-01T00:00:00+00:00"
+    report = tmp_path / "base.json"
+    report.write_text(base.model_dump_json(), encoding="utf-8")
+
+    Recorder.seen.clear()
+    again = scan(repo, Config(), ScanOptions(offline=True, reuse=report), tmp_path / "w2")
+    assert "semgrep" in Recorder.seen
+    assert again.metadata["full_scan_at"] > "2020"
+    assert not again.metadata["full_scan_at"].startswith("2020")

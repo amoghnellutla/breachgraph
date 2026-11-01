@@ -20,6 +20,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -29,6 +30,7 @@ from breachgraph.paths import iter_files
 
 Mode = Literal["full", "files", "carry"]
 _BIG = 5_000_000
+MAX_REUSE_DAYS = 7
 # Files each scanner reads, for deciding whether a change concerns it.
 _IAC = re.compile(
     r"(\.tf|\.tfvars|\.ya?ml|\.json|\.bicep|\.template)$|(^|/)(Dockerfile[^/]*|[^/]*\.dockerfile)$", re.I
@@ -52,6 +54,17 @@ def tree_digest(target: Path, exclude: list[str]) -> dict[str, str]:
         except OSError:
             continue
     return out
+
+
+def overdue(base: ScanResult, now: datetime) -> bool:
+    """Whether the last full scan behind this report is more than MAX_REUSE_DAYS old."""
+    last = base.metadata.get("full_scan_at")
+    if not isinstance(last, str):
+        return True
+    try:
+        return now - datetime.fromisoformat(last) > timedelta(days=MAX_REUSE_DAYS)
+    except (TypeError, ValueError):
+        return True
 
 
 def scanner_fingerprint(config: Config) -> str:

@@ -108,6 +108,14 @@ def scan_cmd(
             "treated as pre-existing, and the report says which paths this change opens or closes.",
         ),
     ] = None,
+    reuse: Annotated[
+        Path | None,
+        typer.Option(
+            "--reuse",
+            help="Rescan only what changed since this report and reuse its findings for the rest, with "
+            "a full scan at least every 7 days. Unlike --compare it doesn't change what gates.",
+        ),
+    ] = None,
     incremental: Annotated[
         bool,
         typer.Option(
@@ -259,6 +267,7 @@ def scan_cmd(
         offline=offline,
         max_workers=workers,
         incremental=incremental and compare_to is not None,
+        reuse=reuse,
     )
 
     def on_done(run: ToolRun) -> None:

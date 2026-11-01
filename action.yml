@@ -103,11 +103,11 @@ runs:
         restore-keys: breachgraph-cache-${{ runner.os }}-
 
     - name: Restore the default branch's report
-      if: ${{ inputs.compare == 'true' && github.event_name == 'pull_request' }}
+      if: ${{ inputs.compare == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
       with:
         path: ${{ runner.temp }}/breachgraph-base
-        key: breachgraph-report-${{ github.event.pull_request.base.sha }}
+        key: breachgraph-report-${{ github.event.pull_request.base.sha || github.event.before }}
         restore-keys: breachgraph-report-
 
     - name: Run breachgraph
@@ -159,8 +159,13 @@ runs:
         if [[ -f "$SG_BASE_REPORT" ]]; then
           # Mounted outside the scanned tree: a copy in the workspace would be scanned as a new file.
           base_mount=(-v "$SG_BASE_REPORT:/github/base.json:ro")
-          args+=(--compare /github/base.json)
-          [[ "$SG_INCREMENTAL" == "true" ]] && args+=(--incremental)
+          if [[ "${GITHUB_EVENT_NAME:-}" == "push" ]]; then
+            # A push still gates on everything; the last report only saves rescanning what didn't change.
+            [[ "$SG_INCREMENTAL" == "true" ]] && args+=(--reuse /github/base.json)
+          else
+            args+=(--compare /github/base.json)
+            [[ "$SG_INCREMENTAL" == "true" ]] && args+=(--incremental)
+          fi
         fi
         # shellcheck disable=SC2206
         extra=($SG_EXTRA)

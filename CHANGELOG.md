@@ -58,6 +58,9 @@ All notable changes to this project are documented here. The format follows
 - An `acl = "public-read"` set directly on an `aws_s3_bucket` now counts as public, as the
   separate ACL resource always did.
 - An attack path step shows where the weakness is, not where the route is declared.
+- Pushes to the default branch reuse the last report too (`--reuse`), rescanning only what changed
+  and still gating on everything. A full scan runs at least every 7 days, so a CVE published since
+  isn't missed for dependencies that didn't change.
 - File digests are computed only when they will be used (CI, `--compare`, `--incremental`). On a
   Docker bind mount from Windows or macOS they took more than 10 minutes on a 33,000-file project.
 

@@ -44,6 +44,7 @@ class ScanOptions:
     offline: bool = False
     max_workers: int = 4
     incremental: bool = False  # with compare: rescan only what changed since the base report
+    reuse: Path | None = None  # rescan only what changed since this report, without comparing to it
 
 
 class PipelineError(Exception):
@@ -233,10 +234,11 @@ def _scan(
     names = select_scanners(config, opts)
     # Reading every file costs minutes on a large tree over a Docker bind mount (Windows, macOS),
     # and only a later incremental scan uses the result: CI, not a scan on a laptop.
-    digests = bool(opts.incremental or opts.compare or os.environ.get("CI"))
+    digests = bool(opts.incremental or opts.compare or opts.reuse or os.environ.get("CI"))
     tree = incremental.tree_digest(target, config.exclude_paths) if digests else {}
     base = _base_for_incremental(opts)
-    plan = incremental.plan(base, tree, config, __version__, names) if opts.incremental else None
+    planned = opts.incremental or opts.reuse is not None
+    plan = incremental.plan(base, tree, config, __version__, names) if planned else None
     run = [n for n in names if plan is None or plan.modes[n] != "carry"]
     contexts = {
         n: ScanContext(target=target, work_dir=work_dir, config=config, artifacts=ctx.artifacts, files=fs)
@@ -272,6 +274,9 @@ def _scan(
     if digests:
         result.metadata["tree"] = tree
     result.metadata["scanner_fingerprint"] = incremental.scanner_fingerprint(config)
+    reused_any = base is not None and plan is not None and not plan.reason
+    last_full = base.metadata.get("full_scan_at") if base is not None and reused_any else None
+    result.metadata["full_scan_at"] = last_full or started.isoformat()
     if plan is not None:
         result.metadata["incremental"] = {
             "full_scan_reason": plan.reason,
@@ -283,9 +288,14 @@ def _scan(
 
 
 def _base_for_incremental(opts: ScanOptions) -> ScanResult | None:
-    if not (opts.incremental and opts.compare and opts.compare.is_file()):
+    path = opts.reuse or (opts.compare if opts.incremental else None)
+    if path is None or not path.is_file():
         return None
     try:
-        return load_report(opts.compare)
+        base = load_report(path)
     except ValueError:
         return None  # process() reports the unreadable base as a warning
+    # Reused dependency results never see a CVE published since: rescan everything now and then.
+    if opts.reuse and incremental.overdue(base, datetime.now(UTC)):
+        return None
+    return base
