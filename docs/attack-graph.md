@@ -217,6 +217,25 @@ attack_graph:
 Data stores and secrets get a default value of 6 even without a rule, so obvious targets are never
 missed. Set `enabled: false` to turn the whole layer off.
 
+## From a route to the code it runs
+
+A finding inside a handler is on that route. A finding in a function the handler calls, directly or
+up to six calls away, is on it too, and the path shows the chain. Calls are followed by name for
+Python, JavaScript/TypeScript, Java and Go, and resolve only within the file, its package or the
+files it imports, so a common method name can't jump across a repository. There is no type
+information, so a chain is evidence rather than proof, and such a path is medium confidence at
+most.
+
+A sink whose values are all built from literals in its function (no parameter, no request, no
+outside variable) is reported at low confidence and doesn't gate. A rule that traced the data from
+a request is taken at its word.
+
+A route with a visible guard (a decorator, middleware argument, annotation, a guard on its class,
+or `use(guard)` and guarded groups in the same file) is labelled **needs a login** and ranks lower.
+It is still reported and still gates, because many applications let anyone sign up. A guard
+mounted from another file or a global security filter isn't seen, so that route counts as
+anonymous.
+
 ## Honest limitations
 
 - **Dependency reachability is import-level, with function-level evidence for Go**: a KEV CVE in a

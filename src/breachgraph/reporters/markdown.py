@@ -133,7 +133,8 @@ def _change_md(result: ScanResult) -> list[str]:
     if opened:
         out += [f"### This change opens {len(opened)} new attack path(s)", ""]
         for p in opened[:3]:
-            out += [f"**→ {_cell(p.target, 60)}** · {p.confidence} confidence", "", *_mermaid(p), ""]
+            login = " · needs a login" if p.needs_login else ""
+            out += [f"**→ {_cell(p.target, 60)}** · {p.confidence} confidence{login}", "", *_mermaid(p), ""]
         if len(opened) > 3:
             out += [f"_…and {len(opened) - 3} more below._", ""]
     if closed:
@@ -175,7 +176,8 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         flag = " · **blocks merge**" if p.gating else ""
         tag = "" if p.is_new or not result.baseline_used else " _(pre-existing)_"
         out.append(
-            f"**Path {i} → {_cell(p.target, 60)}** · risk {p.score} · {p.confidence} confidence{flag}{tag}"
+            f"**Path {i} → {_cell(p.target, 60)}** · risk {p.score} · {p.confidence} confidence"
+            f"{' · needs a login' if p.needs_login else ''}{flag}{tag}"
         )
         chain = []
         for s in p.steps:

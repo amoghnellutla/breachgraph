@@ -52,6 +52,7 @@ class AttackPath:
     score: float = 0.0
     confidence: Confidence = Confidence.HIGH
     weaknesses: list[str] = field(default_factory=list)  # fingerprints of findings on the path
+    needs_login: str = ""  # the guard on a route it passes through, unless a weakness bypasses it
 
     @property
     def nodes(self) -> list[str]:
@@ -138,7 +139,18 @@ def _make_path(graph: Graph, steps: list[Step]) -> AttackPath:
             for w in graph.nodes[s.edge.src].has({s.via}):
                 if w.fingerprint and w.fingerprint not in weaknesses:
                     weaknesses.append(w.fingerprint)
-    return AttackPath(steps=steps, target=target, weaknesses=weaknesses)
+    return AttackPath(
+        steps=steps, target=target, weaknesses=weaknesses, needs_login=_login_needed(graph, steps)
+    )
+
+
+def _login_needed(graph: Graph, steps: list[Step]) -> str:
+    for nid in (s.edge.dst for s in steps):
+        node = graph.nodes[nid]
+        guard = str(node.attrs.get("auth") or "")
+        if guard and not node.has({WeaknessClass.AUTH_BYPASS}):
+            return guard
+    return ""
 
 
 def _score(path: AttackPath) -> None:
@@ -149,7 +161,8 @@ def _score(path: AttackPath) -> None:
         reachability *= _CONF_WEIGHT[c]
     effort = sum(_STEP_COST.get(s.via, 0.5) for s in path.steps if s.via) or 1.0
     # Value dominates; longer, harder, lower-confidence paths score lower.
-    path.score = round(path.target.value * (10 / (effort + 3)) * (0.4 + 0.6 * reachability), 2)
+    login = 0.7 if path.needs_login else 1.0  # an account is a step, not a wall: signup is often open
+    path.score = round(path.target.value * (10 / (effort + 3)) * (0.4 + 0.6 * reachability) * login, 2)
 
 
 @dataclass

@@ -74,6 +74,7 @@ def summarize(
                 length=p.length,
                 is_new=is_new,
                 gating=gating,
+                needs_login=p.needs_login,
                 steps=(steps := [_step(p, i, result.graph) for i in range(len(p.steps))]),
                 techniques=list(dict.fromkeys(t for s in steps for t in s.techniques)),
                 weaknesses=[fp for fp in p.weaknesses if status_by_fp.get(fp) is not Status.SUPPRESSED],

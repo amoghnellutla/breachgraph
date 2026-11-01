@@ -424,7 +424,8 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
         hops = ["Internet"]
         for s in p.steps:
             hops.append(f"[bold red]{escape(s.dst)}[/]({s.via})" if s.via else escape(s.dst))
-        console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}")
+        login = " (needs a login)" if p.needs_login else ""
+        console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}{login}")
         console.print("     " + " → ".join(hops))
     if ag.choke_points:
         console.print("  [bold]Fix first:[/]")

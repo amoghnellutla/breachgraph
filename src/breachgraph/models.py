@@ -257,6 +257,7 @@ class AttackPathView(BaseModel):
     length: int
     is_new: bool = True  # introduces a path not present in the baseline
     gating: bool = False
+    needs_login: str = ""  # the guard in front of a route on this path, when one is visible
     steps: list[AttackStep] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)  # fingerprints of findings on the path
     techniques: list[str] = Field(default_factory=list)  # MITRE ATT&CK ids along the path, in order

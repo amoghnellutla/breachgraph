@@ -294,7 +294,7 @@ ul.warn { margin: 0; padding-left: 18px; }
         <h4>
           {% if p.gating %}<span class="pill gate">blocks merge</span> {% endif %}
           → {{ p.target }}
-          <span class="muted">· risk {{ p.score }} · {{ p.confidence }} confidence{% if result.baseline_used and not p.is_new %} · pre-existing{% endif %}</span>
+          <span class="muted">· risk {{ p.score }} · {{ p.confidence }} confidence{% if p.needs_login %} · needs a login{% endif %}{% if result.baseline_used and not p.is_new %} · pre-existing{% endif %}</span>
         </h4>
         <div class="flow">
           <div class="hop"><div class="box start">Internet</div></div>
@@ -629,7 +629,7 @@ ul.warn { margin: 0; padding-left: 18px; }
       var t = text("div", "→ " + p.target, "t");
       if (p.gating) { t.appendChild(document.createTextNode(" ")); t.appendChild(text("span", "blocks merge", "pill gate")); }
       btn.appendChild(t);
-      btn.appendChild(text("div", p.confidence + " confidence · risk " + p.score + (alive(p) ? "" : " · broken by your fixes"), "r"));
+      btn.appendChild(text("div", p.confidence + " confidence · risk " + p.score + (p.needs_login ? " · needs a login" : "") + (alive(p) ? "" : " · broken by your fixes"), "r"));
       btn.appendChild(text("div", p.nodes.map(function (id) { return (nodes[id] || { name: id }).name; }).join(" → "), "r"));
       btn.addEventListener("click", function () {
         selPath = selPath === p.id ? null : p.id;

@@ -22,6 +22,7 @@ import tree_sitter_javascript as ts_js
 import tree_sitter_python as ts_py
 import tree_sitter_typescript as ts_ts
 
+from breachgraph.graph.sources.auth import annotate
 from breachgraph.graph.sources.common import SourceContext
 
 HTTP_METHODS = {
@@ -61,6 +62,7 @@ class Route:
     end_line: int
     handler: str
     framework: str
+    auth: str = ""  # the guard in front of it, when its declaration shows one (see sources/auth.py)
 
     def __post_init__(self) -> None:
         self.method = self.method.upper()
@@ -120,9 +122,13 @@ class RouteSource:
     def collect(self, ctx: SourceContext) -> list[Route]:
         for path in ctx.files(*_LANGS):
             try:
-                self.routes += routes_in_file(path, ctx.rel(path))
+                found = routes_in_file(path, ctx.rel(path))
             except ValueError:
                 ctx.skipped.append(f"{ctx.rel(path)}: could not parse")
+                continue
+            if found:
+                annotate(found, ctx.read(path) or "")
+            self.routes += found
         return self.routes
 
 

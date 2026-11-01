@@ -188,7 +188,7 @@ def attach(
                 id=f"route:{r.file}:{r.start_line}:{r.label}",
                 kind=NodeKind.ROUTE,
                 name=r.label,
-                attrs={"framework": r.framework, "handler": r.handler, "file": r.file},
+                attrs={"framework": r.framework, "handler": r.handler, "file": r.file, "auth": r.auth},
                 evidence=[
                     Evidence(
                         path=r.file,

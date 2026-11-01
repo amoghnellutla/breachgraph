@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
   JavaScript/TypeScript, Java and Go. A weakness in a helper is on every route that reaches it,
   so an SSRF one call away from a handler now makes a path. A call resolves only within the file,
   its package or what it imports; a chain is medium confidence at most and is shown as evidence.
+- Routes behind a login are labelled. Guards are read from the declaration (Flask, Django, FastAPI,
+  Express, NestJS, Spring, Go middleware and groups); a path through one says "needs a login" and
+  ranks below anonymous paths, but is still reported and still gates. An auth-bypass finding on
+  the route removes the label.
 - A code finding whose sink only sees values built from literals is reported at low confidence
   and doesn't gate a merge, unless the rule itself traced the data from a request.
 
