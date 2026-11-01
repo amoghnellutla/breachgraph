@@ -19,6 +19,7 @@ from breachgraph.graph.model import (
     WeaknessClass,
     not_run,
 )
+from breachgraph.graph.sources.app import APP_ID
 from breachgraph.graph.sources.routes import Route
 from breachgraph.models import Category, Finding, Reachability
 
@@ -264,7 +265,9 @@ def attach(
                 # build script) isn't shown to be reachable by a request: reported, but no gate.
                 served = any(u is unit for _r, _n, u in route_nodes)
                 unreached = cls in _ROUTE_WEAPONS and served and calls is not None and not linked
-                sure_here = Confidence.LOW if unreached else sure
+                # The whole-repository stand-in can't say which service ships a dependency.
+                guessed = cls is WeaknessClass.VULNERABLE_DEPENDENCY and APP_ID in unit.workloads
+                sure_here = Confidence.LOW if unreached or guessed else sure
                 for wid in unit.workloads:
                     if ci and graph.nodes[wid].attrs.get("platform") != "github-actions":
                         continue

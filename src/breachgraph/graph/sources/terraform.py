@@ -140,6 +140,8 @@ class _State:
     root: Path | None = None  # repository root, to read policies kept in files
 
 
+# A bucket whose name says it holds what the public is meant to read.
+_MEANT_PUBLIC = re.compile(r"public|static|assets|cdn", re.I)
 _FILE_CALL = re.compile(r'^\$\{(?:file|templatefile)\(\s*"([^"]+)"')
 
 
@@ -329,7 +331,9 @@ class TerraformSource:
                         dst=b.node_id,
                         kind=EdgeKind.CAN_ACCESS,
                         evidence=[r.ev],
-                        confidence=Confidence.MEDIUM,
+                        confidence=Confidence.LOW
+                        if _MEANT_PUBLIC.search(graph.nodes[b.node_id].name)
+                        else Confidence.MEDIUM,
                         note=why + " (account-level Block Public Access, if enabled, would still stop this)",
                     )
                 )

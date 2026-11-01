@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from breachgraph.cicd import PRIVILEGED_TRIGGERS, gated
+from breachgraph.cicd import PRIVILEGED_TRIGGERS, follows_only_trusted, gated, same_repository_only
 from breachgraph.cicd.workflows import Job, Step, Workflow, job_secrets, load_workflows
 from breachgraph.graph.model import (
     CONTROL,
@@ -94,13 +94,16 @@ class ActionsSource:
         ctx.skipped.extend(skipped)
         self.slug = repository_slug(ctx.root)
         self.ctx = ctx
+        by_name = {wf.name: wf for wf in workflows}
         for wf in workflows:
             for job in wf.jobs:
-                self._job(graph, wf, job)
+                self._job(graph, wf, job, by_name)
 
-    def _job(self, graph: Graph, wf: Workflow, job: Job) -> None:
+    def _job(self, graph: Graph, wf: Workflow, job: Job, by_name: dict[str, Workflow]) -> None:
         outsider = sorted(wf.triggers & PRIVILEGED_TRIGGERS)
-        if not outsider:
+        if outsider == ["workflow_run"] and follows_only_trusted(wf, by_name):
+            return  # it only runs after workflows an outsider can't start
+        if not outsider or same_repository_only(job):
             return  # only people with write access can start it
         ev = Evidence(path=wf.path, line=job.line, detail=f"job {job.id}", source="github-actions")
         nid = f"gha:job:{wf.path}:{job.id}"

@@ -47,6 +47,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- More false paths removed after hand review of 30 real projects. The graph now applies the same
+  rules as the CI/CD checks: a same-repository guard or a `workflow_run` that only follows trusted
+  workflows is not an entry point. A permission check in an earlier step, or `github/command`-style
+  actions, counts as a gate. Compose projects named for development, buckets named as public
+  assets, and dependencies on the whole-repository stand-in are reported at low confidence.
 - Fewer false paths on real projects. When a service has known routes and none of them reaches a
   weakness (a management command, a build step), it is reported at low confidence and doesn't
   gate. Compose files under test directories aren't treated as deployments, and pytest

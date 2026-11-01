@@ -53,6 +53,7 @@ class ImageSource:
         except yaml.YAMLError:
             ctx.skipped.append(f"{rel}: invalid compose YAML")
             return
+        project = f"{rel} {doc.get('name', '')}" if isinstance(doc, dict) else rel
         base = str(PurePosixPath(rel).parent).replace(".", "")
         for svc, spec in (doc.get("services") or {}).items() if isinstance(doc, dict) else []:
             if not isinstance(spec, dict):
@@ -86,7 +87,7 @@ class ImageSource:
                 )
                 if exposed:
                     node.attrs["published_ports"] = exposed
-                    _expose(graph, node.id, f"publishes port {exposed[0]}", rel, svc)
+                    _expose(graph, node.id, f"publishes port {exposed[0]}", rel, svc, project)
         # A reverse proxy that publishes ports forwards the internet to the services it fronts.
         for svc, spec in (doc.get("services") or {}).items() if isinstance(doc, dict) else []:
             if not isinstance(spec, dict) or spec.get("build") or not _PROXY.search(str(spec.get("image"))):
@@ -96,20 +97,22 @@ class ImageSource:
             for dep in [*deps, *(spec.get("links") or [])]:
                 target = f"compose:service:{str(dep).split(':')[0]}"
                 if exposed and target in graph.nodes:
-                    _expose(graph, target, f"behind proxy {svc} (port {exposed[0]})", rel, svc)
+                    _expose(graph, target, f"behind proxy {svc} (port {exposed[0]})", rel, svc, project)
 
 
 _PROXY = re.compile(r"(?:^|/)(nginx|traefik|caddy|haproxy|envoy|httpd)(?::|$)")
+# A compose project that says it's for a developer's machine, in its name or its file's.
+_LOCAL_ONLY = re.compile(r"(?:^|[-_./])(?:dev|develop|development|local|test|testing|ci)(?:[-_./]|$)", re.I)
 
 
-def _expose(graph: Graph, node_id: str, why: str, rel: str, svc: str) -> None:
+def _expose(graph: Graph, node_id: str, why: str, rel: str, svc: str, project: str) -> None:
     graph.add_node(internet())
     graph.add_edge(
         Edge(
             src=INTERNET_ID,
             dst=node_id,
             kind=EdgeKind.EXPOSES,
-            confidence=Confidence.MEDIUM,
+            confidence=Confidence.LOW if _LOCAL_ONLY.search(project) else Confidence.MEDIUM,
             evidence=[Evidence(path=rel, detail=f"service {svc}", source="images")],
             note=f"compose {why}; assumed reachable from the internet",
         )

@@ -70,7 +70,9 @@ _SAME_REPO = re.compile(
 # Actions and API calls that fail a job unless the actor has write access to the repository.
 _PERMISSION_CHECK = re.compile(
     r"check-user-permission|check-actor-permission|actor-permission|repository-permission|"
-    r"team-membership|permission-check|collaborators/[^\s/]+/permission",
+    r"team-membership|permission-check|collaborators/[^\s/]+/permission|"
+    r"getCollaboratorPermissionLevel|checkCollaborator|checkMembership|github/command@|"
+    r"slash-command-dispatch@|slash-command-action@",
     re.I,
 )
 # Triggers an outsider can cause in some workflow (a run of it can then trigger workflow_run).
@@ -96,6 +98,13 @@ def analyze(target: Path, exclude: list[str]) -> tuple[list[Finding], list[str]]
             findings += _agent_prompt_injection(wf, job)
     findings += dependency_confusion(target, exclude)
     return findings, skipped
+
+
+def follows_only_trusted(wf: Workflow, by_name: dict[str, Workflow]) -> bool:
+    """A `workflow_run` workflow is outside an outsider's reach when every workflow it follows is
+    known and none of them can be started by one."""
+    known = [by_name[n] for n in wf.run_after if n in by_name]
+    return bool(known) and len(known) == len(wf.run_after) and not any(w.triggers & _OUTSIDER for w in known)
 
 
 def same_repository_only(job: Job) -> bool:
@@ -132,6 +141,8 @@ def gated(wf: Workflow, job: Job, step: Step | None = None) -> str:
         return "runs once a maintainer adds a label (anyone can push new code after that)"
     if checker := _permission_job(wf, job):
         return f"needs job `{checker}`, which fails unless the actor has write access"
+    if checker := _permission_step(job, step):
+        return f"step `{checker}` fails the job unless the actor has write access"
     if job.environment:
         return (
             f"runs in environment `{job.environment}`; if that environment requires reviewers "
@@ -147,8 +158,23 @@ def _permission_job(wf: Workflow, job: Job) -> str:
     by_id = {j.id: j for j in wf.jobs}
     for name in names:
         dep = by_id.get(name)
-        if dep and any(_PERMISSION_CHECK.search(f"{s.uses} {s.run}") for s in dep.steps):
+        if dep and any(_checks_permission(s) for s in dep.steps):
             return name
+    return ""
+
+
+def _checks_permission(step: Step) -> bool:
+    return bool(_PERMISSION_CHECK.search(f"{step.uses} {step.run} {step.with_.get('script', '')}"))
+
+
+def _permission_step(job: Job, step: Step | None) -> str:
+    """A step that runs first and stops the job for outsiders. A step of its own `if: always()`
+    still runs after such a failure, so it isn't covered."""
+    for s in job.steps:
+        if s is step:
+            return ""
+        if _checks_permission(s):
+            return s.name or s.uses or str(s.index + 1)
     return ""
 
 
@@ -292,11 +318,10 @@ def _untrusted_checkout(wf: Workflow, job: Job, by_name: dict[str, Workflow] | N
     trigger = next((t for t in ("pull_request_target", "workflow_run") if t in wf.triggers), None)
     if trigger is None:
         return []
-    if trigger == "workflow_run" and "pull_request_target" not in wf.triggers and by_name is not None:
-        # head_sha is attacker code only if an outsider can start a workflow this one follows.
-        known = [by_name[n] for n in wf.run_after if n in by_name]
-        if known and len(known) == len(wf.run_after) and not any(w.triggers & _OUTSIDER for w in known):
-            return []
+    # head_sha is attacker code only if an outsider can start a workflow this one follows.
+    only_workflow_run = trigger == "workflow_run" and "pull_request_target" not in wf.triggers
+    if only_workflow_run and by_name is not None and follows_only_trusted(wf, by_name):
+        return []
     for i, step in enumerate(job.steps):
         if step.action != "actions/checkout":
             continue
