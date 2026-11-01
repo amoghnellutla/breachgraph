@@ -19,6 +19,7 @@ from breachgraph.graph.model import (
     Weakness,
     WeaknessClass,
     not_run,
+    not_shipped,
 )
 from breachgraph.graph.sources.app import APP_ID
 from breachgraph.graph.sources.routes import Route
@@ -40,6 +41,17 @@ CWE_CLASSES: dict[WeaknessClass, set[str]] = {
     WeaknessClass.FILE_READ: {"CWE-22", "CWE-23", "CWE-36", "CWE-73", "CWE-611", "CWE-98"},
     WeaknessClass.AUTH_BYPASS: {"CWE-287", "CWE-306", "CWE-862", "CWE-863", "CWE-639", "CWE-284"},
     WeaknessClass.CREDENTIAL_EXPOSURE: {"CWE-798", "CWE-259", "CWE-321", "CWE-522"},
+}
+
+
+# Flaws that run an attacker's code: injection and deserialization, or memory corruption.
+_TAKES_CONTROL = CWE_CLASSES[WeaknessClass.CODE_EXECUTION] | {
+    "CWE-119",
+    "CWE-120",
+    "CWE-121",
+    "CWE-122",
+    "CWE-416",
+    "CWE-787",
 }
 
 
@@ -135,7 +147,9 @@ def code_units(
                     break
         if matched:
             units.append(CodeUnit(d, matched, Confidence.HIGH))
-    if not units and len(dockerfile_dirs) == 1 and len(workloads) == 1:
+    # One image and one workload suggests a match, unless the workload is only an example.
+    example = workloads and any(not_run(e.path) for e in workloads[0].evidence)
+    if not units and len(dockerfile_dirs) == 1 and len(workloads) == 1 and not example:
         units.append(CodeUnit(dockerfile_dirs[0], [workloads[0].id], Confidence.MEDIUM))
     return units
 
@@ -165,19 +179,6 @@ _MANIFEST_FAMILY = {
     "build.gradle": "java",
 }
 _SOURCE_FAMILY = {".py": "py", ".go": "go", ".java": "java"}
-_BUILD_TOOLS = {
-    "vite",
-    "webpack",
-    "esbuild",
-    "rollup",
-    "eslint",
-    "prettier",
-    "jest",
-    "vitest",
-    "babel",
-    "tsup",
-}
-_TOOLING_DIR = re.compile(r"(?:^|/)(?:scripts|tools|hack|dev|ci)/")
 
 
 def _other_language(
@@ -194,10 +195,12 @@ def _other_language(
     return bool(family and served and family not in served)
 
 
-def _not_shipped(f: Finding) -> bool:
-    """A build tool, or a manifest for the repository's own scripts: not what the service runs."""
-    name = (f.package.name if f.package else "").lower().rsplit("/", 1)[-1]
-    return name in _BUILD_TOOLS or bool(_TOOLING_DIR.search(f.location.path))
+def _less_than_control(f: Finding) -> bool:
+    """A dependency CVE whose flaw doesn't hand over the service. KEV and EPSS say a CVE is being
+    exploited, not what it gives: a proxy bypass or a cookie path bug isn't code on the server."""
+    return (
+        f.category in (Category.SCA, Category.CONTAINER) and bool(f.cwe) and not set(f.cwe) & _TAKES_CONTROL
+    )
 
 
 def _expands_trusted_text(f: Finding, root: Path) -> bool:
@@ -298,7 +301,8 @@ def attach(
         # A guessed secret (see scanners/gitleaks.py) can't carry a path that gates either.
         guess = f.category is Category.SECRETS and f.confidence.value == "low"
         harmless = calls is not None and _expands_trusted_text(f, calls.root)
-        sure = Confidence.LOW if constant or guess or harmless else Confidence.HIGH
+        weak = constant or guess or harmless or _less_than_control(f)
+        sure = Confidence.LOW if weak else Confidence.HIGH
         # 1. code findings inside a route handler
         hit = False
         for r, node, _unit in route_nodes:
@@ -341,7 +345,7 @@ def attach(
                 guessed = cls is WeaknessClass.VULNERABLE_DEPENDENCY and (
                     APP_ID in unit.workloads
                     or _other_language(loc.path, unit, route_nodes)
-                    or _not_shipped(f)
+                    or not_shipped(loc.path, f.package.name if f.package else "")
                 )
                 sure_here = Confidence.LOW if unreached or guessed else sure
                 for wid in unit.workloads:

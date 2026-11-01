@@ -17,7 +17,12 @@ All notable changes to this project are documented here. The format follows
 
 - **A repository isn't failed for debt it already has.** A P1 dependency CVE or misconfiguration
   blocks a change that adds it, compared with a baseline or `--compare`, not a first scan. KEV CVEs,
-  attack paths and real secrets always block. `fail_on.existing_debt: true` restores the old gate.
+  attack paths and real secrets always block, except a KEV CVE in tests, the repository's scripts or
+  a build tool, which no service runs. `fail_on.existing_debt: true` restores the old gate.
+- **A dependency CVE needs to give control before it can block a path.** KEV and EPSS say a CVE is
+  exploited, not what it gives. One whose CWE isn't code execution or memory corruption stays on the
+  path as a lead and doesn't gate. All three such paths found across 51 real projects were wrong.
+- A workload defined under `examples/` no longer inherits the repository's only Dockerfile.
 - The HTML report answers more on its own: what a breached node would reach, spreading hop by hop;
   the smallest set of fixes that closes every path, applied one at a time; the vulnerable line and
   the real patch with its proof, inside the path; each path in plain English with "Copy as ticket";

@@ -73,12 +73,31 @@ _NOT_RUN = re.compile(
     r"(?:^|/)(?:tests?|__tests__|__mocks__|testdata|spec|e2e|cypress|playwright|fixtures?|examples?|samples?|docs?)/"
     r"|\.(?:test|spec|stories)\.[a-z]+$|(?:^|/)(?:conftest\.py|test_[^/]+\.py|[^/]+_test\.(?:py|go))$"
 )
+_BUILD_TOOLS = {
+    "vite",
+    "webpack",
+    "esbuild",
+    "rollup",
+    "eslint",
+    "prettier",
+    "jest",
+    "vitest",
+    "babel",
+    "tsup",
+}
+_TOOLING_DIR = re.compile(r"(?:^|/)(?:scripts|tools|hack|dev|ci)/")
 # Code that may ship but is weaker evidence than the application's own source.
 _INCIDENTAL = re.compile(r"(?:^|/)(?:static|vendor|third_party)/")
 
 
 def not_run(path: str) -> bool:
     return bool(_NOT_RUN.search(path))
+
+
+def not_shipped(path: str, package: str = "") -> bool:
+    """A dependency of a build tool, the repository's own scripts or tests: not what a service runs."""
+    name = package.lower().rsplit("/", 1)[-1]
+    return name in _BUILD_TOOLS or bool(_TOOLING_DIR.search(path)) or not_run(path)
 
 
 class Evidence(BaseModel):

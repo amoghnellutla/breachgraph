@@ -54,7 +54,8 @@ deprioritize_paths:              # still reported, but scored 2 points lower
 fail_on:
   priority: P1                   # fail on P1 findings (P2 for a stricter gate); null to disable
   severity: null                 # alternatively gate on raw severity: critical|high|medium|low
-  kev: true                      # any CVE in CISA's Known Exploited Vulnerabilities catalog
+  kev: true                      # any CVE in CISA's Known Exploited Vulnerabilities catalog, except
+                                 # existing debt in tests, scripts and build tools
   secrets: true                  # any hardcoded secret
   new_only: true                 # with a baseline, only new findings can fail the gate
   scanner_errors: true           # false = a failed scanner doesn't change the exit code

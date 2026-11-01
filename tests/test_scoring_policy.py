@@ -261,3 +261,15 @@ def test_kev_blocks_even_as_existing_debt() -> None:
     finding.category = Category.SCA
     finding.enrichment.kev = True
     assert not evaluate_gate(_result([finding]), Config()).passed
+
+
+@pytest.mark.parametrize("path", ["e2e/python/poetry.lock", "scripts/poetry.lock"])
+def test_kev_in_code_no_service_runs_is_debt_until_a_change_adds_it(path: str) -> None:
+    finding = make_finding(path=path)
+    finding.category = Category.SCA
+    finding.enrichment.kev = True
+    result = _result([finding])
+    assert evaluate_gate(result, Config()).passed
+    assert not evaluate_gate(result, Config.model_validate({"fail_on": {"existing_debt": True}})).passed
+    result.baseline_used = True
+    assert not evaluate_gate(result, Config()).passed

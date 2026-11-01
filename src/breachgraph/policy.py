@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from breachgraph.config import Config, Suppression
+from breachgraph.graph.model import not_shipped
 from breachgraph.models import (
     Category,
     Confidence,
@@ -164,11 +165,13 @@ def evaluate_gate(result: ScanResult, config: Config) -> GateResult:
         ):
             continue
         why = None
-        if rules.kev and f.enrichment.kev:
+        debt = _existing_debt(f, result) and not rules.existing_debt
+        name = f.package.name if f.package else ""
+        if rules.kev and f.enrichment.kev and not (debt and not_shipped(f.location.path, name)):
             why = "known exploited (KEV)"
         elif rules.secrets and f.category is Category.SECRETS and f.confidence is not Confidence.LOW:
             why = "secret"
-        elif _existing_debt(f, result) and not rules.existing_debt:
+        elif debt:
             why = None
         elif rules.priority and f.priority.rank >= rules.priority.rank:
             why = f"priority {f.priority.value}"

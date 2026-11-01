@@ -29,7 +29,9 @@ not the same as controlling it.
 | `metadata_reachable` | `hostNetwork`, EC2/ECS metadata, Azure IMDS, GCP metadata server | combined with SSRF, the node/instance identity |
 
 Only dependency CVEs with real exploitation signal (KEV, or EPSS ≥ 10% and CVSS ≥ 7) become a
-weakness, so the graph is not flooded by every unreachable CVE.
+weakness, so the graph is not flooded by every unreachable CVE. Exploited doesn't mean it gives
+control: a CVE whose CWE isn't code execution or memory corruption, such as a proxy bypass or a
+cookie path bug, can appear on a path but doesn't block a merge. A CVE with no CWE is kept.
 
 ## The "no free ride" guarantee
 
