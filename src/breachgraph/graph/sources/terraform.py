@@ -115,22 +115,17 @@ ESCALATION_SETS: list[tuple[set[str], str]] = [
     ({"iam:PutGroupPolicy"}, "can write an inline policy on a group"),
     ({"iam:CreateLoginProfile"}, "can give another user a console password"),
     ({"iam:UpdateLoginProfile"}, "can change another user's console password"),
-    (
-        {"iam:PassRole", "lambda:CreateFunction", "lambda:InvokeFunction"},
-        "can run code as any passable role via Lambda",
-    ),
-    ({"iam:PassRole", "ec2:RunInstances"}, "can launch an instance with any passable role"),
-    ({"iam:PassRole", "ecs:RunTask"}, "can run an ECS task with any passable role"),
-    ({"iam:PassRole", "cloudformation:CreateStack"}, "can deploy a stack with any passable role"),
-    ({"iam:PassRole", "glue:CreateDevEndpoint"}, "can start a Glue endpoint with any passable role"),
-    (
-        {"iam:PassRole", "codebuild:CreateProject", "codebuild:StartBuild"},
-        "can run a build with any passable role",
-    ),
-    (
-        {"iam:PassRole", "sagemaker:CreateNotebookInstance"},
-        "can start a notebook with any passable role",
-    ),
+]
+# Passing a role to a service runs code as that role, but only a role that trusts the service, and
+# only one the PassRole statement covers: (actions, service principal, what it does).
+PASS_ROLE: list[tuple[set[str], str, str]] = [
+    ({"lambda:CreateFunction", "lambda:InvokeFunction"}, "lambda.amazonaws.com", "a Lambda function"),
+    ({"ec2:RunInstances"}, "ec2.amazonaws.com", "an EC2 instance"),
+    ({"ecs:RunTask"}, "ecs-tasks.amazonaws.com", "an ECS task"),
+    ({"cloudformation:CreateStack"}, "cloudformation.amazonaws.com", "a CloudFormation stack"),
+    ({"glue:CreateDevEndpoint"}, "glue.amazonaws.com", "a Glue endpoint"),
+    ({"codebuild:CreateProject", "codebuild:StartBuild"}, "codebuild.amazonaws.com", "a build"),
+    ({"sagemaker:CreateNotebookInstance"}, "sagemaker.amazonaws.com", "a notebook"),
 ]
 
 
@@ -144,6 +139,13 @@ class Stmt:
     evidence: Evidence | None = None
     conditions: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (operator, key, values)
     principals: str = ""  # raw principal text, for trust policies
+
+
+class Grants(list[Stmt]):
+    """A principal's statements. A permissions boundary caps them: what it doesn't allow, they
+    can't grant, whatever they say."""
+
+    boundary: list[Stmt] | None = None
 
 
 @dataclass
@@ -680,11 +682,96 @@ class TerraformSource:
                 )
 
         self._user_permissions(st, graph, policies)
+        self._guardrails(st, policies)
         for role_id, stmts in st.role_stmts.items():
             self._grant_edges(st, graph, role_id, stmts)
+            self._pass_role(st, graph, role_id, stmts)
+
+    def _guardrails(self, st: _State, policies: dict[str, list[Stmt]]) -> None:
+        """What caps a principal from outside its own policies: its boundary, and any SCP."""
+        denied: list[Stmt] = []
+        for r in st.res.values():
+            if r.rtype == "aws_organizations_policy" and str(
+                r.body.get("type", "SERVICE_CONTROL_POLICY")
+            ) == ("SERVICE_CONTROL_POLICY"):
+                attached = any(
+                    o.rtype == "aws_organizations_policy_attachment"
+                    and f"aws_organizations_policy.{r.name}" in refs(o.body.get("policy_id"))
+                    for o in st.res.values()
+                )
+                if attached:
+                    denied += [s for s in self._policy(st, r.body.get("content"), r.ev) if s.effect == "Deny"]
+        for key, r in st.res.items():
+            if r.rtype not in ("aws_iam_role", "aws_iam_user") or not r.node_id:
+                continue
+            value = r.body.get("permissions_boundary")
+            if not value:
+                continue
+            found = next((policies[x] for x in refs(value) if x in policies), None)
+            cap = found if found is not None else _managed(str(value), r.ev)
+            if not cap:
+                st.unresolved.append(f"{key}: permissions boundary {value} could not be read")
+                continue
+            grants = Grants(st.role_stmts.get(r.node_id, []))
+            grants.boundary = cap
+            st.role_stmts[r.node_id] = grants
+        if denied:
+            for role_id, stmts in st.role_stmts.items():
+                grants = Grants([*stmts, *denied])
+                grants.boundary = getattr(stmts, "boundary", None)
+                st.role_stmts[role_id] = grants
+
+    def _pass_role(self, st: _State, graph: Graph, role_id: str, stmts: list[Stmt]) -> None:
+        anywhere = lambda res: any(x == "*" for x in res)  # noqa: E731
+        for needed, service, what in PASS_ROLE:
+            if not all(self._allowed(stmts, a, anywhere)[0] for a in needed):
+                continue
+            trusting = [t for t, trust in st.trust.items() if service in trust and t != role_id]
+            for target in trusting:
+                name = target.rsplit(":", 1)[-1]
+
+                def covers(res: list[str], name: str = name) -> bool:
+                    return any(x == "*" or fnmatch.fnmatchcase(name, x.rsplit("/", 1)[-1]) for x in res)
+
+                ok, cond, grant = self._allowed(stmts, "iam:PassRole", covers)
+                if ok:
+                    graph.add_edge(
+                        Edge(
+                            src=role_id,
+                            dst=target,
+                            kind=EdgeKind.USES_IDENTITY,
+                            evidence=[grant.evidence] if grant and grant.evidence else [],
+                            confidence=Confidence.MEDIUM if cond else Confidence.HIGH,
+                            note=f"privilege escalation: can pass this role to {what} and run code as it",
+                        )
+                    )
+            ok, _cond, grant = self._allowed(stmts, "iam:PassRole", anywhere)
+            if ok and not trusting:
+                # The roles it could pass may live outside this repository.
+                graph.add_node(
+                    Node(
+                        id=ACCOUNT_ADMIN_ID,
+                        kind=NodeKind.IDENTITY,
+                        name="AWS account administrator",
+                        value=10,
+                    )
+                )
+                graph.add_edge(
+                    Edge(
+                        src=role_id,
+                        dst=ACCOUNT_ADMIN_ID,
+                        kind=EdgeKind.USES_IDENTITY,
+                        evidence=[grant.evidence] if grant and grant.evidence else [],
+                        confidence=Confidence.LOW,
+                        note=f"privilege escalation: can pass any role to {what}, if a role elsewhere trusts it",
+                    )
+                )
 
     def _allowed(self, stmts: list[Stmt], action: str, resource_ok: Any) -> tuple[bool, bool, Stmt | None]:
         """(allowed, conditional, granting statement). Explicit Deny wins."""
+        boundary = getattr(stmts, "boundary", None)
+        if boundary is not None and not self._allowed(boundary, action, resource_ok)[0]:
+            return False, False, None
         grant: Stmt | None = None
         for s in stmts:
             hit = any(_actions_match(a, action) for a in s.actions)
@@ -1030,6 +1117,42 @@ class TerraformSource:
 
     # ------------------------------------------------------------------ exposure
 
+    def _subnet(self, st: _State, value: Any) -> tuple[str, bool]:
+        """("public", "private" or "unknown", whether it hands out public addresses). A subnet is
+        public when its route table sends traffic to an internet gateway, not by its name, except
+        for the outputs of a VPC module, which are all there is to go on."""
+        text = str(value)
+        if re.search(r"private_subnets|intra_subnets|database_subnets", text):
+            return "private", False
+        if "public_subnets" in text:
+            return "public", True
+        subnet = self._node_for_ref(st, value, "aws_subnet")
+        if subnet is None:
+            return "unknown", False
+        key = f"aws_subnet.{subnet.name}"
+        tables = [
+            t
+            for r in st.res.values()
+            if r.rtype == "aws_route_table_association" and key in refs(r.body.get("subnet_id"))
+            for t in refs(r.body.get("route_table_id"))
+        ]
+        mapped = truthy(subnet.body.get("map_public_ip_on_launch"))
+        if not tables:
+            return "unknown", mapped
+        to_gateway = {
+            k
+            for k, r in st.res.items()
+            if r.rtype == "aws_route_table"
+            and any(_is_gateway(b.get("gateway_id")) for b in _list_blocks(r.body.get("route")))
+        }
+        to_gateway |= {
+            t
+            for r in st.res.values()
+            if r.rtype == "aws_route" and _is_gateway(r.body.get("gateway_id"))
+            for t in refs(r.body.get("route_table_id"))
+        }
+        return ("public" if set(tables) & to_gateway else "private"), mapped
+
     def _exposure(self, st: _State, graph: Graph) -> None:
         open_sgs: dict[str, list[str]] = {}
         for key, r in st.res.items():
@@ -1099,7 +1222,13 @@ class TerraformSource:
                     for s in refs(r.body.get("vpc_security_group_ids")) + refs(r.body.get("security_groups"))
                     if s in open_sgs
                 ]
-                public_ip = truthy(r.body.get("associate_public_ip_address"))
+                reach, mapped = self._subnet(st, r.body.get("subnet_id"))
+                asked = r.body.get("associate_public_ip_address")
+                public_ip = truthy(asked) or (mapped and asked is None)
+                refused = str(asked).lower() == "false"
+                # No route to an internet gateway, or no public address: open rules reach no one.
+                if reach == "private" or refused or (reach == "public" and not public_ip):
+                    continue
                 if sgs:
                     ports = [p for s in sgs for p in open_sgs[s]]
                     graph.add_node(internet())
@@ -1162,6 +1291,10 @@ class TerraformSource:
                             note="API Gateway integration (check route authorizers)",
                         )
                     )
+
+
+def _is_gateway(value: Any) -> bool:
+    return "aws_internet_gateway" in str(value) or str(value).startswith("igw-")
 
 
 def _managed(arn: str, ev: Evidence) -> list[Stmt]:

@@ -13,6 +13,7 @@ import hcl2
 from breachgraph.graph.model import Evidence
 from breachgraph.graph.sources.common import SourceContext, line_of
 from breachgraph.graph.sources.hcl import blocks
+from breachgraph.graph.sources.tfvalues import directory_inputs, substitute
 from breachgraph.paths import normalize_path
 
 # A reference plus the attribute path after it: azurerm_linux_virtual_machine.vm.identity[0].principal_id
@@ -98,6 +99,7 @@ def _blocks_of(text: str) -> list[tuple[str, str, str, dict[str, Any]]]:
 
 def _load(ctx: SourceContext) -> list[tuple[str, Res]]:
     res: list[tuple[str, Res]] = []
+    values = directory_inputs(ctx, _parse)
     for path in ctx.files(".tf"):
         raw = ctx.read(path)
         if raw is None:
@@ -120,7 +122,8 @@ def _load(ctx: SourceContext) -> list[tuple[str, Res]]:
             key = f"{rtype}.{name}" if section == "resource" else f"data.{rtype}.{name}"
             start = line_of(text, f'{section} "{rtype}" "{name}"')
             ev = Evidence(path=rel, line=start, detail=key, source="terraform")
-            res.append((key, Res(rtype, name, body, ev, end_line=block_end(text, start))))
+            env = values.get(posixpath.dirname(rel), {})
+            res.append((key, Res(rtype, name, substitute(body, env), ev, end_line=block_end(text, start))))
     return res
 
 

@@ -105,7 +105,6 @@ def test_the_bucket_that_holds_terraform_state_is_a_crown_jewel(tmp_path: Path) 
     [
         ('["iam:CreateLoginProfile"]', "console password"),
         ('["iam:AddUserToGroup"]', "group"),
-        ('["iam:PassRole", "glue:CreateDevEndpoint"]', "Glue"),
     ],
 )
 def test_more_ways_to_administrator(tmp_path: Path, actions: str, reason: str) -> None:

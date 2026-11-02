@@ -238,6 +238,18 @@ These are hardening advice with the setting to change. They never fail a build. 
 a pull request that adds one is told so, which catches a widened IAM role or RBAC binding on the
 day it is proposed, before any bug exists.
 
+## What stops a path
+
+Controls that hold count as much as the weaknesses around them:
+
+- **Private subnets.** A security group open to the world reaches no one if the subnet's route table
+  has no internet gateway, or if the instance has no public address.
+- **Permissions boundaries.** A role can't use what its boundary doesn't allow.
+- **Service control policies.** An attached SCP's Deny statements apply to every principal.
+- **Trust.** `iam:PassRole` reaches a role only if that role trusts the service and the statement
+  covers it. Passing any role with no trusting role in the repository is a lead, since one may
+  exist elsewhere.
+
 ## This leaked, what now?
 
 ```bash

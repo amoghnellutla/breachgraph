@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Terraform `var.` and `local.` values are resolved from defaults, `terraform.tfvars`, `*.auto.tfvars`
+  and what a local `module` block passes in. A remote module is reported as a blind spot.
+
+### Changed
+
+- AWS attack paths respect what stops them: subnets with no route to an internet gateway, instances
+  with no public address, permissions boundaries and attached service control policies.
+- `iam:PassRole` reaches the roles that trust the service and that the statement covers, not account
+  administrator. With no trusting role in the repository it is a lead.
+
 ## [0.8.0] - 2026-11-01
 
 ### Added
