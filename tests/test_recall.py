@@ -20,12 +20,12 @@ LINES = {"src/app.py": [[100, 104]]}
 
 
 def test_a_finding_on_the_fixed_lines_counts() -> None:
-    assert recall.found(report("src/app.py", 102), LINES)
-    assert recall.found(report("src/app.py", 96), LINES)  # the line before the fix's context
+    assert recall.found(report("src/app.py", 102), LINES) == "line"
+    assert recall.found(report("src/app.py", 96), LINES) == "line"  # just before the fix's context
 
 
-def test_a_finding_elsewhere_in_the_file_does_not() -> None:
-    assert not recall.found(report("src/app.py", 300), LINES)
+def test_a_finding_elsewhere_in_the_file_counts_as_less() -> None:
+    assert recall.found(report("src/app.py", 300), LINES) == "file"
 
 
 def test_another_file_does_not() -> None:
@@ -38,8 +38,9 @@ def test_a_dependency_or_secret_on_that_line_is_not_finding_the_flaw() -> None:
 
 def test_the_tally_keeps_failed_scans_out_of_both_sides() -> None:
     rows = [
-        {"weakness": "SSRF", "outcome": "ok", "found": True},
-        {"weakness": "SSRF", "outcome": "ok", "found": False},
+        {"weakness": "SSRF", "outcome": "ok", "found": "line"},
+        {"weakness": "SSRF", "outcome": "ok", "found": "file"},
+        {"weakness": "SSRF", "outcome": "ok", "found": None},
         {"weakness": "SQL injection", "outcome": "crash", "found": None},
     ]
-    assert recall.tally(rows) == {"cases": 2, "found": 1, "by_weakness": {"SSRF": [1, 2]}}
+    assert recall.tally(rows) == {"cases": 3, "on_line": 1, "in_file": 2, "by_weakness": {"SSRF": [1, 2, 3]}}

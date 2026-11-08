@@ -1,14 +1,14 @@
 {
-  "date": "2026-11-01",
-  "commit": "1433c67",
+  "date": "2026-11-08",
+  "commit": "23c90d8",
   "projects": 51,
   "crashes": 0,
-  "median_seconds": 31.9,
-  "max_seconds": 223.3,
+  "median_seconds": 34.5,
+  "max_seconds": 255.2,
   "over_5_minutes": 0,
-  "findings": 25142,
-  "paths": 76,
-  "projects_with_paths": 19,
+  "findings": 24877,
+  "paths": 74,
+  "projects_with_paths": 18,
   "gating_paths": 2,
   "real_gating_paths": 2,
   "false_gating_paths": 0,
@@ -19,30 +19,37 @@
   "projects_one_bug_away": 34,
   "projects_modeling_nothing": 0,
   "recall": {
-    "cases": 38,
-    "found": 10,
+    "cases": 39,
+    "on_line": 10,
+    "in_file": 13,
     "by_weakness": {
       "code injection": [
+        1,
         1,
         7
       ],
       "command injection": [
         6,
+        7,
         13
       ],
       "SSRF": [
+        0,
         0,
         3
       ],
       "path traversal": [
         3,
+        4,
         12
       ],
       "deserialization": [
         0,
-        2
+        1,
+        3
       ],
       "SQL injection": [
+        0,
         0,
         1
       ]

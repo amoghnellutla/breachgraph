@@ -40,10 +40,12 @@ def explorer_payload(result: ScanResult) -> dict[str, Any] | None:
         "nodes": [n.model_dump(mode="json") for n in ag.graph.nodes],
         "edges": [e.model_dump(mode="json") for e in ag.graph.edges],
         "truncated": ag.graph.truncated,
+        "smallest": ag.fix_set.fixes if ag.fix_set else [],
         "paths": [
             {
                 "id": p.id or str(i),
                 "group": p.group or p.id or str(i),
+                "known_as": p.known_as,
                 "target": p.target,
                 "confidence": p.confidence,
                 "gating": p.gating,

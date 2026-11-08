@@ -7,9 +7,11 @@ import hashlib
 from breachgraph.config import AttackGraph as AttackGraphConfig
 from breachgraph.graph import AttackGraphResult
 from breachgraph.graph.attack import step_techniques
+from breachgraph.graph.cut import smallest_fix_set
 from breachgraph.graph.exposure import Exposure
-from breachgraph.graph.model import Confidence, Graph, NodeKind
+from breachgraph.graph.model import Confidence, Graph, NodeKind, WeaknessClass
 from breachgraph.graph.paths import AttackPath
+from breachgraph.graph.sources.actions import BRANCH_ID
 from breachgraph.models import (
     AttackGraphSummary,
     AttackPathView,
@@ -18,6 +20,7 @@ from breachgraph.models import (
     Coverage,
     ExposureView,
     Finding,
+    FixSetView,
     GraphEdgeView,
     GraphExport,
     GraphNodeView,
@@ -39,6 +42,23 @@ def path_id(path: AttackPath) -> str:
     nodes = path.nodes
     parts = [nodes[0], path.target.id, *sorted(path.weaknesses)] if path.weaknesses else nodes
     return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+
+def known_as(path: AttackPath, graph: Graph) -> str:
+    """The public incident a path has the shape of. It helps a reader place the risk, so only a
+    match on the steps themselves counts."""
+    vias = [s.via for s in path.steps]
+    if (
+        WeaknessClass.SSRF in vias
+        and path.target.kind is NodeKind.DATASTORE
+        and any(graph.nodes[s.edge.dst].kind is NodeKind.IDENTITY for s in path.steps)
+    ):
+        return "The shape of the 2019 Capital One breach: SSRF, instance credentials, then storage."
+    if BRANCH_ID in path.nodes or any(n.startswith("image:") for n in path.nodes[1:-1]):
+        return (
+            "The shape of the 2024 Ultralytics compromise: a workflow an outsider starts poisons a release."
+        )
+    return ""
 
 
 def group_id(path: AttackPath) -> str:
@@ -76,6 +96,7 @@ def summarize(
             AttackPathView(
                 id=pid,
                 group=group_id(p),
+                known_as=known_as(p, result.graph),
                 node_ids=p.nodes,
                 target=p.target.name,
                 target_kind=p.target.kind.value,
@@ -102,9 +123,16 @@ def summarize(
         )
         for c in result.choke_points
     ]
+    smallest = smallest_fix_set(v.weaknesses for v in views)
     return AttackGraphSummary(
         enabled=True,
         paths=views,
+        fix_set=FixSetView(
+            fixes=smallest.fixes,
+            exact=smallest.exact,
+            closes=smallest.closes,
+            beyond_code=smallest.beyond_code,
+        ),
         choke_points=chokes,
         exposures=[_exposure(x, result.graph) for x in result.exposures],
         skipped=result.skipped,

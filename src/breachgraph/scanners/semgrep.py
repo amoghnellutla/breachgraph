@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, ClassVar, cast
 
 from breachgraph.config import SemgrepConfig
-from breachgraph.graph.model import not_run
+from breachgraph.graph.model import not_run, request_cannot_reach
 from breachgraph.models import Category, Confidence, Finding, Location, Severity, ToolStatus
 from breachgraph.paths import iter_files
 from breachgraph.scanners._util import first_sentence, read_snippet, simple_dir_excludes
@@ -111,8 +111,10 @@ class SemgrepScanner(Scanner):
         for r in results:
             if ".compatibility." in r["check_id"]:
                 continue  # "this needs Python 3.7" says nothing about security
-            if r["check_id"].endswith("-parameter") and (r["path"], r["start"]["line"]) in traced:
-                continue
+            if r["check_id"].endswith("-parameter") and (
+                (r["path"], r["start"]["line"]) in traced or request_cannot_reach(r["path"])
+            ):
+                continue  # these rules only mean something where a request can arrive
             extra = r.get("extra", {})
             meta = extra.get("metadata", {}) or {}
             path = r["path"]

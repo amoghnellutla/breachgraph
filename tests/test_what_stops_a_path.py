@@ -203,3 +203,43 @@ def test_a_role_that_trusts_another_service_cannot_be_passed_here(tmp_path: Path
 def test_no_trusting_role_here_is_only_a_lead(tmp_path: Path) -> None:
     edge = next(e for e in role(tmp_path, PASS).edges if e.dst == "aws:account-admin")
     assert edge.confidence is Confidence.LOW
+
+
+DB = """
+resource "aws_vpc" "main" { cidr_block = "10.0.0.0/16" }
+resource "aws_security_group" "db" {}
+resource "aws_security_group_rule" "in" {
+  type = "ingress"
+  cidr_blocks = [%s]
+  security_group_id = aws_security_group.db.id
+}
+resource "aws_db_instance" "main" {
+  publicly_accessible = true
+  password = "committed"
+  vpc_security_group_ids = [%s]
+}
+"""
+
+
+def reaches_database(tmp_path: Path, cidr: str, groups: str = "aws_security_group.db.id") -> bool:
+    graph = load(tmp_path, DB % (cidr, groups))
+    return any(e.src == INTERNET_ID and "endpoint" in e.dst for e in graph.edges)
+
+
+def test_a_public_database_behind_its_own_network_is_not_reachable(tmp_path: Path) -> None:
+    assert not reaches_database(tmp_path, "aws_vpc.main.cidr_block")
+    assert not reaches_database(tmp_path, '"10.0.0.0/8"')
+
+
+@pytest.mark.parametrize(
+    ("cidr", "groups"),
+    [
+        ('"0.0.0.0/0"', "aws_security_group.db.id"),
+        ("var.allowed", "aws_security_group.db.id"),  # could be anything
+        ('"10.0.0.0/8"', '"sg-0123", aws_security_group.db.id'),  # a group we can't read
+    ],
+)
+def test_a_database_stays_reported_unless_every_group_shuts_it(
+    tmp_path: Path, cidr: str, groups: str
+) -> None:
+    assert reaches_database(tmp_path, cidr, groups)

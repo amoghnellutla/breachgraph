@@ -23,9 +23,8 @@ def test_published_numbers_are_current_and_within_the_limits() -> None:
 def test_the_published_counts_cannot_carry_a_project_or_file_name() -> None:
     c = json.loads(corpus.PUBLISHED.read_text(encoding="utf-8"))
     assert not [v for k, v in c.items() if isinstance(v, str) and k not in ("date", "commit")]
-    assert corpus.recall_table({"found": 1, "cases": 2, "by_weakness": {"SSRF": [1, 2]}}).endswith(
-        "| 1 of 2 |"
-    )
+    table = corpus.recall_table({"on_line": 1, "in_file": 2, "cases": 3, "by_weakness": {"SSRF": [1, 2, 3]}})
+    assert table.endswith("| All | 1 | 2 | 3 |")
 
 
 def test_a_scan_that_saw_nothing_is_not_a_clean_result() -> None:

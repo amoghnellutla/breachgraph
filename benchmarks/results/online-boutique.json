@@ -3,16 +3,16 @@
   "repo": "https://github.com/GoogleCloudPlatform/microservices-demo",
   "sha": "38e7348eb289eb5b87c0c6e8cb19ced0449dc389",
   "kind": "control",
-  "breachgraph_version": "0.7.0",
-  "breachgraph_commit": "1433c67",
-  "wall_time_s": 42.3,
+  "breachgraph_version": "0.9.0",
+  "breachgraph_commit": "e6ee1bc",
+  "wall_time_s": 48.0,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 0,
-      "duration_s": 19.51,
+      "duration_s": 22.16,
       "message": null
     },
     {
@@ -20,7 +20,7 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 0,
-      "duration_s": 2.2,
+      "duration_s": 2.82,
       "message": null
     },
     {
@@ -28,7 +28,7 @@
       "status": "ok",
       "version": "0.75.0",
       "findings": 569,
-      "duration_s": 33.41,
+      "duration_s": 37.41,
       "message": null
     },
     {
@@ -36,15 +36,15 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 59,
-      "duration_s": 0.99,
+      "duration_s": 1.48,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.7.0",
+      "version": "0.9.0",
       "findings": 1,
-      "duration_s": 0.31,
+      "duration_s": 0.4,
       "message": null
     }
   ],
@@ -53,9 +53,9 @@
   "multi_tool_findings": 1,
   "by_priority": {
     "P1": 7,
-    "P2": 115,
-    "P3": 210,
-    "P4": 290
+    "P2": 119,
+    "P3": 207,
+    "P4": 289
   },
   "gating_findings": 1,
   "graph_stats": {
@@ -68,6 +68,9 @@
     "paths_not_shown": 0
   },
   "blind_spots": [
+    ".github/terraform: module enable_google_apis comes from terraform-google-modules/project-factory/google//modules/project_services, which isn't in the repository",
+    "terraform: module enable_google_apis comes from terraform-google-modules/project-factory/google//modules/project_services, which isn't in the repository",
+    "terraform: module gcloud comes from terraform-google-modules/gcloud/google, which isn't in the repository",
     ".github/terraform/main.tf:98: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform",
     "terraform/main.tf:40: GKE nodes use the Compute Engine default service account, whose roles are not in Terraform",
     ".github/terraform/main.tf:70: GCP role 'roles/monitoring.metricWriter' is not modeled, binding ignored",

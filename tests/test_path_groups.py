@@ -14,7 +14,7 @@ from breachgraph.graph.model import (
     internet,
 )
 from breachgraph.graph.paths import find_paths
-from breachgraph.graph.summary import group_id
+from breachgraph.graph.summary import group_id, known_as
 from breachgraph.models import AttackGraphSummary, AttackPathView, AttackStep
 
 
@@ -76,3 +76,27 @@ def test_a_blocking_path_leads_its_group() -> None:
 
 def test_older_reports_have_no_groups_so_nothing_merges() -> None:
     assert len(AttackGraphSummary(paths=[view(""), view("")]).grouped()) == 2
+
+
+def incident_graph(via: WeaknessClass, target: NodeKind) -> Graph:
+    g = Graph()
+    g.add_node(internet())
+    g.add_node(Node(id="w", kind=NodeKind.WORKLOAD, name="web", weaknesses=[]))
+    g.add_node(Node(id="r", kind=NodeKind.IDENTITY, name="role"))
+    g.add_node(Node(id="d", kind=target, name="data", value=9))
+    g.nodes["w"].weaknesses.append(
+        Weakness(cls=via, title="t", evidence=Evidence(path="a.py", line=1), fingerprint="f")
+    )
+    g.add_edge(Edge(src=INTERNET_ID, dst="w", kind=EdgeKind.EXPOSES))
+    g.add_edge(Edge(src="w", dst="r", kind=EdgeKind.USES_IDENTITY, requires=[via]))
+    g.add_edge(Edge(src="r", dst="d", kind=EdgeKind.CAN_ACCESS))
+    return g
+
+
+def test_a_path_with_a_known_shape_says_so_and_others_do_not() -> None:
+    ssrf = incident_graph(WeaknessClass.SSRF, NodeKind.DATASTORE)
+    assert "Capital One" in known_as(find_paths(ssrf)[0], ssrf)
+    rce = incident_graph(WeaknessClass.CODE_EXECUTION, NodeKind.DATASTORE)
+    assert known_as(find_paths(rce)[0], rce) == ""
+    secret = incident_graph(WeaknessClass.SSRF, NodeKind.SECRET)
+    assert known_as(find_paths(secret)[0], secret) == ""

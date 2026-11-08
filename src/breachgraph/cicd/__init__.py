@@ -97,6 +97,9 @@ def analyze(target: Path, exclude: list[str]) -> tuple[list[Finding], list[str]]
             findings += _untrusted_checkout(wf, job, by_name)
             findings += _agent_prompt_injection(wf, job)
     findings += dependency_confusion(target, exclude)
+    from breachgraph.cicd.mcp import mcp_configs  # the graph package imports this one
+
+    findings += mcp_configs(target, exclude)
     return findings, skipped
 
 

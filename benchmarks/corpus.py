@@ -292,8 +292,9 @@ def summary() -> int:
 
 
 def recall_table(r: dict[str, Any]) -> str:
-    rows = [f"| {w} | {f} of {n} |" for w, (f, n) in sorted(r["by_weakness"].items())]
-    return "\n".join(["| Weakness | Found |", "|---|---|", *rows, f"| All | {r['found']} of {r['cases']} |"])
+    rows = [f"| {w} | {line} | {file} | {n} |" for w, (line, file, n) in sorted(r["by_weakness"].items())]
+    head = ["| Weakness | On the fixed lines | In a fixed file | Cases |", "|---|---:|---:|---:|"]
+    return "\n".join([*head, *rows, f"| All | {r['on_line']} | {r['in_file']} | {r['cases']} |"])
 
 
 def counts(rows: list[dict[str, Any]], review: dict[str, int]) -> dict[str, Any]:
@@ -389,14 +390,16 @@ in the code, but no path here was exploited to prove it.
 
 Precision can't show what a tool misses, so `benchmarks/recall.py` takes reviewed GitHub advisories by
 a written rule: the newest HIGH or CRITICAL ones in npm, PyPI, Go and Maven for weaknesses breachgraph
-has rules for, each with a linked fix commit. It scans the commit just before the fix and counts a
-case as found when a code finding lands within {RECALL_WINDOW} lines of a line the fix changed.
+has rules for, each with a linked fix commit. It scans the commit just before the fix and counts
+whether a code finding lands within {RECALL_WINDOW} lines of a line the fix changed, or only in a file it
+changed. Fixes often land apart from the flaw, as validation or a new default, so the first column
+undercounts and the second can overcount.
 
 {recall_table(c["recall"])}
 
-Most of these are missed. They are library bugs, often deep in code a
-rule-based scanner can't follow, so read this as a floor for what attack paths can start from, and
-as the reason a path's absence never means a repository is safe.
+Reading the misses shows why. Most are logic bugs in libraries, not a value reaching a dangerous
+call, and no rule finds those without also flagging correct code. So read this as a floor for what
+attack paths can start from, and as the reason a path's absence never means a repository is safe.
 
 ## What this does not show
 

@@ -232,3 +232,24 @@ rules:
       - pattern: os.system(...)
       - pattern: subprocess.$F(..., shell=True, ...)
       - pattern: $CURSOR.execute(...)
+  - id: breachgraph.python.deserialization-parameter
+    mode: taint
+    languages: [python]
+    severity: WARNING
+    message: A function's parameter is deserialized, which can run code. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      confidence: MEDIUM
+    pattern-sources: *py-parameter
+    pattern-sinks:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: dill.loads(...)
+      - pattern: jsonpickle.decode(...)
+      - pattern: yaml.load($X)  # a custom Loader is usually a SafeLoader subclass
+      - pattern: yaml.load(..., Loader=yaml.Loader, ...)
+      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader, ...)
+      - pattern: yaml.load(..., Loader=yaml.FullLoader, ...)
+      - patterns:
+          - pattern: torch.load(...)
+          - pattern-not: torch.load(..., weights_only=True, ...)

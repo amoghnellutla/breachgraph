@@ -262,6 +262,7 @@ class AttackStep(BaseModel):
 class AttackPathView(BaseModel):
     id: str = ""  # stable across runs: entry, target and the findings it needs (see graph.summary)
     group: str = ""  # shared by paths using the same kind of flaw to reach the same asset
+    known_as: str = ""  # a public incident with the same shape
     node_ids: list[str] = Field(default_factory=list)
     target: str
     target_kind: str
@@ -358,11 +359,21 @@ class ExposureView(BaseModel):
     harden: str = ""  # the setting that takes the target out of reach
 
 
+class FixSetView(BaseModel):
+    """The fewest findings to fix so that every path that rests on a finding closes."""
+
+    fixes: list[str] = Field(default_factory=list)  # fingerprints
+    exact: bool = False  # proved smallest, not only small
+    closes: int = 0
+    beyond_code: int = 0  # paths with no finding to fix: a setting has to change
+
+
 class AttackGraphSummary(BaseModel):
     enabled: bool = True
     paths: list[AttackPathView] = Field(default_factory=list)
     choke_points: list[ChokePointView] = Field(default_factory=list)
     exposures: list[ExposureView] | None = None
+    fix_set: FixSetView | None = None
     skipped: list[str] = Field(default_factory=list)
     stats: dict[str, int] = Field(default_factory=dict)
     graph: GraphExport | None = None

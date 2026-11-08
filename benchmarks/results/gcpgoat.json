@@ -3,16 +3,16 @@
   "repo": "https://github.com/ine-labs/GCPGoat",
   "sha": "44605c4bff4b2da7611dfce78696bb53db6d8c54",
   "kind": "vulnerable",
-  "breachgraph_version": "0.7.0",
-  "breachgraph_commit": "1433c67",
-  "wall_time_s": 62.0,
+  "breachgraph_version": "0.9.0",
+  "breachgraph_commit": "e6ee1bc",
+  "wall_time_s": 72.7,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 2,
-      "duration_s": 29.46,
+      "duration_s": 33.93,
       "message": null
     },
     {
@@ -20,15 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 13,
-      "duration_s": 5.5,
+      "duration_s": 6.04,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 466,
-      "duration_s": 55.8,
+      "findings": 456,
+      "duration_s": 65.72,
       "message": null
     },
     {
@@ -42,19 +42,19 @@
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.7.0",
+      "version": "0.9.0",
       "findings": 0,
-      "duration_s": 0.04,
+      "duration_s": 0.1,
       "message": null
     }
   ],
-  "raw_findings": 481,
-  "findings": 412,
+  "raw_findings": 471,
+  "findings": 404,
   "multi_tool_findings": 0,
   "by_priority": {
     "P1": 28,
-    "P2": 67,
-    "P3": 213,
+    "P2": 63,
+    "P3": 209,
     "P4": 104
   },
   "gating_findings": 8,

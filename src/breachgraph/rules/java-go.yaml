@@ -216,3 +216,33 @@ rules:
       cwe: ["CWE-321: Use of Hard-coded Cryptographic Key"]
       confidence: MEDIUM
     pattern: $T.SignedString([]byte("..."))
+  - id: breachgraph.java.command-injection-parameter
+    mode: taint
+    languages: [java]
+    severity: WARNING
+    message: A function's parameter reaches a command the server runs. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-78: OS Command Injection"]
+      confidence: MEDIUM
+    pattern-sources: &java-parameter
+      - patterns:
+          - pattern-inside: |
+              $R $F(..., String $P, ...) { ... }
+          - focus-metavariable: $P
+    pattern-sinks:
+      - pattern: Runtime.getRuntime().exec(...)
+      - pattern: new ProcessBuilder(...)
+  - id: breachgraph.java.sql-injection-parameter
+    mode: taint
+    languages: [java]
+    severity: WARNING
+    message: A function's parameter is built into a SQL statement. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-89: SQL Injection"]
+      confidence: MEDIUM
+    pattern-sources: *java-parameter
+    pattern-sinks:
+      - pattern: $S.executeQuery("..." + $X)
+      - pattern: $S.executeUpdate("..." + $X)
+      - pattern: $S.execute("..." + $X)
+      - pattern: $C.prepareStatement("..." + $X)

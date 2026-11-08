@@ -58,7 +58,11 @@ def test_a_default_names_the_role_and_a_local_names_the_bucket(tmp_path: Path) -
 
 
 def test_tfvars_beat_a_default(tmp_path: Path) -> None:
-    write(tmp_path, "main.tf", 'variable "role_name" {\n  default = "web"\n}\nlocals {\n  prefix = "s"\n}\n' + ROLE)
+    write(
+        tmp_path,
+        "main.tf",
+        'variable "role_name" {\n  default = "web"\n}\nlocals {\n  prefix = "s"\n}\n' + ROLE,
+    )
     write(tmp_path, "terraform.tfvars", 'role_name = "prod"\n')
     assert "aws:iam_role:prod" in load(tmp_path)[0].nodes
 

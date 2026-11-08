@@ -11,17 +11,17 @@ listed as misses.
 
 | Project | Kind | Scanner findings | After dedupe | Blocking findings | Attack paths | True | False | Unclear |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 715 | 677 | 5 | 2 | 2 | 0 | 0 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 560 | 548 | 0 | 0 | 0 | 0 | 0 |
+| [terragoat](https://github.com/bridgecrewio/terragoat) | vulnerable | 711 | 673 | 5 | 2 | 2 | 0 | 0 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | vulnerable | 557 | 545 | 0 | 0 | 0 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | vulnerable | 601 | 601 | 0 | 1 | 1 | 0 | 0 |
-| [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 583 | 514 | 10 | 3 | 3 | 0 | 0 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 496 | 413 | 8 | 2 | 2 | 0 | 0 |
-| [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 481 | 412 | 8 | 5 | 4 | 1 | 0 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | vulnerable | 573 | 506 | 10 | 3 | 3 | 0 | 0 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | vulnerable | 490 | 409 | 8 | 2 | 2 | 0 | 0 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | vulnerable | 471 | 404 | 8 | 5 | 4 | 1 | 0 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | vulnerable | 273 | 273 | 2 | 4 | 3 | 1 | 0 |
 | [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) | control | 629 | 622 | 1 | 0 | 0 | 0 | 0 |
-| **Total** | | **4,338** | **4,060** | **34** | **17** | **15** | **2** | **0** |
+| **Total** | | **4,305** | **4,033** | **34** | **17** | **15** | **2** | **0** |
 
-**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,060 deduplicated findings reduce to **17 attack paths** to review first.
+**Path precision: 88%** (15 of 17 decided paths are real attack chains). 4,033 deduplicated findings reduce to **17 attack paths** to review first.
 
 Of the 15 real paths, 10 are direct exposures of data (a public bucket, dataset or storage account) and 5 are chains that needed a weakness (a code vulnerability or a committed credential) to get in. 8 documented scenarios were not found as complete paths; each is listed below with the reason.
 
@@ -33,11 +33,11 @@ Terraform misconfigurations across AWS, Azure and GCP. Commit `729f8da62c6a`.
 
 TerraGoat is misconfigured Terraform for AWS, Azure, GCP (and Alibaba/Oracle) with no application code, so the paths that can exist are direct exposures of data. Both reported paths are real. The other intended misconfigurations are findings, not complete attack paths: they need credentials or an application weakness that TerraGoat does not contain.
 
-- **true** · high confidence · `Internet -> BigQuery dataset dataset`
+- **true** · high confidence · `Internet -> BigQuery dataset terragoat_dev_dataset`
   The dataset grants READER to the special group allAuthenticatedUsers (terraform/gcp/big_data.tf:23), so any Google account can read it.
-- **true** · high confidence · `Internet -> GCS bucket terragoat_website`
+- **true** · high confidence · `Internet -> GCS bucket terragot-dev`
   allUsers holds roles/storage.objectViewer on the bucket (terraform/gcp/gcs.tf:17); anyone on the internet can read every object.
-- **miss**: Publicly accessible RDS instance (terraform/aws/db-app.tf:22). Reported as an internet-facing database endpoint. It is not a path without database credentials, and the password comes from a variable, by design ("no free ride").
+- **miss**: Publicly accessible RDS instance (terraform/aws/db-app.tf:22). Not a path, correctly. The password default is committed (terraform/aws/consts.tf:42), but the only ingress rule admits port 3306 from the VPC's own range (terraform/aws/db-app.tf:141).
 - **miss**: EC2 instance with SSH and HTTP open to 0.0.0.0/0 (terraform/aws/ec2.tf). Reported as exposure; the instance runs no code in the repository that has a weakness.
 
 ### kubernetes-goat
@@ -138,7 +138,7 @@ points on, add the paths below. They are not hand-labeled and are not part of th
 |---|---:|---:|
 | terragoat | 6 | 0 |
 | kubernetes-goat | 0 | 0 |
-| cloudgoat | 26 | 0 |
+| cloudgoat | 31 | 0 |
 | awsgoat | 0 | 0 |
 | azuregoat | 0 | 0 |
 | gcpgoat | 0 | 0 |
@@ -149,8 +149,8 @@ The longest chains:
 
 - terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data`
 - terragoat: `Internet -> Leaked access key of IAM user user (assumed) -> IAM user user -> S3 bucket data_science`
-- cloudgoat: `Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> AWS account administrator`
-- cloudgoat: `Internet -> Leaked access key of IAM user starting_user (assumed) -> IAM user starting_user -> IAM role lambda_execution_role -> DynamoDB table secrets_table`
+- cloudgoat: `Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> IAM role debug_role -> IAM role cg-Glue_Privesc-ec2-profile -> IAM role ec2_instance_profile_role -> IAM role ec2_role -> AWS account administrator`
+- cloudgoat: `Internet -> Leaked access key of IAM user chris (assumed) -> IAM user chris -> IAM role lambdaManager_role -> IAM role debug_role -> IAM role cg-Glue_Privesc-ec2-profile -> IAM role ec2_instance_profile_role -> IAM role ec2_role -> RDS database cg-psql-rds`
 
 ## Reproduce
 
@@ -160,4 +160,4 @@ python benchmarks/run.py           # clones each project at its pinned commit an
 python benchmarks/report.py        # rebuilds this page from results/ and labels/
 ```
 
-Run with breachgraph at commit `1433c67`. Scanner versions are recorded per run in `benchmarks/results/`.
+Run with breachgraph at commit `e6ee1bc`. Scanner versions are recorded per run in `benchmarks/results/`.

@@ -319,6 +319,14 @@ through what the job's token can write:
   publishes. The path reaches what the workloads running that image can reach. An image pinned to a
   digest can't be replaced. Other registries aren't modeled.
 
+## The fewest fixes
+
+A path breaks when any one of its weaknesses is fixed. So the question that matters is which fixes
+close everything, and fixing what breaks the most paths first isn't always the shortest answer.
+breachgraph searches for the smallest set, checks the result against every path again, and says
+whether it proved the set smallest or ran out of search budget. Paths with no finding on them are
+counted apart, because a setting has to change, and `breachgraph fix` proposes those.
+
 ## Paths of the same kind
 
 Paths that use the same kind of flaw to reach the same asset are shown as one entry, "and 34 more

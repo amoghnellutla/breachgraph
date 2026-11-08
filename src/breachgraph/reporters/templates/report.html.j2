@@ -960,6 +960,8 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
 
   /* The fewest fixes that close every path: each round takes the one that closes the most. */
   function smallestFixes() {
+    // The engine's answer is proved smallest. Once a reader marks a fix, plan from what's left.
+    if (!touched().length && data.smallest && data.smallest.length) return data.smallest.slice();
     var open = data.paths.filter(function (p) { return alive(p) && p.weaknesses.length; }), picks = [];
     while (open.length) {
       var count = {};
@@ -1070,6 +1072,7 @@ footer { padding: var(--s4) 0 var(--s6); color: var(--muted); font-size: 12.5px;
       said = end = to;
     });
     if (end !== p.target) out.push(["From there it reaches ", p.target, "."]);
+    if (p.known_as) out.push([p.known_as]);
     return out;
   }
   function storyText(p) { return story(p).map(function (x) { return x.join(""); }).join(" "); }

@@ -224,3 +224,16 @@ rules:
       - pattern: exec(...)
       - pattern: execSync(...)
       - pattern: child_process.exec(...)
+  - id: breachgraph.javascript.deserialization-parameter
+    mode: taint
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A function's parameter is deserialized, which can run code. Dangerous if a request can reach this function.
+    metadata:
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      confidence: MEDIUM
+    pattern-sources: *js-parameter
+    pattern-sinks:
+      - pattern: $S.unserialize(...)
+      - pattern: vm.runInNewContext(...)
+      - pattern: vm.runInThisContext(...)

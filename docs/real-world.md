@@ -17,7 +17,7 @@ Every path that blocks a merge was reviewed by reading the code. Nothing was run
 project. Findings in other people's projects stay private, so only counts are given here and no
 project is named.
 
-Run on 2026-11-01 at commit `1433c67`.
+Run on 2026-11-08 at commit `23c90d8`.
 
 Correction: the version of this page released with 0.7.0 was wrong. Seven of its 51 scans had run on
 an interrupted checkout with no files, and those scans counted as clean passes, so it overstated
@@ -30,14 +30,14 @@ treats a scan that saw nothing as a failure, which stops a release from publishi
 |---|---|
 | Projects | 51 |
 | Crashes | 0 |
-| Scan time, median | 32s |
-| Scan time, slowest | 223s |
+| Scan time, median | 34s |
+| Scan time, slowest | 255s |
 | Scans over 5 minutes | 0 |
-| Findings reported | 25,142 |
+| Findings reported | 24,877 |
 | Projects that pass a first scan | 48 of 51 |
 | Blocking findings per project, median | 0 |
 | Blocking findings per project, most | 1 |
-| Attack paths reported | 76, in 19 projects |
+| Attack paths reported | 74, in 18 projects |
 | Attack paths that block a merge | 2 |
 | Of those, real on review | 2 |
 | Of those, false | 0 |
@@ -51,22 +51,24 @@ in the code, but no path here was exploited to prove it.
 
 Precision can't show what a tool misses, so `benchmarks/recall.py` takes reviewed GitHub advisories by
 a written rule: the newest HIGH or CRITICAL ones in npm, PyPI, Go and Maven for weaknesses breachgraph
-has rules for, each with a linked fix commit. It scans the commit just before the fix and counts a
-case as found when a code finding lands within 5 lines of a line the fix changed.
+has rules for, each with a linked fix commit. It scans the commit just before the fix and counts
+whether a code finding lands within 5 lines of a line the fix changed, or only in a file it
+changed. Fixes often land apart from the flaw, as validation or a new default, so the first column
+undercounts and the second can overcount.
 
-| Weakness | Found |
-|---|---|
-| SQL injection | 0 of 1 |
-| SSRF | 0 of 3 |
-| code injection | 1 of 7 |
-| command injection | 6 of 13 |
-| deserialization | 0 of 2 |
-| path traversal | 3 of 12 |
-| All | 10 of 38 |
+| Weakness | On the fixed lines | In a fixed file | Cases |
+|---|---:|---:|---:|
+| SQL injection | 0 | 0 | 1 |
+| SSRF | 0 | 0 | 3 |
+| code injection | 1 | 1 | 7 |
+| command injection | 6 | 7 | 13 |
+| deserialization | 0 | 1 | 3 |
+| path traversal | 3 | 4 | 12 |
+| All | 10 | 13 | 39 |
 
-Most of these are missed. They are library bugs, often deep in code a
-rule-based scanner can't follow, so read this as a floor for what attack paths can start from, and
-as the reason a path's absence never means a repository is safe.
+Reading the misses shows why. Most are logic bugs in libraries, not a value reaching a dangerous
+call, and no rule finds those without also flagging correct code. So read this as a floor for what
+attack paths can start from, and as the reason a path's absence never means a repository is safe.
 
 ## What this does not show
 

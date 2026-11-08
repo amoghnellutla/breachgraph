@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from breachgraph.config import Config
 from breachgraph.models import ToolStatus
 from breachgraph.scanners.base import ScanContext, Step
@@ -108,6 +110,24 @@ def test_compatibility_rules_are_not_findings(tmp_path: Path) -> None:
     }
     ctx = ScanContext(target=tmp_path, work_dir=tmp_path, config=Config())
     assert SemgrepScanner().parse(raw, ctx) == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["scripts/gen.py", "app/foo.test.ts", "electron/ipc.node-test.mjs", "browser-tests/a.cjs", "public/w.js"],
+)
+def test_a_parameter_rule_means_nothing_where_no_request_arrives(tmp_path: Path, path: str) -> None:
+    ctx = ScanContext(target=tmp_path, work_dir=tmp_path, config=Config())
+    result = {
+        "check_id": "breachgraph.python.ssrf-parameter",
+        "path": path,
+        "start": {"line": 1},
+        "end": {"line": 1},
+        "extra": {"message": "m", "severity": "WARNING", "metadata": {}},
+    }
+    assert SemgrepScanner().parse({"results": [result]}, ctx) == []
+    result["path"] = "src/tools/fetch.py"
+    assert len(SemgrepScanner().parse({"results": [result]}, ctx)) == 1
 
 
 def test_a_tainted_match_replaces_the_parameter_match(tmp_path: Path) -> None:

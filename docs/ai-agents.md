@@ -42,7 +42,7 @@ With [pre-commit](https://pre-commit.com):
 ```yaml
 repos:
   - repo: https://github.com/amoghnellutla/breachgraph
-    rev: v0.8.0
+    rev: v0.9.0
     hooks:
       - id: breachgraph
 ```

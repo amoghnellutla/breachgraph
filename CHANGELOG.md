@@ -6,10 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-08
+
 ### Added
 
 - Terraform `var.` and `local.` values are resolved from defaults, `terraform.tfvars`, `*.auto.tfvars`
   and what a local `module` block passes in. A remote module is reported as a blind spot.
+- The smallest set of fixes that closes every path, proved and rechecked, in the console, pull
+  request comment, JSON and HTML report.
+- MCP server configs in a repository: a server that runs an unpinned package, or is reached over
+  plain HTTP.
+- A path with the shape of a public incident says so.
+- More rules: deserialization in Python and JavaScript, including unsafe `yaml.load` and
+  `torch.load`, and command and SQL injection in Java. Each finds a sink in a helper, and the call
+  graph decides if a route reaches it.
+- The recall benchmark records which rules hit each advisory. Path traversal rules for four
+  languages and SSRF rules for Go and Java were tried and left out: they caught none of the
+  advisories and added about 500 findings across the corpus.
 
 ### Changed
 
@@ -17,6 +30,17 @@ All notable changes to this project are documented here. The format follows
   with no public address, permissions boundaries and attached service control policies.
 - `iam:PassRole` reaches the roles that trust the service and that the statement covers, not account
   administrator. With no trusting role in the repository it is a lead.
+- A public RDS instance is a path only if one of its security groups admits the internet or a
+  source we can't resolve. Found on the benchmark: once inputs resolved, TerraGoat's committed
+  password made a path through a group that only admits the VPC.
+- A rule that only knows a function parameter reaches a sink is silent in tests, a maintainer's
+  scripts and bundled assets, where no request arrives.
+
+### Fixed
+
+- A scan no longer crashes when a scanner finishes only part of its work. The console had no style
+  for that status, so the scan stopped instead of reporting what finished. Found by the recall
+  benchmark; present since 0.8.0.
 
 ## [0.8.0] - 2026-11-01
 
@@ -534,7 +558,8 @@ Found by running breachgraph on vulnerable-by-design projects (see benchmarks/):
   gate by default; reachable ones are flagged. Also decides which dependency CVEs can be weapons
   in the attack graph.
 
-[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/amoghnellutla/breachgraph/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/amoghnellutla/breachgraph/compare/v0.5.0...v0.6.0

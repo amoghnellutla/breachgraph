@@ -27,17 +27,17 @@ healthy control. Every path it reported was checked by hand.
 <!-- benchmark-table:start -->
 | Project | Findings after dedupe | Attack paths | Real |
 |---|---:|---:|---:|
-| [terragoat](https://github.com/bridgecrewio/terragoat) | 677 | 2 | 2 |
-| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 548 | 0 | 0 |
+| [terragoat](https://github.com/bridgecrewio/terragoat) | 673 | 2 | 2 |
+| [kubernetes-goat](https://github.com/madhuakula/kubernetes-goat) | 545 | 0 | 0 |
 | [cloudgoat](https://github.com/RhinoSecurityLabs/cloudgoat) | 601 | 1 | 1 |
-| [awsgoat](https://github.com/ine-labs/AWSGoat) | 514 | 3 | 3 |
-| [azuregoat](https://github.com/ine-labs/AzureGoat) | 413 | 2 | 2 |
-| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 412 | 5 | 4 |
+| [awsgoat](https://github.com/ine-labs/AWSGoat) | 506 | 3 | 3 |
+| [azuregoat](https://github.com/ine-labs/AzureGoat) | 409 | 2 | 2 |
+| [gcpgoat](https://github.com/ine-labs/GCPGoat) | 404 | 5 | 4 |
 | [juice-shop](https://github.com/juice-shop/juice-shop) | 273 | 4 | 3 |
 | [online-boutique](https://github.com/GoogleCloudPlatform/microservices-demo) (control) | 622 | 0 | 0 |
-| **Total** | **4,060** | **17** | **15** |
+| **Total** | **4,033** | **17** | **15** |
 
-4,060 findings come down to 17 attack paths, and 15 of them are real chains an
+4,033 findings come down to 17 attack paths, and 15 of them are real chains an
 attacker could use (88% precision). Of the 15 that block a merge, 15 are real;
 the rest are low confidence and only reported. The control project gets none.
 <!-- benchmark-table:end -->
@@ -48,7 +48,7 @@ what it finds from a leaked key or a foothold inside the cluster are in
 
 The CI/CD checks were also run on 3,659 workflows from popular, well-maintained projects, where a
 false alarm costs a real team's time: [docs/ci-survey.md](docs/ci-survey.md). What a first scan
-gives real projects, and how many real vulnerabilities it would have found (10 of 38), is in
+gives real projects, and how many real vulnerabilities it would have found (10 of 39 on the fixed lines), is in
 [docs/real-world.md](docs/real-world.md).
 
 <p align="center"><img src="docs/img/attack-paths.png" alt="The HTML report's attack-graph explorer with one path selected, from the internet through an injectable CI job and its deploy role to a customer-data bucket" width="860"></p>

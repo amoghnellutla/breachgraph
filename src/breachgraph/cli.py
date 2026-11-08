@@ -271,9 +271,7 @@ def scan_cmd(
     )
 
     def on_done(run: ToolRun) -> None:
-        style = {"ok": "green", "imported": "cyan", "skipped": "dim", "failed": "red", "reused": "cyan"}[
-            run.status.value
-        ]
+        style = TOOL_STYLE[run.status]
         extra = f" {run.message}" if run.message and run.status is not ToolStatus.OK else ""
         console.print(
             f"  [{style}]{run.status.value:>8}[/] {run.name:<9} {run.findings:>4} findings"
@@ -354,6 +352,17 @@ def _missing_scanners_hint(result: ScanResult) -> None:
         markup=True,
         highlight=False,
     )
+
+
+# Every status needs one: a missing key crashed whole scans when a scanner finished partly.
+TOOL_STYLE = {
+    ToolStatus.OK: "green",
+    ToolStatus.IMPORTED: "cyan",
+    ToolStatus.REUSED: "cyan",
+    ToolStatus.SKIPPED: "dim",
+    ToolStatus.PARTIAL: "yellow",
+    ToolStatus.FAILED: "red",
+}
 
 
 def _check_writable(output_dir: Path) -> None:
@@ -455,9 +464,17 @@ def _print_attack_paths(result: ScanResult, limit: int = 8) -> None:
         more = f", and {len(rest)} more like it" if rest else ""
         console.print(f"  {i}. [{p.confidence}] risk {p.score}{flag}{login}{more}")
         console.print("     " + " → ".join(hops))
+        if p.known_as:
+            console.print(f"     [dim]{escape(p.known_as)}[/]")
     if ag.stats.get("paths_not_shown"):
         console.print(
             f"  [dim]{ag.stats['paths_not_shown']} lower-ranked path(s) over attack_graph.max_paths[/]"
+        )
+    if ag.fix_set and ag.fix_set.fixes:
+        proved = "the smallest set" if ag.fix_set.exact else "a small set"
+        others = f"; {ag.fix_set.beyond_code} more need a setting changed" if ag.fix_set.beyond_code else ""
+        console.print(
+            f"  [bold]{len(ag.fix_set.fixes)} fix(es) close {ag.fix_set.closes} path(s)[/], {proved}{others}"
         )
     if ag.choke_points:
         console.print("  [bold]Fix first:[/]")

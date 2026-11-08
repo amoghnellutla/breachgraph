@@ -214,6 +214,8 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
             else:
                 chain.append(_cell(s.dst, 40))
         out.append("`Internet` → " + " → ".join(chain))
+        if p.known_as:
+            out += ["", p.known_as]
         if rest:
             places = [f"`{s.evidence_path}:{s.evidence_line}`" for r in rest for s in r.steps if s.via][:5]
             shown = f": {', '.join(places)}" if places else ""
@@ -224,6 +226,9 @@ def _attack_paths_md(result: ScanResult) -> list[str]:
         out.append("")
     if ag.stats.get("paths_not_shown"):
         out += [f"{ag.stats['paths_not_shown']} lower-ranked path(s) are over `attack_graph.max_paths`.", ""]
+    if ag.fix_set and ag.fix_set.fixes:
+        proved = "the smallest set" if ag.fix_set.exact else "a small set"
+        out += [f"{len(ag.fix_set.fixes)} fix(es) close {ag.fix_set.closes} path(s), {proved}.", ""]
     if ag.choke_points:
         out.append("**Fix these first (each breaks the most paths):**")
         for c in ag.choke_points[:5]:

@@ -3,16 +3,16 @@
   "repo": "https://github.com/bridgecrewio/terragoat",
   "sha": "729f8da62c6a85ce4af5ad3d123de97776d954c4",
   "kind": "vulnerable",
-  "breachgraph_version": "0.7.0",
-  "breachgraph_commit": "1433c67",
-  "wall_time_s": 31.5,
+  "breachgraph_version": "0.9.0",
+  "breachgraph_commit": "e6ee1bc",
+  "wall_time_s": 206.3,
   "tools": [
     {
       "name": "semgrep",
       "status": "ok",
       "version": "1.179.0",
       "findings": 0,
-      "duration_s": 8.08,
+      "duration_s": 9.09,
       "message": null
     },
     {
@@ -20,15 +20,15 @@
       "status": "ok",
       "version": "8.30.1",
       "findings": 4,
-      "duration_s": 0.84,
+      "duration_s": 1.37,
       "message": null
     },
     {
       "name": "trivy",
       "status": "ok",
       "version": "0.75.0",
-      "findings": 698,
-      "duration_s": 27.67,
+      "findings": 694,
+      "duration_s": 167.68,
       "message": "package registry unavailable (rate limited); retried with --offline-scan, transitive Java dependencies were not resolved"
     },
     {
@@ -36,31 +36,31 @@
       "status": "ok",
       "version": "1.30.1",
       "findings": 13,
-      "duration_s": 0.78,
+      "duration_s": 0.98,
       "message": null
     },
     {
       "name": "cicd",
       "status": "ok",
-      "version": "0.7.0",
+      "version": "0.9.0",
       "findings": 0,
-      "duration_s": 0.08,
+      "duration_s": 0.05,
       "message": null
     }
   ],
-  "raw_findings": 715,
-  "findings": 677,
+  "raw_findings": 711,
+  "findings": 673,
   "multi_tool_findings": 0,
   "by_priority": {
     "P1": 51,
-    "P2": 300,
-    "P3": 245,
-    "P4": 81
+    "P2": 298,
+    "P3": 244,
+    "P4": 80
   },
   "gating_findings": 5,
   "graph_stats": {
-    "nodes": 47,
-    "edges": 27,
+    "nodes": 46,
+    "edges": 25,
     "routes": 0,
     "workloads": 8,
     "crown_jewels": 30,
@@ -72,8 +72,8 @@
   ],
   "attack_paths": [
     {
-      "key": "Internet -> BigQuery dataset dataset",
-      "target": "BigQuery dataset dataset",
+      "key": "Internet -> BigQuery dataset terragoat_dev_dataset",
+      "target": "BigQuery dataset terragoat_dev_dataset",
       "confidence": "high",
       "gating": true,
       "score": 20.0,
@@ -83,8 +83,8 @@
       ]
     },
     {
-      "key": "Internet -> GCS bucket terragoat_website",
-      "target": "GCS bucket terragoat_website",
+      "key": "Internet -> GCS bucket terragot-dev",
+      "target": "GCS bucket terragot-dev",
       "confidence": "high",
       "gating": true,
       "score": 17.5,

@@ -4,12 +4,12 @@ summary: >
   The other intended misconfigurations are findings, not complete attack paths: they need
   credentials or an application weakness that TerraGoat does not contain.
 paths:
-  - key: "Internet -> BigQuery dataset dataset"
+  - key: "Internet -> BigQuery dataset terragoat_dev_dataset"
     verdict: true
     why: >
       The dataset grants READER to the special group allAuthenticatedUsers (terraform/gcp/big_data.tf:23),
       so any Google account can read it.
-  - key: "Internet -> GCS bucket terragoat_website"
+  - key: "Internet -> GCS bucket terragot-dev"
     verdict: true
     why: >
       allUsers holds roles/storage.objectViewer on the bucket (terraform/gcp/gcs.tf:17); anyone on the
@@ -17,7 +17,7 @@ paths:
 misses:
   - scenario: Publicly accessible RDS instance (terraform/aws/db-app.tf:22).
     why: >
-      Reported as an internet-facing database endpoint. It is not a path without database credentials,
-      and the password comes from a variable, by design ("no free ride").
+      Not a path, correctly. The password default is committed (terraform/aws/consts.tf:42), but the
+      only ingress rule admits port 3306 from the VPC's own range (terraform/aws/db-app.tf:141).
   - scenario: EC2 instance with SSH and HTTP open to 0.0.0.0/0 (terraform/aws/ec2.tf).
     why: Reported as exposure; the instance runs no code in the repository that has a weakness.

@@ -70,8 +70,8 @@ READ_FILES = [*CONTROL, WeaknessClass.FILE_READ]
 
 # Code that a service does not run: tests, fixtures, examples and docs.
 _NOT_RUN = re.compile(
-    r"(?:^|/)(?:tests?|__tests__|__mocks__|testdata|spec|e2e|cypress|playwright|fixtures?|examples?|samples?|docs?)/"
-    r"|\.(?:test|spec|stories)\.[a-z]+$|(?:^|/)(?:conftest\.py|tests?\.(?:py|go|js|ts)|test_[^/]+\.py|[^/]+_test\.(?:py|go))$"
+    r"(?:^|/)(?:(?:[\w-]+-)?tests?|__tests__|__mocks__|testdata|spec|e2e|cypress|playwright|fixtures?|examples?|samples?|docs?)/"
+    r"|[.-](?:\w+-)?(?:test|spec|stories)\.[a-z]+$|(?:^|/)(?:conftest\.py|tests?\.(?:py|go|js|ts)|test_[^/]+\.py|[^/]+_test\.(?:py|go))$"
 )
 _BUILD_TOOLS = {
     "vite",
@@ -87,11 +87,18 @@ _BUILD_TOOLS = {
 }
 _TOOLING_DIR = re.compile(r"(?:^|/)(?:scripts|tools|hack|dev|ci)/")
 # Code that may ship but is weaker evidence than the application's own source.
-_INCIDENTAL = re.compile(r"(?:^|/)(?:static|vendor|third_party)/")
+_INCIDENTAL = re.compile(r"(?:^|/)(?:static|public|vendor|third_party)/")
+_MAINTAINER_SCRIPTS = re.compile(r"(?:^|/)(?:scripts|hack)/")
 
 
 def not_run(path: str) -> bool:
     return bool(_NOT_RUN.search(path))
+
+
+def request_cannot_reach(path: str) -> bool:
+    """Tests, a maintainer's scripts and bundled assets. `tools/` stays out: in an agent or an MCP
+    server that is the product."""
+    return not_run(path) or bool(_MAINTAINER_SCRIPTS.search(path) or _INCIDENTAL.search(path))
 
 
 def not_shipped(path: str, package: str = "") -> bool:

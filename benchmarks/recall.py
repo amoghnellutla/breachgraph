@@ -12,7 +12,8 @@ weakness is one breachgraph has rules for (command injection, code injection, de
 injection, path traversal, SSRF), with a linked fix commit that changes non-test source files. No
 advisory is picked by looking at what breachgraph finds.
 
-A case counts as found when a code finding lands on or within a few lines of a line the fix changed.
+A case counts on the line when a code finding lands within a few lines of a line the fix changed,
+and in the file when it only lands in a file the fix changed.
 Work stays under .tmp/corpus/, as corpus.py does. Advisories are public, so results can name them.
 """
 
@@ -123,15 +124,30 @@ def select(limit: int) -> int:
     return 0
 
 
-def found(report: dict[str, Any], lines: dict[str, list[list[int]]]) -> bool:
+def found(report: dict[str, Any], lines: dict[str, list[list[int]]]) -> str | None:
+    """ "line" when a finding sits on the fix, "file" when it's only in a file the fix changed. Fixes
+    often land apart from the flaw, as validation or a new default, so a line alone undercounts."""
+    best = None
     for f in report["findings"]:
         loc = f["location"]
-        if f["category"] != "sast" or not loc.get("start_line"):
+        if f["category"] != "sast" or not loc.get("start_line") or loc["path"] not in lines:
             continue
-        for start, end in lines.get(loc["path"], []):
+        best = "file"
+        for start, end in lines[loc["path"]]:
             if start - WINDOW <= loc["start_line"] <= end + WINDOW:
-                return True
-    return False
+                return "line"
+    return best
+
+
+def rules_in(report: dict[str, Any], lines: dict[str, list[list[int]]]) -> list[str]:
+    """Which rules touched the fixed files, so each rule has to earn its noise."""
+    return sorted(
+        {
+            f["rule_id"]
+            for f in report["findings"]
+            if f["category"] == "sast" and f["location"]["path"] in lines
+        }
+    )
 
 
 def run(image: str) -> int:
@@ -145,10 +161,17 @@ def run(image: str) -> int:
         except (subprocess.SubprocessError, OSError) as exc:
             scanned = {"outcome": "checkout failed", "error": str(exc)[:300]}
         report = corpus.WORK / "out" / corpus.slug(case["name"]) / "breachgraph.json"
-        hit = None
+        hit, rules = None, []
         if scanned["outcome"] == "ok":
-            hit = found(json.loads(report.read_text(encoding="utf-8")), case["lines"])
-        row = {"id": case["id"], "weakness": case["weakness"], "outcome": scanned["outcome"], "found": hit}
+            parsed = json.loads(report.read_text(encoding="utf-8"))
+            hit, rules = found(parsed, case["lines"]), rules_in(parsed, case["lines"])
+        row = {
+            "id": case["id"],
+            "weakness": case["weakness"],
+            "outcome": scanned["outcome"],
+            "found": hit,
+            "rules": rules,
+        }
         stored.write_text(json.dumps(row, indent=2) + "\n", encoding="utf-8")
         shutil.rmtree(report.parent, ignore_errors=True)
         print(f"{case['id']} {case['weakness']:<20} {scanned['outcome']:<8} {hit}", flush=True)
@@ -159,10 +182,13 @@ def tally(rows: list[dict[str, Any]]) -> dict[str, Any]:
     done = [r for r in rows if r["outcome"] == "ok"]
     by: dict[str, list[int]] = {}
     for r in done:
-        pair = by.setdefault(r["weakness"], [0, 0])
-        pair[0] += bool(r["found"])
-        pair[1] += 1
-    return {"cases": len(done), "found": sum(bool(r["found"]) for r in done), "by_weakness": by}
+        row = by.setdefault(r["weakness"], [0, 0, 0])
+        row[0] += r["found"] == "line"
+        row[1] += bool(r["found"])
+        row[2] += 1
+    on_line = sum(r["found"] == "line" for r in done)
+    in_file = sum(bool(r["found"]) for r in done)
+    return {"cases": len(done), "on_line": on_line, "in_file": in_file, "by_weakness": by}
 
 
 def summary() -> int:

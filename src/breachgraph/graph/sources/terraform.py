@@ -360,12 +360,20 @@ class TerraformSource:
                 )
 
     def _public_rds(self, st: _State, graph: Graph) -> None:
+        open_sgs = self._open_groups(st)
+        unsure = self._unsure_groups(st)
         for r in st.res.values():
             if (
                 r.rtype in ("aws_db_instance", "aws_rds_cluster_instance")
                 and truthy(r.body.get("publicly_accessible"))
                 and r.node_id
             ):
+                # Every group is in the repository and none admits the internet. One we can't see,
+                # or a source we can't resolve, might, so those stay reported.
+                listed = _list(r.body.get("vpc_security_group_ids"))
+                known = [g for g in refs(listed) if g in st.res]
+                if listed and len(known) == len(listed) and not set(known) & (set(open_sgs) | unsure):
+                    continue
                 ep_id = f"{r.node_id}:endpoint"
                 graph.add_node(internet())
                 graph.add_node(
@@ -763,7 +771,7 @@ class TerraformSource:
                         kind=EdgeKind.USES_IDENTITY,
                         evidence=[grant.evidence] if grant and grant.evidence else [],
                         confidence=Confidence.LOW,
-                        note=f"privilege escalation: can pass any role to {what}, if a role elsewhere trusts it",
+                        note=f"privilege escalation: can pass any role to {what}, if one elsewhere trusts it",
                     )
                 )
 
@@ -1153,7 +1161,8 @@ class TerraformSource:
         }
         return ("public" if set(tables) & to_gateway else "private"), mapped
 
-    def _exposure(self, st: _State, graph: Graph) -> None:
+    @staticmethod
+    def _open_groups(st: _State) -> dict[str, list[str]]:
         open_sgs: dict[str, list[str]] = {}
         for key, r in st.res.items():
             if r.rtype == "aws_security_group":
@@ -1172,6 +1181,29 @@ class TerraformSource:
                         open_sgs.setdefault(sg, []).append(
                             f"{r.body.get('from_port')}-{r.body.get('to_port')}"
                         )
+        return open_sgs
+
+    @staticmethod
+    def _unsure_groups(st: _State) -> set[str]:
+        """Groups admitting a source only known at apply time. A VPC's or subnet's own range is inside."""
+
+        def unknown(cidrs: list[Any]) -> bool:
+            return any("${" in str(c) and not re.search(r"aws_(?:vpc|subnet)\.", str(c)) for c in cidrs)
+
+        out: set[str] = set()
+        for key, r in st.res.items():
+            if r.rtype == "aws_security_group":
+                blocks = _list_blocks(r.body.get("ingress"))
+                if any(unknown(_list(i.get("cidr_blocks"))) for i in blocks):
+                    out.add(key)
+            elif r.rtype in ("aws_security_group_rule", "aws_vpc_security_group_ingress_rule"):
+                cidrs = _list(r.body.get("cidr_blocks")) + _list(r.body.get("cidr_ipv4"))
+                if str(r.body.get("type", "ingress")) == "ingress" and unknown(cidrs):
+                    out.update(refs(r.body.get("security_group_id")))
+        return out
+
+    def _exposure(self, st: _State, graph: Graph) -> None:
+        open_sgs = self._open_groups(st)
 
         # Internet-facing load balancers -> listener -> target group -> workload
         tg_to_workload: dict[str, list[str]] = {}
