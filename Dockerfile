@@ -4,7 +4,7 @@
 # Bump versions with the matching SHA-256 from each project's release checksums file.
 # The base image is pinned by digest; Dependabot proposes updates.
 
-FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70 AS binaries
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS binaries
 ARG TARGETARCH=amd64
 ARG TRIVY_VERSION=0.75.0
 ARG TRIVY_SHA256_AMD64=c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
@@ -41,7 +41,7 @@ RUN set -eux; \
     tar -xzf kustomize.tgz kustomize; \
     chmod 0755 trivy gitleaks helm kustomize
 
-FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70 AS python-tools
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS python-tools
 # Every Python package is installed from a hash-pinned lock (requirements/, see scripts/lock.py).
 # Separate virtualenvs: semgrep and checkov pin conflicting dependencies.
 COPY requirements /build/requirements
@@ -58,7 +58,7 @@ RUN python -m venv /tmp/build-env \
     && /opt/breachgraph/bin/pip install --no-cache-dir --require-hashes -r /build/requirements/runtime.txt \
     && /opt/breachgraph/bin/pip install --no-cache-dir --no-deps /build/dist/*.whl
 
-FROM python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9
 LABEL org.opencontainers.image.title="breachgraph" \
       org.opencontainers.image.description="Security gate: Semgrep, Gitleaks, Trivy, Checkov and zizmor with dedupe, KEV/EPSS risk scoring, attack paths and policy" \
       org.opencontainers.image.licenses="Apache-2.0"
